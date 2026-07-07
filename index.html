@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Deutsch Flash Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ===================== BARRE DE NAVIGATION ===================== -->
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-title">Deutsch <span>Flash Studio</span></div>
+        <!-- Petit drapeau allemand décoratif (noir / rouge / or) -->
+        <div class="logo-flag" aria-hidden="true">
+          <span class="flag-black"></span><span class="flag-red"></span><span class="flag-gold"></span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-btn" data-page="dashboard"><span class="nav-icon">▦</span> Mes jeux</button>
+        <button class="nav-btn" data-page="apprentissage"><span class="nav-icon">🧠</span> Apprentissage</button>
+        <button class="nav-btn" data-page="revision"><span class="nav-icon">🔁</span> Révision</button>
+        <button class="nav-btn" data-page="ajouter"><span class="nav-icon">➕</span> Ajouter une carte</button>
+        <button class="nav-btn" data-page="bibliotheque"><span class="nav-icon">📚</span> Bibliothèque</button>
+        <button class="nav-btn" data-page="grammaire"><span class="nav-icon">📖</span> Grammaire</button>
+        <button class="nav-btn" data-page="sauvegarde"><span class="nav-icon">💾</span> Sauvegarde</button>
+        <button class="nav-btn" data-page="missing-images"><span class="nav-icon">IMG</span> Images manquantes</button>
+      </nav>
+
+      <p class="sidebar-note">Fonctionne 100&nbsp;% en local 🔒<br>Aucune donnée n'est envoyée sur internet.</p>
+    </aside>
+
+    <!-- ===================== CONTENU PRINCIPAL ===================== -->
+    <main>
+
+      <!-- ============ PAGE : MES JEUX ============ -->
+      <section id="page-dashboard" class="page">
+        <header class="page-header">
+          <h1>Mes jeux</h1>
+          <p>Chaque catégorie devient un deck de vocabulaire à étudier ou réviser.</p>
+        </header>
+
+        <div class="deck-top-actions">
+          <button class="btn btn-primary btn-large" id="btn-create-deck">+ Créer un jeu</button>
+          <button class="btn btn-ghost" id="btn-study-all-decks">Tout étudier</button>
+          <button class="btn btn-ghost" id="btn-train-all-decks">Tout entraîner</button>
+          <button class="btn btn-ghost" id="btn-review-all-decks">Tout réviser</button>
+          <button class="btn btn-ghost" id="btn-select-decks" type="button">Sélectionner</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Cartes au total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value stat-gold" id="stat-due">0</div>
+            <div class="stat-label">À réviser aujourd'hui</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value stat-green" id="stat-mastered">0</div>
+            <div class="stat-label">Cartes acquises</div>
+          </div>
+        </div>
+
+        <div class="dashboard-insights">
+          <section class="panel today-stats-panel">
+            <div class="panel-heading-row">
+              <h2>Aujourd'hui</h2>
+              <span id="today-stats-message" class="muted">Pas encore de révision aujourd'hui.</span>
+            </div>
+            <div class="today-stat-grid">
+              <div class="today-stat-card">
+                <span>Streak</span>
+                <strong class="streak-value" id="today-streak">0 jour</strong>
+              </div>
+              <div class="today-stat-card">
+                <span>Révisions aujourd'hui</span>
+                <strong id="today-reviews-count">0</strong>
+              </div>
+              <div class="today-stat-card">
+                <span>Réussite</span>
+                <strong id="today-success-rate">0%</strong>
+              </div>
+              <div class="today-stat-card">
+                <span>Cartes difficiles</span>
+                <strong id="today-hard-count">0</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel hard-cards-panel">
+            <div class="panel-heading-row">
+              <h2>Cartes difficiles</h2>
+              <button class="btn btn-ghost btn-small" data-goto="bibliotheque" type="button">Voir Bibliothèque</button>
+            </div>
+            <div id="hard-cards-list" class="hard-cards-list"></div>
+          </section>
+        </div>
+
+        <div class="deck-bulk-bar hidden" id="deck-grid-bulk-bar">
+          <strong id="deck-grid-bulk-count">0 jeu sélectionné</strong>
+          <div class="deck-bulk-actions">
+            <button class="btn btn-ghost btn-small" id="btn-deck-grid-select-all" type="button">Tout sélectionner</button>
+            <button class="btn btn-ghost btn-small" id="btn-deck-grid-clear" type="button">Désélectionner</button>
+            <button class="btn btn-danger-action btn-small" id="btn-deck-grid-delete" type="button">🗑️ Supprimer la sélection</button>
+          </div>
+        </div>
+
+        <div class="deck-grid" id="deck-grid"></div>
+
+        <div class="panel deck-empty hidden" id="deck-empty">
+          <p class="muted">Aucun deck pour le moment. Ajoute une carte pour créer ton premier jeu.</p>
+          <button class="btn btn-primary" data-goto="ajouter">Ajouter une carte</button>
+        </div>
+
+        <div class="deck-action-menu hidden" id="deck-action-menu"></div>
+      </section>
+
+      <!-- ============ PAGE : DÉTAIL D'UN JEU ============ -->
+      <section id="page-deck-detail" class="page">
+        <div class="deck-detail-header">
+          <button class="btn btn-ghost btn-small" id="btn-deck-detail-back" type="button">← Retour aux jeux</button>
+          <div>
+            <h1 id="deck-detail-title">Jeu</h1>
+            <p id="deck-detail-subtitle">0 carte</p>
+          </div>
+        </div>
+
+        <div class="panel deck-detail-actions">
+          <button class="btn btn-primary" id="btn-deck-detail-review" type="button">Révision du jour</button>
+          <button class="btn btn-ghost" id="btn-deck-detail-train" type="button">S'entraîner</button>
+          <button class="btn btn-ghost" id="btn-deck-detail-study" type="button">Tout étudier</button>
+          <button class="btn btn-ghost" id="btn-deck-detail-add" type="button">+ Ajouter une carte</button>
+          <button class="btn btn-ghost" id="btn-deck-detail-appearance" type="button">Modifier apparence</button>
+          <button class="btn btn-ghost" id="btn-deck-detail-select" type="button">Sélectionner</button>
+        </div>
+
+        <div class="panel deck-detail-toolbar">
+          <input id="deck-detail-search" type="search" placeholder="Rechercher dans ce jeu…">
+          <select id="deck-detail-subcategory-filter">
+            <option value="">Toutes les sous-catégories</option>
+          </select>
+        </div>
+
+        <div class="deck-bulk-bar hidden" id="deck-bulk-bar">
+          <strong id="deck-bulk-count">0 sélectionnée</strong>
+          <div class="deck-bulk-actions">
+            <button class="btn btn-primary btn-small" id="btn-bulk-subcategory" type="button">Changer sous-catégorie</button>
+            <button class="btn btn-ghost btn-small" id="btn-bulk-select-all" type="button">Tout sélectionner</button>
+            <button class="btn btn-ghost btn-small" id="btn-bulk-clear" type="button">Désélectionner</button>
+          </div>
+        </div>
+
+        <div class="deck-detail-subcategories" id="deck-detail-subcategories"></div>
+
+        <div id="deck-detail-empty" class="empty-state hidden">
+          <div class="empty-emoji">🗂️</div>
+          <p>Ce jeu est vide.</p>
+          <button class="btn btn-primary" id="btn-deck-detail-empty-add" type="button">+ Ajouter une carte</button>
+        </div>
+
+        <div class="deck-detail-grid" id="deck-detail-grid"></div>
+      </section>
+
+      <!-- ============ PAGE : APPRENTISSAGE ============ -->
+      <section id="page-apprentissage" class="page">
+        <header class="page-header">
+          <h1>Apprentissage</h1>
+          <p>Parcours tes cartes librement, sans modifier la progression SRS.</p>
+        </header>
+
+        <div class="panel learning-toolbar">
+          <input id="learning-search" type="search" placeholder="🔍 Rechercher un mot (allemand ou français)…">
+          <select id="learning-filter-category">
+            <option value="">Toutes les catégories</option>
+          </select>
+          <select id="learning-filter-subcategory">
+            <option value="">Toutes les sous-catégories</option>
+          </select>
+          <button class="btn btn-ghost" id="btn-learning-shuffle" type="button">Mélanger</button>
+        </div>
+
+        <div id="learning-empty" class="empty-state hidden">
+          <div class="empty-emoji">📚</div>
+          <p id="learning-empty-text"></p>
+          <button class="btn btn-ghost" data-goto="ajouter">➕ Ajouter une carte</button>
+        </div>
+
+        <div id="learning-area" class="learning-area hidden">
+          <p class="review-counter" id="learning-counter"></p>
+
+          <article class="learning-card">
+            <div class="chips learning-category-top">
+              <span class="chip chip-category" id="learning-category"></span>
+              <span class="chip chip-subcategory hidden" id="learning-subcategory"></span>
+            </div>
+
+            <img id="learning-image" alt="Illustration de la carte">
+
+            <div class="learning-word">
+              <span id="learning-article"></span><span id="learning-word-text"></span>
+              <button class="btn btn-icon" id="btn-learning-speak-word" title="Écouter le mot" aria-label="Écouter le mot">🔊</button>
+            </div>
+
+            <p class="learning-plural" id="learning-plural"></p>
+            <p class="learning-fr" id="learning-fr"></p>
+
+            <div class="example-block" id="learning-example-block">
+              <p class="example-de">
+                <span id="learning-example-de"></span>
+                <button class="btn btn-icon btn-small" id="btn-learning-speak-sentence" title="Écouter la phrase" aria-label="Écouter la phrase">🔊</button>
+              </p>
+              <p class="example-fr" id="learning-example-fr"></p>
+            </div>
+
+            <div class="learning-actions">
+              <button class="btn btn-ghost" id="btn-learning-prev">Carte précédente</button>
+              <button class="btn btn-primary" id="btn-learning-next">Carte suivante</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ PAGE : RÉVISION ============ -->
+      <section id="page-revision" class="page">
+        <header class="page-header">
+          <h1>Révision</h1>
+          <p>Les cartes du jour et les cartes en retard.</p>
+        </header>
+
+        <div class="panel review-setup">
+          <div>
+            <h2 id="review-scope-title">Révision : toutes les catégories</h2>
+            <p class="muted" id="review-mode-help">Choisis un mode, puis révise les cartes dues.</p>
+          </div>
+          <div class="review-setup-actions">
+            <button class="btn btn-ghost btn-small" id="btn-review-all">Réviser toutes les catégories</button>
+            <div class="segmented">
+              <button class="btn btn-small active" id="btn-review-type-due" type="button">Révision du jour</button>
+              <button class="btn btn-small" id="btn-review-type-free" type="button">Entraînement libre</button>
+            </div>
+            <div class="segmented">
+              <button class="btn btn-small active" id="btn-review-mode-classic" type="button">Cartes classiques</button>
+              <button class="btn btn-small" id="btn-review-mode-multiple" type="button">Réponses multiples</button>
+              <button class="btn btn-small" id="btn-review-mode-written" type="button">Révision écrite</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel srs-help">
+          <strong>Comment ça marche ?</strong>
+          <p>Révision du jour utilise la répétition espacée : si tu connais une carte, elle revient plus tard. Si tu la rates, elle revient vite. Entraînement libre te laisse réviser quand tu veux sans modifier ta progression.</p>
+          <div class="srs-help-grid">
+            <span>Raté : revient aujourd'hui</span>
+            <span>Difficile : revient demain</span>
+            <span>Normal : revient plus tard</span>
+            <span>Facile : revient encore plus tard</span>
+          </div>
+        </div>
+
+        <!-- État vide : rien à réviser ou bibliothèque vide -->
+        <div id="review-empty" class="empty-state hidden">
+          <div class="empty-emoji">🎉</div>
+          <p id="review-empty-text"></p>
+          <div id="session-summary" class="session-summary hidden"></div>
+          <button class="btn btn-primary hidden" id="btn-start-free-practice" type="button">Lancer Entraînement libre</button>
+          <button class="btn btn-ghost" data-goto="ajouter">➕ Ajouter une carte</button>
+        </div>
+
+        <!-- Zone de révision -->
+        <div id="review-area" class="hidden">
+          <p class="review-counter" id="review-counter"></p>
+
+          <div class="review-card">
+            <div class="chips review-category-top">
+              <span class="chip chip-category" id="review-category"></span>
+            </div>
+
+            <img id="review-image" alt="Illustration de la carte">
+
+            <p class="review-front-fr" id="review-front-fr"></p>
+            <p class="review-front-hint" id="review-front-hint">Retrouve le mot allemand</p>
+
+            <div class="multiple-choice hidden" id="multiple-choice"></div>
+            <p class="multiple-feedback hidden" id="multiple-feedback"></p>
+
+            <div class="written-review hidden" id="written-review">
+              <div class="written-fields">
+                <input id="written-article" type="text" placeholder="Article">
+                <input id="written-word" type="text" placeholder="Mot allemand">
+              </div>
+              <button class="btn btn-primary" id="btn-check-written" type="button">Vérifier</button>
+            </div>
+
+            <button class="btn btn-primary btn-large" id="btn-show-answer">Afficher la réponse</button>
+
+            <!-- La réponse (cachée au départ) -->
+            <div id="review-answer" class="hidden">
+              <div class="review-word review-answer-word">
+                <span id="answer-article"></span><span id="answer-word-text"></span>
+                <button class="btn btn-icon" id="btn-answer-speak-word" title="Écouter le mot" aria-label="Écouter le mot">🔊</button>
+              </div>
+
+              <p class="answer-line" id="answer-plural-row">Pluriel : <strong id="answer-plural"></strong></p>
+              <p class="answer-line hidden" id="answer-subcategory-row">Sous-catégorie : <strong id="answer-subcategory"></strong></p>
+
+              <div class="example-block" id="answer-example-block">
+                <p class="example-de">
+                  <span id="answer-example-de"></span>
+                  <button class="btn btn-icon btn-small" id="btn-speak-sentence" title="Écouter la phrase" aria-label="Écouter la phrase">🔊</button>
+                </p>
+                <p class="example-fr" id="answer-example-fr"></p>
+              </div>
+
+              <p class="grade-question">Tu la connaissais&nbsp;?</p>
+              <div class="grade-buttons">
+                <button class="btn grade-fail" data-grade="fail">Raté<span>revient aujourd'hui</span></button>
+                <button class="btn grade-hard" data-grade="hard">Difficile<span>revient demain</span></button>
+                <button class="btn grade-good" data-grade="good">Normal<span>box + 1</span></button>
+                <button class="btn grade-easy" data-grade="easy">Facile<span>box + 2</span></button>
+              </div>
+              <button class="btn btn-primary btn-large hidden" id="btn-free-next" type="button">Carte suivante</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PAGE : AJOUTER UNE CARTE ============ -->
+      <section id="page-ajouter" class="page">
+        <header class="page-header">
+          <h1 id="form-title">Ajouter une carte</h1>
+          <p id="form-help">En allemand, on n'apprend jamais un nom seul&nbsp;: toujours <strong>l'article + le mot + le pluriel</strong>.</p>
+        </header>
+
+        <form id="add-card-form" class="panel form-panel">
+          <p id="edit-mode-note" class="edit-mode-note hidden">Tu modifies une carte existante. Sa progression SRS sera conservée.</p>
+
+          <div class="form-grid">
+
+            <div class="form-field">
+              <label for="f-article">Article</label>
+              <select id="f-article">
+                <option value="">— (verbe ou pas d'article)</option>
+                <option value="der">der (masculin)</option>
+                <option value="die">die (féminin)</option>
+                <option value="das">das (neutre)</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="f-de">Mot allemand *</label>
+              <input id="f-de" type="text" required placeholder="Hund">
+            </div>
+
+            <div class="form-field">
+              <label for="f-plural">Pluriel</label>
+              <input id="f-plural" type="text" placeholder="Hunde">
+              <button class="btn btn-ghost btn-small plural-helper-btn" id="btn-no-normal-plural" type="button">Marquer comme sans pluriel normal</button>
+              <p class="field-help">Pour un mot sans pluriel normal, écris : kein Plural</p>
+            </div>
+
+            <div class="form-field">
+              <label for="f-fr">Traduction française *</label>
+              <input id="f-fr" type="text" required placeholder="chien">
+            </div>
+
+            <div class="form-field form-wide">
+              <label for="f-example-de">Phrase d'exemple (allemand)</label>
+              <input id="f-example-de" type="text" placeholder="Der Hund ist klein.">
+            </div>
+
+            <div class="form-field form-wide">
+              <label for="f-example-fr">Traduction de la phrase</label>
+              <input id="f-example-fr" type="text" placeholder="Le chien est petit.">
+            </div>
+
+            <div class="form-field">
+              <label for="f-category">Catégorie</label>
+              <input id="f-category" type="text" list="category-suggestions" placeholder="Animaux">
+              <datalist id="category-suggestions"></datalist>
+            </div>
+
+            <div class="form-field">
+              <label for="f-subcategory">Sous-catégorie</label>
+              <input id="f-subcategory" type="text" list="subcategory-suggestions" placeholder="Légumes">
+              <datalist id="subcategory-suggestions"></datalist>
+            </div>
+
+            <div class="form-field form-wide">
+              <label for="f-image">Image (optionnelle)</label>
+              <input id="f-image" type="file" accept="image/*">
+              <div id="image-preview-wrap" class="preview-wrap hidden">
+                <img id="image-preview" alt="Aperçu de l'image choisie">
+                <button type="button" class="btn btn-ghost btn-small" id="btn-remove-image">Supprimer l'image</button>
+              </div>
+            </div>
+
+            <div class="form-field form-wide">
+              <label for="f-image-query">Recherche image</label>
+              <input id="f-image-query" type="text" placeholder="garlic isolated white background">
+              <p class="field-help">Optionnel : utile pour retrouver vite une image apres import JSON.</p>
+            </div>
+
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large" id="btn-save-card">💾 Sauvegarder la carte</button>
+            <button type="button" class="btn btn-ghost btn-large hidden" id="btn-cancel-edit">Annuler la modification</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============ PAGE : BIBLIOTHÈQUE ============ -->
+      <section id="page-bibliotheque" class="page">
+        <header class="page-header">
+          <h1>Bibliothèque</h1>
+          <p>Toutes tes cartes, avec recherche et filtres.</p>
+        </header>
+
+        <div class="panel library-toolbar">
+          <input id="search-input" type="search" placeholder="🔍 Rechercher un mot (allemand ou français)…">
+          <select id="filter-category">
+            <option value="">Toutes les catégories</option>
+          </select>
+          <select id="filter-subcategory">
+            <option value="">Toutes les sous-catégories</option>
+          </select>
+          <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
+        </div>
+
+        <p id="library-count" class="muted"></p>
+        <div id="library-grid" class="library-grid"></div>
+      </section>
+
+      <!-- ============ PAGE : IMAGES MANQUANTES ============ -->
+      <section id="page-missing-images" class="page">
+        <header class="page-header">
+          <h1>Images manquantes</h1>
+          <p>Ajoute vite des images aux cartes qui n'en ont pas encore.</p>
+        </header>
+
+        <div class="panel missing-images-toolbar">
+          <p id="missing-images-count" class="muted">0 carte sans image</p>
+          <div class="missing-images-actions">
+            <button class="btn btn-primary" id="btn-open-current-image-search" type="button">Ouvrir la recherche de la carte actuelle</button>
+            <button class="btn btn-ghost" id="btn-missing-images-library" type="button">Retour Bibliothèque</button>
+          </div>
+        </div>
+
+        <div id="missing-images-empty" class="empty-state hidden">
+          <div class="empty-emoji">✅</div>
+          <p>Tout est bon, toutes les cartes ont une image ✅</p>
+        </div>
+
+        <div class="missing-images-grid" id="missing-images-grid"></div>
+      </section>
+
+      <!-- ============ PAGE : GRAMMAIRE ============ -->
+      <section id="page-grammaire" class="page">
+        <header class="page-header">
+          <h1>Grammaire</h1>
+          <p>Les bases indispensables, expliquées simplement. Clique sur 🔊 pour écouter les exemples.</p>
+        </header>
+
+        <div class="lessons-grid">
+
+          <article class="panel lesson">
+            <h2>🧩 der / die / das</h2>
+            <p>Chaque nom allemand a un genre&nbsp;: masculin (<span class="art-der">der</span>), féminin (<span class="art-die">die</span>) ou neutre (<span class="art-das">das</span>). Il n'est pas toujours logique, donc apprends <strong>toujours l'article avec le mot</strong>.</p>
+            <ul>
+              <li>Mots en <strong>-ung, -heit, -keit, -tion</strong> → <span class="art-die">die</span> (die Zeitung)</li>
+              <li>Mots en <strong>-chen, -lein</strong> → <span class="art-das">das</span> (das Mädchen… même pour «&nbsp;la fille&nbsp;»&nbsp;!)</li>
+              <li>Jours, mois, saisons → <span class="art-der">der</span> (der Montag)</li>
+            </ul>
+            <p class="example-de">Beispiel&nbsp;: das Mädchen
+              <button class="btn btn-icon btn-small" data-speak="das Mädchen" title="Écouter">🔊</button>
+            </p>
+          </article>
+
+          <article class="panel lesson">
+            <h2>🎯 L'accusatif</h2>
+            <p>C'est le cas du <strong>complément d'objet direct</strong> (COD). Bonne nouvelle&nbsp;: seul le masculin change.</p>
+            <ul>
+              <li><span class="art-der">der</span> → <strong>den</strong></li>
+              <li>die, das et le pluriel ne changent pas</li>
+            </ul>
+            <p class="example-de">Ich sehe <strong>den</strong> Hund. <span class="muted">(Je vois le chien.)</span>
+              <button class="btn btn-icon btn-small" data-speak="Ich sehe den Hund." title="Écouter">🔊</button>
+            </p>
+          </article>
+
+          <article class="panel lesson">
+            <h2>🎁 Le datif</h2>
+            <p>C'est le cas du <strong>complément d'objet indirect</strong>, et il est obligatoire après certaines prépositions&nbsp;: <em>mit, zu, bei, von, aus…</em></p>
+            <ul>
+              <li><span class="art-der">der</span> / <span class="art-das">das</span> → <strong>dem</strong></li>
+              <li><span class="art-die">die</span> → <strong>der</strong></li>
+              <li>pluriel → <strong>den</strong> (et le nom prend souvent un -n)</li>
+            </ul>
+            <p class="example-de">Ich fahre mit <strong>dem</strong> Bus. <span class="muted">(Je prends le bus.)</span>
+              <button class="btn btn-icon btn-small" data-speak="Ich fahre mit dem Bus." title="Écouter">🔊</button>
+            </p>
+          </article>
+
+          <article class="panel lesson">
+            <h2>👥 Les pluriels</h2>
+            <p>Il n'y a pas une seule règle, mais des familles de pluriels. C'est pour ça qu'on apprend <strong>le pluriel en même temps que le mot</strong>.</p>
+            <ul>
+              <li><strong>-e</strong>&nbsp;: der Hund → die Hund<strong>e</strong></li>
+              <li><strong>-en</strong>&nbsp;: die Katze → die Katze<strong>n</strong></li>
+              <li><strong>¨ + -er</strong>&nbsp;: das Haus → die H<strong>äu</strong>s<strong>er</strong></li>
+              <li><strong>-s</strong>&nbsp;: das Auto → die Auto<strong>s</strong></li>
+            </ul>
+            <p class="example-de">Beispiel&nbsp;: die Häuser
+              <button class="btn btn-icon btn-small" data-speak="das Haus, die Häuser" title="Écouter">🔊</button>
+            </p>
+          </article>
+
+          <article class="panel lesson">
+            <h2>💪 Les verbes forts</h2>
+            <p>Certains verbes changent de voyelle avec <strong>du</strong> et <strong>er/sie/es</strong>. Il faut les repérer et les apprendre.</p>
+            <ul>
+              <li>sprechen → du <strong>sprichst</strong></li>
+              <li>essen → du <strong>isst</strong></li>
+              <li>fahren → du <strong>fährst</strong></li>
+              <li>sehen → du <strong>siehst</strong></li>
+            </ul>
+            <p class="example-de">Du isst einen Apfel. <span class="muted">(Tu manges une pomme.)</span>
+              <button class="btn btn-icon btn-small" data-speak="Du isst einen Apfel." title="Écouter">🔊</button>
+            </p>
+          </article>
+
+          <article class="panel lesson">
+            <h2>💬 Phrases utiles</h2>
+            <ul class="phrase-list">
+              <li>Hallo, wie geht's? <span class="muted">— Salut, ça va&nbsp;?</span>
+                <button class="btn btn-icon btn-small" data-speak="Hallo, wie geht's?" title="Écouter">🔊</button></li>
+              <li>Ich verstehe nicht. <span class="muted">— Je ne comprends pas.</span>
+                <button class="btn btn-icon btn-small" data-speak="Ich verstehe nicht." title="Écouter">🔊</button></li>
+              <li>Kannst du das wiederholen, bitte? <span class="muted">— Tu peux répéter, s'il te plaît&nbsp;?</span>
+                <button class="btn btn-icon btn-small" data-speak="Kannst du das wiederholen, bitte?" title="Écouter">🔊</button></li>
+              <li>Danke schön! <span class="muted">— Merci beaucoup&nbsp;!</span>
+                <button class="btn btn-icon btn-small" data-speak="Danke schön!" title="Écouter">🔊</button></li>
+              <li>Tschüss, bis morgen! <span class="muted">— Salut, à demain&nbsp;!</span>
+                <button class="btn btn-icon btn-small" data-speak="Tschüss, bis morgen!" title="Écouter">🔊</button></li>
+            </ul>
+          </article>
+
+        </div>
+
+        <div class="panel">
+          <h2>✍️ Mini quiz</h2>
+          <p class="muted">Clique sur la bonne réponse, la correction est immédiate.</p>
+          <div id="quiz-container"></div>
+          <button class="btn btn-ghost" id="btn-restart-quiz">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <!-- ============ PAGE : SAUVEGARDE ============ -->
+      <section id="page-sauvegarde" class="page">
+        <header class="page-header">
+          <h1>Sauvegarde</h1>
+          <p>Tes données restent dans ce navigateur. Pense à exporter régulièrement pour ne rien perdre.</p>
+        </header>
+
+        <div class="panel">
+          <h2>📤 Exporter mes données</h2>
+          <p>Télécharge un fichier JSON contenant toutes tes cartes, ta progression <strong>et tes images</strong> (converties en base64).</p>
+          <p id="backup-info" class="muted"></p>
+          <p id="last-export-note" class="last-export-note"></p>
+          <button class="btn btn-primary" id="btn-export">Exporter mes données</button>
+        </div>
+
+        <div class="panel">
+          <h2>📥 Importer mes données</h2>
+          <p>Choisis un fichier JSON exporté depuis Deutsch Flash Studio. Tu verras un résumé avant de décider quoi faire.</p>
+          <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+          <div class="import-actions">
+            <button class="btn btn-primary" id="btn-import-json" type="button">Importer un fichier JSON</button>
+          </div>
+          <p class="muted">Tu pourras choisir Fusionner ou Tout remplacer après la prévisualisation.</p>
+        </div>
+
+        <div class="panel danger-zone">
+          <h2>Danger Zone</h2>
+          <p class="danger-warning">Actions irréversibles.</p>
+          <button class="btn btn-ghost danger-toggle" id="btn-toggle-danger-zone" type="button">Afficher la Danger Zone</button>
+          <div class="danger-zone-content hidden" id="danger-zone-content">
+            <p class="danger-warning">Avant toute action dangereuse, exporte tes données. Ces actions peuvent supprimer ou réinitialiser ta progression.</p>
+            <div class="danger-actions">
+              <button class="btn btn-ghost" id="btn-export-before-reset">Exporter avant reset</button>
+              <button class="btn btn-danger-action" id="btn-reset-srs">Réinitialiser uniquement la progression SRS</button>
+              <button class="btn btn-danger-action" id="btn-delete-all-data">Supprimer toutes les cartes et images</button>
+              <button class="btn btn-danger-action" id="btn-delete-everything">Tout supprimer : jeux, sous-catégories, cartes et images</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="deck-modal">
+    <div class="modal-panel">
+      <h2 id="deck-modal-title">Créer un jeu</h2>
+      <div class="form-field">
+        <label for="deck-name-input">Nom du jeu</label>
+        <input id="deck-name-input" type="text" placeholder="Aliments">
+      </div>
+      <div class="form-field">
+        <label for="deck-color-input">Couleur</label>
+        <select id="deck-color-input">
+          <option value="gold">gold</option>
+          <option value="blue">blue</option>
+          <option value="green">green</option>
+          <option value="orange">orange</option>
+          <option value="red">red</option>
+          <option value="purple">purple</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="deck-emoji-input">Icône / emoji optionnel</label>
+        <input id="deck-emoji-input" type="text" maxlength="4" placeholder="🍎">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btn-save-deck" type="button">Sauvegarder</button>
+        <button class="btn btn-ghost" id="btn-cancel-deck" type="button">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Petite notification en bas de l'écran -->
+  <div class="modal-backdrop hidden" id="subcategory-modal">
+    <div class="modal-panel">
+      <h2>Changer la sous-catégorie</h2>
+      <p class="muted" id="subcategory-modal-card">Carte sélectionnée</p>
+      <div class="form-field">
+        <label for="subcategory-select">Sous-catégorie</label>
+        <select id="subcategory-select"></select>
+      </div>
+      <div class="form-field hidden" id="subcategory-new-wrap">
+        <label for="subcategory-new-name">Nouvelle sous-catégorie</label>
+        <input id="subcategory-new-name" type="text" placeholder="Exemple : Légumes">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btn-save-subcategory-choice" type="button">Valider</button>
+        <button class="btn btn-ghost" id="btn-cancel-subcategory-choice" type="button">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="import-preview-modal">
+    <div class="modal-panel import-preview-panel">
+      <h2>Prévisualisation de l'import</h2>
+      <p class="import-preview-summary" id="import-preview-summary">Ce fichier contient 0 carte.</p>
+
+      <div class="import-preview-stats" id="import-preview-stats"></div>
+
+      <div class="import-preview-categories">
+        <strong>Catégories détectées</strong>
+        <p id="import-preview-categories" class="muted">Aucune catégorie détectée.</p>
+      </div>
+
+      <div class="import-preview-warnings hidden" id="import-preview-warnings"></div>
+
+      <p class="danger-warning hidden" id="import-replace-warning">Attention : toutes les cartes et images actuelles seront remplacées.</p>
+
+      <div class="modal-actions import-preview-actions">
+        <button class="btn btn-primary" id="btn-import-preview-merge" type="button">Fusionner avec mes données</button>
+        <button class="btn btn-danger-action" id="btn-import-preview-replace" type="button">Tout remplacer</button>
+        <button class="btn btn-ghost" id="btn-import-preview-cancel" type="button">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

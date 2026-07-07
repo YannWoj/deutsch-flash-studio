@@ -1,0 +1,919 @@
+{
+   "version": 1,
+   "exportedAt": "2026-07-07",
+   "cards": [
+      {
+         "id": "card_001",
+         "article": "",
+         "de": "Willkommen",
+         "plural": "",
+         "fr": "Bienvenue",
+         "exampleDe": "Willkommen in Berlin!",
+         "exampleFr": "Bienvenue à Berlin !",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Salutations",
+         "imageQuery": "welcome sign simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_002",
+         "article": "",
+         "de": "Guten Morgen",
+         "plural": "",
+         "fr": "Bonjour (le matin)",
+         "exampleDe": "Guten Morgen, Anna.",
+         "exampleFr": "Bonjour, Anna.",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Salutations",
+         "imageQuery": "morning sunrise simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_003",
+         "article": "",
+         "de": "Guten Abend",
+         "plural": "",
+         "fr": "Bonsoir",
+         "exampleDe": "Guten Abend, Herr Müller.",
+         "exampleFr": "Bonsoir, monsieur Müller.",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Salutations",
+         "imageQuery": "evening sky simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_004",
+         "article": "",
+         "de": "lernen",
+         "plural": "",
+         "fr": "Apprendre",
+         "exampleDe": "Ich lerne Deutsch.",
+         "exampleFr": "J’apprends l’allemand.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "student learning simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_005",
+         "article": "",
+         "de": "ich",
+         "plural": "",
+         "fr": "Je",
+         "exampleDe": "Ich trinke Wasser.",
+         "exampleFr": "Je bois de l’eau.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "person icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_006",
+         "article": "",
+         "de": "du",
+         "plural": "",
+         "fr": "Tu",
+         "exampleDe": "Du lernst Deutsch.",
+         "exampleFr": "Tu apprends l’allemand.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "two people talking simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_007",
+         "article": "",
+         "de": "er",
+         "plural": "",
+         "fr": "Il",
+         "exampleDe": "Er kommt heute.",
+         "exampleFr": "Il vient aujourd’hui.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "man icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_008",
+         "article": "",
+         "de": "sie",
+         "plural": "",
+         "fr": "Elle / ils / elles",
+         "exampleDe": "Sie ist hier.",
+         "exampleFr": "Elle est ici.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "woman and group icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_009",
+         "article": "",
+         "de": "es",
+         "plural": "",
+         "fr": "Il / elle (neutre)",
+         "exampleDe": "Es ist gut.",
+         "exampleFr": "C’est bien.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "neutral object icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_010",
+         "article": "",
+         "de": "wir",
+         "plural": "",
+         "fr": "Nous",
+         "exampleDe": "Wir trinken Wasser.",
+         "exampleFr": "Nous buvons de l’eau.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "group of people icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_011",
+         "article": "",
+         "de": "ihr",
+         "plural": "",
+         "fr": "Vous (informel)",
+         "exampleDe": "Ihr kommt bald.",
+         "exampleFr": "Vous venez bientôt.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "group talking simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_012",
+         "article": "",
+         "de": "Sie",
+         "plural": "",
+         "fr": "Vous (formel)",
+         "exampleDe": "Bitte kommen Sie.",
+         "exampleFr": "Venez, s’il vous plaît.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "formal conversation simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_013",
+         "article": "",
+         "de": "was",
+         "plural": "",
+         "fr": "Quoi / que",
+         "exampleDe": "Was ist das?",
+         "exampleFr": "Qu’est-ce que c’est ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Mots interrogatifs",
+         "imageQuery": "question mark icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_014",
+         "article": "",
+         "de": "trinken",
+         "plural": "",
+         "fr": "Boire",
+         "exampleDe": "Was trinkst du?",
+         "exampleFr": "Que bois-tu ?",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Actions quotidiennes",
+         "imageQuery": "person drinking water simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_015",
+         "article": "das",
+         "de": "Wasser",
+         "plural": "kein Plural",
+         "fr": "L’eau",
+         "exampleDe": "Das Wasser ist gut.",
+         "exampleFr": "L’eau est bonne.",
+         "level": "",
+         "category": "Aliments",
+         "subcategory": "Boissons",
+         "imageQuery": "glass of water isolated white background",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_016",
+         "article": "",
+         "de": "wollen",
+         "plural": "",
+         "fr": "Vouloir",
+         "exampleDe": "Ich will Wasser.",
+         "exampleFr": "Je veux de l’eau.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes modaux",
+         "imageQuery": "want desire icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_017",
+         "article": "",
+         "de": "essen",
+         "plural": "",
+         "fr": "Manger",
+         "exampleDe": "Ich esse jetzt.",
+         "exampleFr": "Je mange maintenant.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Actions quotidiennes",
+         "imageQuery": "person eating simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_018",
+         "article": "",
+         "de": "tun",
+         "plural": "",
+         "fr": "Faire",
+         "exampleDe": "Was tust du?",
+         "exampleFr": "Que fais-tu ?",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person doing task simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_019",
+         "article": "",
+         "de": "kommen",
+         "plural": "",
+         "fr": "Venir",
+         "exampleDe": "Kommst du heute?",
+         "exampleFr": "Tu viens aujourd’hui ?",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Mouvement",
+         "imageQuery": "person coming simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_020",
+         "article": "",
+         "de": "mit",
+         "plural": "",
+         "fr": "Avec",
+         "exampleDe": "Kommst du mit?",
+         "exampleFr": "Tu viens avec nous ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Prépositions",
+         "imageQuery": "together icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_021",
+         "article": "",
+         "de": "heute Abend",
+         "plural": "",
+         "fr": "Ce soir",
+         "exampleDe": "Wir essen heute Abend.",
+         "exampleFr": "Nous mangeons ce soir.",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Temps",
+         "imageQuery": "evening sky simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_022",
+         "article": "",
+         "de": "sein",
+         "plural": "",
+         "fr": "Être",
+         "exampleDe": "Wir sind hier.",
+         "exampleFr": "Nous sommes ici.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person identity icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_023",
+         "article": "",
+         "de": "wann",
+         "plural": "",
+         "fr": "Quand",
+         "exampleDe": "Wann kommst du?",
+         "exampleFr": "Quand viens-tu ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Mots interrogatifs",
+         "imageQuery": "calendar question mark icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_024",
+         "article": "",
+         "de": "wenn",
+         "plural": "",
+         "fr": "Quand / si",
+         "exampleDe": "Wenn du willst.",
+         "exampleFr": "Si tu veux.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Conjonctions",
+         "imageQuery": "condition arrows icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_025",
+         "article": "",
+         "de": "können",
+         "plural": "",
+         "fr": "Pouvoir / savoir faire",
+         "exampleDe": "Kannst du kommen?",
+         "exampleFr": "Peux-tu venir ?",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes modaux",
+         "imageQuery": "ability check mark icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_026",
+         "article": "",
+         "de": "bitte",
+         "plural": "",
+         "fr": "S’il te plaît / s’il vous plaît",
+         "exampleDe": "Ein Wasser, bitte.",
+         "exampleFr": "Une eau, s’il vous plaît.",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Politesse",
+         "imageQuery": "please polite gesture simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_027",
+         "article": "",
+         "de": "sehen",
+         "plural": "",
+         "fr": "Voir",
+         "exampleDe": "Ich sehe den Mann.",
+         "exampleFr": "Je vois l’homme.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Perception",
+         "imageQuery": "person looking simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_028",
+         "article": "",
+         "de": "gehen",
+         "plural": "",
+         "fr": "Aller",
+         "exampleDe": "Ich gehe nach Hause.",
+         "exampleFr": "Je rentre à la maison.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Mouvement",
+         "imageQuery": "person walking simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_029",
+         "article": "",
+         "de": "hören",
+         "plural": "",
+         "fr": "Entendre / écouter",
+         "exampleDe": "Ich höre Musik.",
+         "exampleFr": "J’écoute de la musique.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Perception",
+         "imageQuery": "person listening simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_030",
+         "article": "",
+         "de": "bald",
+         "plural": "",
+         "fr": "Bientôt",
+         "exampleDe": "Bis bald!",
+         "exampleFr": "À bientôt !",
+         "level": "",
+         "category": "Temps",
+         "subcategory": "Jours et moments",
+         "imageQuery": "soon clock icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_031",
+         "article": "",
+         "de": "bleiben",
+         "plural": "",
+         "fr": "Rester",
+         "exampleDe": "Ich bleibe hier.",
+         "exampleFr": "Je reste ici.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person staying simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_032",
+         "article": "",
+         "de": "hier",
+         "plural": "",
+         "fr": "Ici",
+         "exampleDe": "Ich bin hier.",
+         "exampleFr": "Je suis ici.",
+         "level": "",
+         "category": "Temps",
+         "subcategory": "Jours et moments",
+         "imageQuery": "location pin icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_033",
+         "article": "",
+         "de": "jetzt",
+         "plural": "",
+         "fr": "Maintenant",
+         "exampleDe": "Wir gehen jetzt.",
+         "exampleFr": "Nous partons maintenant.",
+         "level": "",
+         "category": "Temps",
+         "subcategory": "Jours et moments",
+         "imageQuery": "now clock icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_034",
+         "article": "",
+         "de": "nicht",
+         "plural": "",
+         "fr": "Ne pas / pas",
+         "exampleDe": "Ich komme nicht.",
+         "exampleFr": "Je ne viens pas.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Négation",
+         "imageQuery": "no symbol icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-07",
+         "updatedAt": "2026-07-07",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-07",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      }
+   ],
+   "reviews": [],
+   "images": [],
+   "customDecks": [
+      {
+         "id": "deck_001",
+         "name": "Expressions",
+         "color": "purple",
+         "emoji": "💬",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "deck_002",
+         "name": "Verbes",
+         "color": "blue",
+         "emoji": "⚙️",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "deck_003",
+         "name": "Aliments",
+         "color": "gold",
+         "emoji": "🍽️",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "deck_004",
+         "name": "Grammaire",
+         "color": "green",
+         "emoji": "🧠",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "deck_005",
+         "name": "Temps",
+         "color": "orange",
+         "emoji": "🕒",
+         "createdAt": "2026-07-07"
+      }
+   ],
+   "customSubcategories": [
+      {
+         "id": "sub_001",
+         "category": "Expressions",
+         "name": "Salutations",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_002",
+         "category": "Expressions",
+         "name": "Politesse",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_003",
+         "category": "Expressions",
+         "name": "Temps",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_004",
+         "category": "Verbes",
+         "name": "Verbes essentiels",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_005",
+         "category": "Verbes",
+         "name": "Actions quotidiennes",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_006",
+         "category": "Verbes",
+         "name": "Mouvement",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_007",
+         "category": "Verbes",
+         "name": "Perception",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_008",
+         "category": "Verbes",
+         "name": "Verbes modaux",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_009",
+         "category": "Aliments",
+         "name": "Boissons",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_010",
+         "category": "Grammaire",
+         "name": "Pronoms",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_011",
+         "category": "Grammaire",
+         "name": "Mots interrogatifs",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_012",
+         "category": "Grammaire",
+         "name": "Conjonctions",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_013",
+         "category": "Grammaire",
+         "name": "Prépositions",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_014",
+         "category": "Grammaire",
+         "name": "Négation",
+         "createdAt": "2026-07-07"
+      },
+      {
+         "id": "sub_015",
+         "category": "Temps",
+         "name": "Jours et moments",
+         "createdAt": "2026-07-07"
+      }
+   ]
+}
