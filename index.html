@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0d12">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Deutsch Flash Studio</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -682,5 +688,16 @@
   <div id="toast" role="status"></div>
 
   <script src="app.js"></script>
+  <script>
+    // Enregistrement du service worker (mode hors ligne + installation sur mobile).
+    // Le chemin relatif "sw.js" fonctionne aussi bien en local que sur GitHub Pages.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((error) => {
+          console.warn("Service worker non enregistré :", error);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
