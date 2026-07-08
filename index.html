@@ -15,6 +15,55 @@
 </head>
 <body>
 
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-grid" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+      <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+      <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+    </symbol>
+
+    <symbol id="icon-bulb" viewBox="0 0 24 24">
+      <path d="M9 18h6"></path>
+      <path d="M10 22h4"></path>
+      <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"></path>
+    </symbol>
+
+    <symbol id="icon-repeat" viewBox="0 0 24 24">
+      <path d="M17 2l4 4-4 4"></path>
+      <path d="M3 11V9a3 3 0 0 1 3-3h15"></path>
+      <path d="M7 22l-4-4 4-4"></path>
+      <path d="M21 13v2a3 3 0 0 1-3 3H3"></path>
+    </symbol>
+
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+      <path d="M12 5v14"></path>
+      <path d="M5 12h14"></path>
+    </symbol>
+
+    <symbol id="icon-library" viewBox="0 0 24 24">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path>
+    </symbol>
+
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"></path>
+      <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"></path>
+    </symbol>
+
+    <symbol id="icon-save" viewBox="0 0 24 24">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+      <path d="M17 21v-8H7v8"></path>
+      <path d="M7 3v5h8"></path>
+    </symbol>
+
+    <symbol id="icon-image" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+      <circle cx="8" cy="10" r="1.5"></circle>
+      <path d="M21 16l-5-5-4 4-2-2-5 5"></path>
+    </symbol>
+  </svg>
+
   <div class="app">
 
     <!-- ===================== BARRE DE NAVIGATION ===================== -->
@@ -28,14 +77,14 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-btn" data-page="dashboard"><span class="nav-icon">▦</span> Mes jeux</button>
-        <button class="nav-btn" data-page="apprentissage"><span class="nav-icon">🧠</span> Apprentissage</button>
-        <button class="nav-btn" data-page="revision"><span class="nav-icon">🔁</span> Révision</button>
-        <button class="nav-btn" data-page="ajouter"><span class="nav-icon">➕</span> Ajouter une carte</button>
-        <button class="nav-btn" data-page="bibliotheque"><span class="nav-icon">📚</span> Bibliothèque</button>
-        <button class="nav-btn" data-page="grammaire"><span class="nav-icon">📖</span> Grammaire</button>
-        <button class="nav-btn" data-page="sauvegarde"><span class="nav-icon">💾</span> Sauvegarde</button>
-        <button class="nav-btn" data-page="missing-images"><span class="nav-icon">IMG</span> Images manquantes</button>
+        <button class="nav-btn" data-page="dashboard"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-grid"></use></svg></span> Mes jeux</button>
+        <button class="nav-btn" data-page="apprentissage"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-bulb"></use></svg></span> Apprentissage</button>
+        <button class="nav-btn" data-page="revision"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-repeat"></use></svg></span> Révision</button>
+        <button class="nav-btn" data-page="ajouter"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-plus"></use></svg></span> Ajouter une carte</button>
+        <button class="nav-btn" data-page="bibliotheque"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-library"></use></svg></span> Bibliothèque</button>
+        <button class="nav-btn" data-page="grammaire"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-book"></use></svg></span> Grammaire</button>
+        <button class="nav-btn" data-page="sauvegarde"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-save"></use></svg></span> Sauvegarde</button>
+        <button class="nav-btn" data-page="missing-images"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-image"></use></svg></span> Images manquantes</button>
       </nav>
 
       <p class="sidebar-note">Fonctionne 100&nbsp;% en local 🔒<br>Aucune donnée n'est envoyée sur internet.</p>

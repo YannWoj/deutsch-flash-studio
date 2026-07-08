@@ -113,6 +113,7 @@ let replaceImportArmed = false;
 let imageInputVersion = 0;
 let lastImageTargetCardId = null;
 let skippedMissingImageIds = new Set();
+let longPressFiredAt = 0;             // timestamp du dernier long-press déclenché
 
 
 /* =========================================================
@@ -122,6 +123,63 @@ let skippedMissingImageIds = new Set();
 // Raccourci pratique : $("mon-id") au lieu de document.getElementById("mon-id")
 function $(id) {
   return document.getElementById(id);
+}
+
+function wasLongPressJustFired() {
+  return Date.now() - longPressFiredAt < 400;
+}
+
+function attachLongPress(element, callback, options = {}) {
+  const delay = options.delay || 450;
+  const moveTolerance = options.moveTolerance || 8;
+  let timer = null;
+  let startX = 0;
+  let startY = 0;
+
+  function isInteractiveTarget(target) {
+    return Boolean(target.closest('button, input, select, textarea, a, label, [role="button"]'));
+  }
+
+  function clearPress() {
+    clearTimeout(timer);
+    timer = null;
+    element.classList.remove("pressing");
+  }
+
+  element.addEventListener("pointerdown", (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (isInteractiveTarget(event.target)) return;
+
+    startX = event.clientX;
+    startY = event.clientY;
+    element.classList.add("pressing");
+
+    timer = setTimeout(() => {
+      timer = null;
+      longPressFiredAt = Date.now();
+      element.classList.remove("pressing");
+      if (navigator.vibrate) navigator.vibrate(10);
+      callback();
+    }, delay);
+  });
+
+  element.addEventListener("pointermove", (event) => {
+    if (!timer) return;
+    if (
+      Math.abs(event.clientX - startX) > moveTolerance ||
+      Math.abs(event.clientY - startY) > moveTolerance
+    ) {
+      clearPress();
+    }
+  });
+
+  element.addEventListener("pointerup", clearPress);
+  element.addEventListener("pointercancel", clearPress);
+  element.addEventListener("pointerleave", clearPress);
+
+  element.addEventListener("contextmenu", (event) => {
+    if (Date.now() - longPressFiredAt < 600) event.preventDefault();
+  });
 }
 
 // Date du jour au format "2026-07-05" (en heure locale, pas UTC)
@@ -1254,6 +1312,12 @@ function setupNavigation() {
   // - data-speak : lit un texte en allemand
   // - data-goto  : navigue vers une page
   document.addEventListener("click", (event) => {
+    if (wasLongPressJustFired()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const speakBtn = event.target.closest("[data-speak]");
     if (speakBtn) {
       speakGerman(speakBtn.dataset.speak);
@@ -1495,6 +1559,19 @@ function renderDecks(cards) {
       setDeckNameSelected(checkbox.dataset.deckGridSelect, checkbox.checked);
     });
   });
+
+  container.querySelectorAll("[data-open-deck]").forEach((el) => {
+    attachLongPress(el, () => {
+      const name = el.dataset.openDeck;
+      if (!deckGridSelectionMode) {
+        deckGridSelectionMode = true;
+        selectedDeckNames.add(name);
+        refreshDashboard();
+        return;
+      }
+      setDeckNameSelected(name, !selectedDeckNames.has(name));
+    });
+  });
 }
 
 /* --- Sélection multiple de jeux sur le dashboard --- */
@@ -1675,8 +1752,25 @@ async function renderDeckDetail() {
   });
   grid.querySelectorAll("[data-deck-select-card]").forEach((cardEl) => {
     cardEl.addEventListener("click", (event) => {
+      if (wasLongPressJustFired()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!deckDetailSelectionMode || event.target.closest("button, input, select, textarea, a")) return;
       const id = cardEl.dataset.deckSelectCard;
+      setDeckCardSelected(id, !selectedDeckCardIds.has(id));
+      renderDeckDetail();
+    });
+
+    attachLongPress(cardEl, () => {
+      const id = cardEl.dataset.deckSelectCard;
+      if (!deckDetailSelectionMode) {
+        deckDetailSelectionMode = true;
+        selectedDeckCardIds.add(id);
+        renderDeckDetail();
+        return;
+      }
       setDeckCardSelected(id, !selectedDeckCardIds.has(id));
       renderDeckDetail();
     });
