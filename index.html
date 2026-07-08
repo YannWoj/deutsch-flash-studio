@@ -112,6 +112,7 @@
           <div class="deck-bulk-actions">
             <button class="btn btn-ghost btn-small" id="btn-deck-grid-select-all" type="button">Tout sélectionner</button>
             <button class="btn btn-ghost btn-small" id="btn-deck-grid-clear" type="button">Désélectionner</button>
+            <button class="btn btn-primary btn-small" id="btn-deck-grid-study" type="button">Étudier la sélection</button>
             <button class="btn btn-danger-action btn-small" id="btn-deck-grid-delete" type="button">🗑️ Supprimer la sélection</button>
           </div>
         </div>
@@ -280,6 +281,7 @@
           <div class="review-session-mini-header">
             <span id="review-session-label"></span>
             <strong class="review-counter" id="review-counter"></strong>
+            <button class="btn btn-ghost btn-small review-exit-btn" id="btn-review-exit" type="button">Quitter</button>
           </div>
 
           <div class="review-card">
@@ -568,7 +570,7 @@
     <div class="modal-panel study-mode-panel" role="dialog" aria-modal="true" aria-labelledby="study-mode-title">
       <button class="modal-close-btn" id="btn-close-study-mode" type="button" aria-label="Fermer">×</button>
       <h2 id="study-mode-title">Étudier</h2>
-      <p class="muted study-mode-subtitle">Choisis comment tu veux travailler ce jeu.</p>
+      <p class="muted study-mode-subtitle" id="study-mode-subtitle">Choisis comment tu veux travailler ce jeu.</p>
 
       <div class="study-mode-list">
         <button class="study-mode-option" type="button" data-study-mode="due" id="study-option-due">

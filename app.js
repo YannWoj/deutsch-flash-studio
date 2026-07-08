@@ -75,11 +75,12 @@ let editingCard = null;              // carte en cours de modification, ou null 
 let imageMarkedForRemoval = false;   // indique que l'image actuelle doit être retirée en édition
 let learningCards = [];              // cartes visibles dans le mode Apprentissage
 let currentLearningIndex = 0;         // index de la carte affichée en Apprentissage
-let pendingLearningCategory = null;   // catégorie choisie depuis le dashboard
-let currentReviewCategory = null;     // null = révision globale, sinon deck ciblé
+let pendingLearningCategory = null;   // null = tout, string = un deck, array = plusieurs decks
+let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks
+let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks
 let currentReviewMode = "classic";
 let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
-let pendingStudyScope = null;         // null = toutes les cartes, sinon deck ciblé dans le modal Étudier
+let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks
 let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
 let deckDetailSearch = "";
@@ -139,6 +140,60 @@ function isNewCard(card) {
 
 function cardDeckName(card) {
   return card.category || "Général";
+}
+
+function normalizeScope(scope) {
+  if (Array.isArray(scope)) {
+    const clean = scope.map((name) => String(name || "").trim()).filter(Boolean);
+    return clean.length ? [...new Set(clean)] : null;
+  }
+  const name = String(scope || "").trim();
+  return name ? name : null;
+}
+
+function cardInScope(card, scope) {
+  const normalizedScope = normalizeScope(scope);
+  if (!normalizedScope) return true;
+  const deckName = cardDeckName(card);
+  if (Array.isArray(normalizedScope)) return normalizedScope.includes(deckName);
+  return deckName === normalizedScope;
+}
+
+function scopeHasDeck(scope, deckName) {
+  const normalizedScope = normalizeScope(scope);
+  if (!normalizedScope) return false;
+  if (Array.isArray(normalizedScope)) return normalizedScope.includes(deckName);
+  return normalizedScope === deckName;
+}
+
+function removeDeckFromScope(scope, deckName) {
+  const normalizedScope = normalizeScope(scope);
+  if (!normalizedScope) return null;
+  if (Array.isArray(normalizedScope)) {
+    const next = normalizedScope.filter((name) => name !== deckName);
+    return next.length ? next : null;
+  }
+  return normalizedScope === deckName ? null : normalizedScope;
+}
+
+function renameDeckInScope(scope, oldName, newName) {
+  const normalizedScope = normalizeScope(scope);
+  if (!normalizedScope) return null;
+  if (Array.isArray(normalizedScope)) {
+    return normalizeScope(normalizedScope.map((name) => name === oldName ? newName : name));
+  }
+  return normalizedScope === oldName ? newName : normalizedScope;
+}
+
+function scopeLabel(scope) {
+  const normalizedScope = normalizeScope(scope);
+  if (!normalizedScope) return "toutes les catégories";
+  if (Array.isArray(normalizedScope)) return normalizedScope.join(" + ");
+  return normalizedScope;
+}
+
+function isMultiScope(scope) {
+  return Array.isArray(normalizeScope(scope));
 }
 
 function cardSubcategoryName(card) {
@@ -1111,6 +1166,7 @@ const PAGES = ["dashboard", "deck-detail", "apprentissage", "revision", "ajouter
 function showPage(name) {
   if (!PAGES.includes(name)) name = "dashboard";
   hideDeckActionMenu();
+  if (name !== "revision") setReviewSessionActive(false);
 
   // Affiche la bonne section, cache les autres
   PAGES.forEach((page) => {
@@ -1158,6 +1214,7 @@ function setupNavigation() {
   $("btn-select-decks").addEventListener("click", toggleDeckGridSelectionMode);
   $("btn-deck-grid-select-all").addEventListener("click", selectAllDecks);
   $("btn-deck-grid-clear").addEventListener("click", clearDeckGridSelection);
+  $("btn-deck-grid-study").addEventListener("click", studySelectedDecks);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
   $("btn-study-all").addEventListener("click", () => openStudyModeModal(null));
   $("btn-close-study-mode").addEventListener("click", closeStudyModeModal);
@@ -1472,6 +1529,7 @@ function updateDeckGridBulkBar() {
 
   const count = selectedDeckNames.size;
   $("deck-grid-bulk-count").textContent = count + " jeu" + (count > 1 ? "x" : "") + " sélectionné" + (count > 1 ? "s" : "");
+  $("btn-deck-grid-study").disabled = count === 0;
   $("btn-deck-grid-delete").disabled = count === 0;
   $("btn-deck-grid-clear").disabled = count === 0;
   $("btn-deck-grid-select-all").disabled = visibleDeckNames.length === 0;
@@ -1484,6 +1542,19 @@ function selectAllDecks() {
 
 function clearDeckGridSelection() {
   selectedDeckNames.clear();
+  refreshDashboard();
+}
+
+function studySelectedDecks() {
+  const scope = normalizeScope(Array.from(selectedDeckNames));
+  if (!scope) {
+    toast("Sélectionne au moins un jeu.");
+    return;
+  }
+  openStudyModeModal(scope);
+  deckGridSelectionMode = false;
+  selectedDeckNames.clear();
+  updateDeckGridBulkBar();
   refreshDashboard();
 }
 
@@ -1887,11 +1958,9 @@ function setStudyOptionDisabled(id, disabled) {
   option.setAttribute("aria-disabled", disabled ? "true" : "false");
 }
 
-async function getStudyScopeStats(deckName = null) {
+async function getStudyScopeStats(scope = null) {
   const cards = await getAllCards();
-  const scopedCards = deckName
-    ? cards.filter((card) => cardDeckName(card) === deckName)
-    : cards;
+  const scopedCards = cards.filter((card) => cardInScope(card, scope));
   const today = todayISO();
   return {
     cards: scopedCards,
@@ -1905,14 +1974,15 @@ async function getStudyScopeStats(deckName = null) {
   };
 }
 
-async function openStudyModeModal(deckName = null) {
-  pendingStudyScope = deckName || null;
+async function openStudyModeModal(scope = null) {
+  pendingStudyScope = normalizeScope(scope);
   const stats = await getStudyScopeStats(pendingStudyScope);
   const modal = $("study-mode-modal");
 
-  $("study-mode-title").textContent = pendingStudyScope
-    ? "Étudier : " + pendingStudyScope
-    : "Étudier : toutes les cartes";
+  $("study-mode-title").textContent = "Étudier : " + scopeLabel(pendingStudyScope);
+  $("study-mode-subtitle").textContent = pendingStudyScope
+    ? (isMultiScope(pendingStudyScope) ? "Choisis comment tu veux travailler cette sélection." : "Choisis comment tu veux travailler ce jeu.")
+    : "Choisis comment tu veux travailler toutes tes cartes.";
   $("study-due-badge").textContent = studyCardCountLabel(stats.dueCards);
   $("study-multiple-badge").textContent = stats.distinctGermanWords >= 4 ? "Quiz" : "4 cartes minimum";
 
@@ -1931,11 +2001,11 @@ function closeStudyModeModal() {
 }
 
 function handleStudyModeChoice(mode) {
-  const deckName = pendingStudyScope || null;
+  const scope = normalizeScope(pendingStudyScope);
   const dueCards = Number($("study-mode-modal").dataset.dueCards || "0");
 
   if (mode === "due") {
-    currentReviewCategory = deckName;
+    currentReviewCategory = scope;
     reviewSessionType = "due";
     currentReviewMode = "classic";
     closeStudyModeModal();
@@ -1944,7 +2014,7 @@ function handleStudyModeChoice(mode) {
   }
 
   if (mode === "free") {
-    currentReviewCategory = deckName;
+    currentReviewCategory = scope;
     reviewSessionType = "free";
     currentReviewMode = "classic";
     closeStudyModeModal();
@@ -1953,7 +2023,7 @@ function handleStudyModeChoice(mode) {
   }
 
   if (mode === "multiple") {
-    currentReviewCategory = deckName;
+    currentReviewCategory = scope;
     reviewSessionType = dueCards > 0 ? "due" : "free";
     currentReviewMode = "multiple";
     closeStudyModeModal();
@@ -1962,7 +2032,7 @@ function handleStudyModeChoice(mode) {
   }
 
   if (mode === "written") {
-    currentReviewCategory = deckName;
+    currentReviewCategory = scope;
     reviewSessionType = dueCards > 0 ? "due" : "free";
     currentReviewMode = "written";
     closeStudyModeModal();
@@ -1971,10 +2041,11 @@ function handleStudyModeChoice(mode) {
   }
 
   if (mode === "learning") {
-    if (deckName) {
-      pendingLearningCategory = deckName;
+    if (scope) {
+      pendingLearningCategory = scope;
     } else {
       pendingLearningCategory = null;
+      currentLearningScope = null;
       $("learning-filter-category").value = "";
       $("learning-filter-subcategory").value = "";
       currentLearningIndex = 0;
@@ -2106,9 +2177,10 @@ async function renameDeck(oldName) {
     await saveCard(card);
   }
 
-  if (currentReviewCategory === oldName) currentReviewCategory = cleanName;
-  if (pendingLearningCategory === oldName) pendingLearningCategory = cleanName;
-  if (pendingStudyScope === oldName) pendingStudyScope = cleanName;
+  currentReviewCategory = renameDeckInScope(currentReviewCategory, oldName, cleanName);
+  pendingLearningCategory = renameDeckInScope(pendingLearningCategory, oldName, cleanName);
+  currentLearningScope = renameDeckInScope(currentLearningScope, oldName, cleanName);
+  pendingStudyScope = renameDeckInScope(pendingStudyScope, oldName, cleanName);
   if (currentDeckDetailCategory === oldName) currentDeckDetailCategory = cleanName;
   refreshAfterDeckChange();
   toast("Jeu renommé.");
@@ -2133,9 +2205,10 @@ async function removeDeckData(deckName, allCards) {
   deleteCustomDeckByName(deckName);
 
   // Nettoyage des états qui pointaient vers ce deck
-  if (currentReviewCategory === deckName) currentReviewCategory = null;
-  if (pendingLearningCategory === deckName) pendingLearningCategory = null;
-  if (pendingStudyScope === deckName) pendingStudyScope = null;
+  currentReviewCategory = removeDeckFromScope(currentReviewCategory, deckName);
+  pendingLearningCategory = removeDeckFromScope(pendingLearningCategory, deckName);
+  currentLearningScope = removeDeckFromScope(currentLearningScope, deckName);
+  pendingStudyScope = removeDeckFromScope(pendingStudyScope, deckName);
   if (currentDeckDetailCategory === deckName) {
     currentDeckDetailCategory = null;
     if ($("page-deck-detail").classList.contains("active")) showPage("dashboard");
@@ -2183,9 +2256,8 @@ function refreshAfterDeckChange() {
 
 async function startReviewSession() {
   const cards = await getAllCards();
-  const scopedCards = currentReviewCategory
-    ? cards.filter((card) => cardDeckName(card) === currentReviewCategory)
-    : cards;
+  currentReviewCategory = normalizeScope(currentReviewCategory);
+  const scopedCards = cards.filter((card) => cardInScope(card, currentReviewCategory));
   failedOnceInSession = new Set();
   reviewSessionStats = { seen: 0, correct: 0, wrong: 0, failedCardIds: [], failedCards: [] };
   isGrading = false;
@@ -2199,12 +2271,14 @@ async function startReviewSession() {
   if (cards.length === 0) {
     showReviewEmpty("Ta bibliothèque est vide. Commence par ajouter quelques cartes ! 📝");
   } else if (scopedCards.length === 0 && currentReviewCategory) {
-    showReviewEmpty("Aucune carte dans ce deck.");
+    showReviewEmpty(isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.");
   } else if (reviewQueue.length === 0) {
     if (reviewSessionType === "due") {
       showReviewEmpty("Aucune carte prévue aujourd'hui. Tu peux lancer Entraînement libre pour réviser quand même.", scopedCards.length > 0);
     } else {
-      showReviewEmpty(currentReviewCategory ? "Aucune carte dans ce deck." : "Aucune carte à entraîner.");
+      showReviewEmpty(currentReviewCategory
+        ? (isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.")
+        : "Aucune carte à entraîner.");
     }
   } else {
     showNextReviewCard();
@@ -2213,9 +2287,7 @@ async function startReviewSession() {
 
 function updateReviewSetup(scopedCards) {
   const sessionLabel = reviewSessionType === "free" ? "Entraînement libre" : "Révision du jour";
-  $("review-scope-title").textContent = currentReviewCategory
-    ? sessionLabel + " : " + currentReviewCategory
-    : sessionLabel + " : toutes les catégories";
+  $("review-scope-title").textContent = sessionLabel + " : " + scopeLabel(currentReviewCategory);
 
   const distinctChoices = new Set(scopedCards.map((card) => fullWord(card))).size;
   const multipleAvailable = distinctChoices >= 4;
@@ -2240,16 +2312,28 @@ function updateReviewSetup(scopedCards) {
 
 function setReviewSessionActive(active) {
   $("page-revision").classList.toggle("session-active", active);
+  document.body.classList.toggle("review-session-active", active);
 }
 
 function reviewSessionLabelText() {
   const parts = [
     reviewSessionType === "free" ? "Entraînement libre" : "Révision du jour",
-    currentReviewCategory || "toutes les catégories",
+    scopeLabel(currentReviewCategory),
   ];
   if (currentReviewMode === "multiple") parts.push("Choix multiple");
   if (currentReviewMode === "written") parts.push("Écrit");
   return parts.join(" · ");
+}
+
+function exitReviewSession() {
+  reviewQueue = [];
+  currentCard = null;
+  failedOnceInSession = new Set();
+  reviewSessionStats = null;
+  isGrading = false;
+  setGradeButtonsDisabled(false);
+  setReviewSessionActive(false);
+  showPage("dashboard");
 }
 
 function showReviewEmpty(message, canStartFreePractice = false) {
@@ -2606,6 +2690,7 @@ async function handleGrade(grade) {
 
 function setupReviewPage() {
   $("btn-show-answer").addEventListener("click", showAnswer);
+  $("btn-review-exit").addEventListener("click", exitReviewSession);
   $("btn-review-all").addEventListener("click", () => {
     currentReviewCategory = null;
     reviewSessionType = "due";
@@ -3396,7 +3481,8 @@ async function renderLearningPage(resetIndex = false) {
   updateLearningSubcategoryFilter(allCards);
 
   if (pendingLearningCategory) {
-    $("learning-filter-category").value = pendingLearningCategory;
+    currentLearningScope = normalizeScope(pendingLearningCategory);
+    $("learning-filter-category").value = Array.isArray(currentLearningScope) ? "" : currentLearningScope;
     $("learning-filter-subcategory").value = "";
     pendingLearningCategory = null;
     resetIndex = true;
@@ -3411,9 +3497,10 @@ async function renderLearningPage(resetIndex = false) {
 
   learningCards = allCards
     .filter((card) => {
+      const matchesScope = cardInScope(card, currentLearningScope);
       const matchesCategory = !category || cardDeckName(card) === category;
       const matchesSubcategory = !subcategory || (subcategory === "__none__" ? !card.subcategory : card.subcategory === subcategory);
-      return matchesCardQuery(card, query) && matchesCategory && matchesSubcategory;
+      return matchesCardQuery(card, query) && matchesScope && matchesCategory && matchesSubcategory;
     })
     .sort((a, b) => fullWord(a).localeCompare(fullWord(b), "de"));
 
@@ -3512,14 +3599,18 @@ function updateLearningSubcategoryFilter(cards) {
   const select = $("learning-filter-subcategory");
   const currentValue = select.value;
   const category = $("learning-filter-category").value;
-  const scopedCards = category ? cards.filter((card) => cardDeckName(card) === category) : cards;
+  const scopedCards = cards.filter((card) => cardInScope(card, currentLearningScope))
+    .filter((card) => !category || cardDeckName(card) === category);
   fillSubcategorySelect(select, scopedCards, currentValue, category);
 }
 
 function setupLearningPage() {
   const debouncedRenderLearning = debounce(() => renderLearningPage(true), 150);
   $("learning-search").addEventListener("input", debouncedRenderLearning);
-  $("learning-filter-category").addEventListener("change", () => renderLearningPage(true));
+  $("learning-filter-category").addEventListener("change", () => {
+    currentLearningScope = null;
+    renderLearningPage(true);
+  });
   $("learning-filter-subcategory").addEventListener("change", () => renderLearningPage(true));
   $("btn-learning-shuffle").addEventListener("click", () => {
     if (learningCards.length < 2) return;
