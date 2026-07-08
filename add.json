@@ -1,0 +1,435 @@
+{
+   "version": 1,
+   "exportedAt": "2026-07-08",
+   "cards": [
+      {
+         "id": "card_035",
+         "article": "",
+         "de": "verstehen",
+         "plural": "",
+         "fr": "Comprendre",
+         "exampleDe": "Ich verstehe nicht.",
+         "exampleFr": "Je ne comprends pas.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person understanding lightbulb simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_036",
+         "article": "",
+         "de": "sehr",
+         "plural": "",
+         "fr": "Très",
+         "exampleDe": "Das ist sehr gut.",
+         "exampleFr": "C’est très bien.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Adverbes",
+         "imageQuery": "very intensity icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_037",
+         "article": "das",
+         "de": "Meer",
+         "plural": "Meere",
+         "fr": "La mer",
+         "exampleDe": "Das Meer ist blau.",
+         "exampleFr": "La mer est bleue.",
+         "level": "",
+         "category": "Nature",
+         "subcategory": "Paysages",
+         "imageQuery": "sea ocean waves simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_038",
+         "article": "",
+         "de": "mehr",
+         "plural": "",
+         "fr": "Plus (comme more en anglais)",
+         "exampleDe": "Ich will mehr Wasser.",
+         "exampleFr": "Je veux plus d’eau.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Adverbes",
+         "imageQuery": "more plus icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_039",
+         "article": "",
+         "de": "stehen",
+         "plural": "",
+         "fr": "Être debout (immobile)",
+         "exampleDe": "Ich stehe hier.",
+         "exampleFr": "Je suis debout ici.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person standing still simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_040",
+         "article": "",
+         "de": "mich",
+         "plural": "",
+         "fr": "Me / moi (COD)",
+         "exampleDe": "Siehst du mich?",
+         "exampleFr": "Tu me vois ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "pointing at self icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_041",
+         "article": "",
+         "de": "mir",
+         "plural": "",
+         "fr": "Me / à moi (COI)",
+         "exampleDe": "Kannst du mir helfen?",
+         "exampleFr": "Peux-tu m’aider ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Pronoms",
+         "imageQuery": "giving hand to person icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_042",
+         "article": "",
+         "de": "Es tut mir leid",
+         "plural": "",
+         "fr": "Je suis désolé(e)",
+         "exampleDe": "Es tut mir leid, ich komme nicht.",
+         "exampleFr": "Je suis désolé, je ne viens pas.",
+         "level": "",
+         "category": "Expressions",
+         "subcategory": "Politesse",
+         "imageQuery": "sorry apology gesture simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_043",
+         "article": "",
+         "de": "aber",
+         "plural": "",
+         "fr": "Mais",
+         "exampleDe": "Ich will, aber ich kann nicht.",
+         "exampleFr": "Je veux, mais je ne peux pas.",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Conjonctions",
+         "imageQuery": "contrast opposite arrows icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_044",
+         "article": "",
+         "de": "lange",
+         "plural": "",
+         "fr": "Longtemps",
+         "exampleDe": "Ich bleibe nicht lange.",
+         "exampleFr": "Je ne reste pas longtemps.",
+         "level": "",
+         "category": "Temps",
+         "subcategory": "Jours et moments",
+         "imageQuery": "long duration clock icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_045",
+         "article": "",
+         "de": "wie lange",
+         "plural": "",
+         "fr": "Combien de temps",
+         "exampleDe": "Wie lange bleibst du?",
+         "exampleFr": "Combien de temps restes-tu ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Mots interrogatifs",
+         "imageQuery": "duration question mark clock icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_046",
+         "article": "",
+         "de": "wie",
+         "plural": "",
+         "fr": "Comment",
+         "exampleDe": "Wie geht es dir?",
+         "exampleFr": "Comment vas-tu ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Mots interrogatifs",
+         "imageQuery": "how question mark icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_047",
+         "article": "",
+         "de": "müssen",
+         "plural": "",
+         "fr": "Devoir (obligation)",
+         "exampleDe": "Ich muss jetzt gehen.",
+         "exampleFr": "Je dois partir maintenant.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes modaux",
+         "imageQuery": "must obligation checklist icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_048",
+         "article": "",
+         "de": "finden",
+         "plural": "",
+         "fr": "Trouver",
+         "exampleDe": "Ich finde das gut.",
+         "exampleFr": "Je trouve ça bien.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "person finding magnifying glass simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_049",
+         "article": "",
+         "de": "wissen",
+         "plural": "",
+         "fr": "Savoir",
+         "exampleDe": "Ich weiß nicht.",
+         "exampleFr": "Je ne sais pas.",
+         "level": "",
+         "category": "Verbes",
+         "subcategory": "Verbes essentiels",
+         "imageQuery": "knowledge brain icon simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_050",
+         "article": "",
+         "de": "weiß",
+         "plural": "",
+         "fr": "Blanc",
+         "exampleDe": "Das Haus ist weiß.",
+         "exampleFr": "La maison est blanche.",
+         "level": "",
+         "category": "Adjectifs",
+         "subcategory": "Couleurs",
+         "imageQuery": "white color paint swatch simple illustration",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      },
+      {
+         "id": "card_051",
+         "article": "",
+         "de": "wo",
+         "plural": "",
+         "fr": "Où",
+         "exampleDe": "Wo bist du?",
+         "exampleFr": "Où es-tu ?",
+         "level": "",
+         "category": "Grammaire",
+         "subcategory": "Mots interrogatifs",
+         "imageQuery": "where location question icon",
+         "favorite": false,
+         "imageId": null,
+         "createdAt": "2026-07-08",
+         "updatedAt": "2026-07-08",
+         "srs": {
+            "box": 1,
+            "nextReview": "2026-07-08",
+            "correctCount": 0,
+            "wrongCount": 0
+         }
+      }
+   ],
+   "reviews": [],
+   "images": [],
+   "customDecks": [
+      {
+         "id": "deck_006",
+         "name": "Adjectifs",
+         "color": "red",
+         "emoji": "🎨",
+         "createdAt": "2026-07-08"
+      },
+      {
+         "id": "deck_007",
+         "name": "Nature",
+         "color": "green",
+         "emoji": "🌊",
+         "createdAt": "2026-07-08"
+      }
+   ],
+   "customSubcategories": [
+      {
+         "id": "sub_016",
+         "category": "Grammaire",
+         "name": "Adverbes",
+         "createdAt": "2026-07-08"
+      },
+      {
+         "id": "sub_017",
+         "category": "Adjectifs",
+         "name": "Couleurs",
+         "createdAt": "2026-07-08"
+      },
+      {
+         "id": "sub_018",
+         "category": "Nature",
+         "name": "Paysages",
+         "createdAt": "2026-07-08"
+      }
+   ]
+}

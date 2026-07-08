@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -53,9 +53,7 @@
 
         <div class="deck-top-actions">
           <button class="btn btn-primary btn-large" id="btn-create-deck">+ Créer un jeu</button>
-          <button class="btn btn-ghost" id="btn-study-all-decks">Tout étudier</button>
-          <button class="btn btn-ghost" id="btn-train-all-decks">Tout entraîner</button>
-          <button class="btn btn-ghost" id="btn-review-all-decks">Tout réviser</button>
+          <button class="btn btn-ghost" id="btn-study-all" type="button">Étudier tout</button>
           <button class="btn btn-ghost" id="btn-select-decks" type="button">Sélectionner</button>
         </div>
 
@@ -139,9 +137,7 @@
         </div>
 
         <div class="panel deck-detail-actions">
-          <button class="btn btn-primary" id="btn-deck-detail-review" type="button">Révision du jour</button>
-          <button class="btn btn-ghost" id="btn-deck-detail-train" type="button">S'entraîner</button>
-          <button class="btn btn-ghost" id="btn-deck-detail-study" type="button">Tout étudier</button>
+          <button class="btn btn-primary" id="btn-deck-detail-study-modal" type="button">Étudier</button>
           <button class="btn btn-ghost" id="btn-deck-detail-add" type="button">+ Ajouter une carte</button>
           <button class="btn btn-ghost" id="btn-deck-detail-appearance" type="button">Modifier apparence</button>
           <button class="btn btn-ghost" id="btn-deck-detail-select" type="button">Sélectionner</button>
@@ -429,6 +425,25 @@
           <p>Toutes tes cartes, avec recherche et filtres.</p>
         </header>
 
+        <div class="library-stats-strip">
+          <div class="library-stat-mini">
+            <span>Total</span>
+            <strong id="library-stat-total">0</strong>
+          </div>
+          <div class="library-stat-mini">
+            <span>Mémorisées</span>
+            <strong id="library-stat-mastered">0</strong>
+          </div>
+          <div class="library-stat-mini">
+            <span>À réviser aujourd'hui</span>
+            <strong id="library-stat-due">0</strong>
+          </div>
+          <div class="library-stat-mini">
+            <span>Favoris</span>
+            <strong id="library-stat-favorites">0</strong>
+          </div>
+        </div>
+
         <div class="panel library-toolbar">
           <input id="search-input" type="search" placeholder="🔍 Rechercher un mot (allemand ou français)…">
           <select id="filter-category">
@@ -437,7 +452,25 @@
           <select id="filter-subcategory">
             <option value="">Toutes les sous-catégories</option>
           </select>
+          <select id="library-sort" aria-label="Trier la bibliothèque">
+            <option value="recent">Plus récentes</option>
+            <option value="az">A → Z allemand</option>
+            <option value="hard">Difficiles d'abord</option>
+            <option value="due">Prochaine révision</option>
+          </select>
           <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
+        </div>
+
+        <div class="library-toolbar-extra">
+          <div class="library-filter-chips" aria-label="Filtres rapides">
+            <button class="library-filter-chip" id="library-filter-favorites" type="button">♥ Favoris</button>
+            <button class="library-filter-chip" id="library-filter-no-image" type="button">Sans image</button>
+            <button class="library-filter-chip" id="library-filter-due" type="button">À réviser</button>
+          </div>
+          <div class="library-view-toggle" aria-label="Affichage bibliothèque">
+            <button class="btn btn-small" id="library-view-grid" type="button">▦ Grille</button>
+            <button class="btn btn-small" id="library-view-list" type="button">☰ Liste</button>
+          </div>
         </div>
 
         <p id="library-count" class="muted"></p>
@@ -471,103 +504,19 @@
       <section id="page-grammaire" class="page">
         <header class="page-header">
           <h1>Grammaire</h1>
-          <p>Les bases indispensables, expliquées simplement. Clique sur 🔊 pour écouter les exemples.</p>
+          <p>Cas, conjugaison et verbes irréguliers, reliés à tes cartes quand c'est utile.</p>
         </header>
 
-        <div class="lessons-grid">
-
-          <article class="panel lesson">
-            <h2>🧩 der / die / das</h2>
-            <p>Chaque nom allemand a un genre&nbsp;: masculin (<span class="art-der">der</span>), féminin (<span class="art-die">die</span>) ou neutre (<span class="art-das">das</span>). Il n'est pas toujours logique, donc apprends <strong>toujours l'article avec le mot</strong>.</p>
-            <ul>
-              <li>Mots en <strong>-ung, -heit, -keit, -tion</strong> → <span class="art-die">die</span> (die Zeitung)</li>
-              <li>Mots en <strong>-chen, -lein</strong> → <span class="art-das">das</span> (das Mädchen… même pour «&nbsp;la fille&nbsp;»&nbsp;!)</li>
-              <li>Jours, mois, saisons → <span class="art-der">der</span> (der Montag)</li>
-            </ul>
-            <p class="example-de">Beispiel&nbsp;: das Mädchen
-              <button class="btn btn-icon btn-small" data-speak="das Mädchen" title="Écouter">🔊</button>
-            </p>
-          </article>
-
-          <article class="panel lesson">
-            <h2>🎯 L'accusatif</h2>
-            <p>C'est le cas du <strong>complément d'objet direct</strong> (COD). Bonne nouvelle&nbsp;: seul le masculin change.</p>
-            <ul>
-              <li><span class="art-der">der</span> → <strong>den</strong></li>
-              <li>die, das et le pluriel ne changent pas</li>
-            </ul>
-            <p class="example-de">Ich sehe <strong>den</strong> Hund. <span class="muted">(Je vois le chien.)</span>
-              <button class="btn btn-icon btn-small" data-speak="Ich sehe den Hund." title="Écouter">🔊</button>
-            </p>
-          </article>
-
-          <article class="panel lesson">
-            <h2>🎁 Le datif</h2>
-            <p>C'est le cas du <strong>complément d'objet indirect</strong>, et il est obligatoire après certaines prépositions&nbsp;: <em>mit, zu, bei, von, aus…</em></p>
-            <ul>
-              <li><span class="art-der">der</span> / <span class="art-das">das</span> → <strong>dem</strong></li>
-              <li><span class="art-die">die</span> → <strong>der</strong></li>
-              <li>pluriel → <strong>den</strong> (et le nom prend souvent un -n)</li>
-            </ul>
-            <p class="example-de">Ich fahre mit <strong>dem</strong> Bus. <span class="muted">(Je prends le bus.)</span>
-              <button class="btn btn-icon btn-small" data-speak="Ich fahre mit dem Bus." title="Écouter">🔊</button>
-            </p>
-          </article>
-
-          <article class="panel lesson">
-            <h2>👥 Les pluriels</h2>
-            <p>Il n'y a pas une seule règle, mais des familles de pluriels. C'est pour ça qu'on apprend <strong>le pluriel en même temps que le mot</strong>.</p>
-            <ul>
-              <li><strong>-e</strong>&nbsp;: der Hund → die Hund<strong>e</strong></li>
-              <li><strong>-en</strong>&nbsp;: die Katze → die Katze<strong>n</strong></li>
-              <li><strong>¨ + -er</strong>&nbsp;: das Haus → die H<strong>äu</strong>s<strong>er</strong></li>
-              <li><strong>-s</strong>&nbsp;: das Auto → die Auto<strong>s</strong></li>
-            </ul>
-            <p class="example-de">Beispiel&nbsp;: die Häuser
-              <button class="btn btn-icon btn-small" data-speak="das Haus, die Häuser" title="Écouter">🔊</button>
-            </p>
-          </article>
-
-          <article class="panel lesson">
-            <h2>💪 Les verbes forts</h2>
-            <p>Certains verbes changent de voyelle avec <strong>du</strong> et <strong>er/sie/es</strong>. Il faut les repérer et les apprendre.</p>
-            <ul>
-              <li>sprechen → du <strong>sprichst</strong></li>
-              <li>essen → du <strong>isst</strong></li>
-              <li>fahren → du <strong>fährst</strong></li>
-              <li>sehen → du <strong>siehst</strong></li>
-            </ul>
-            <p class="example-de">Du isst einen Apfel. <span class="muted">(Tu manges une pomme.)</span>
-              <button class="btn btn-icon btn-small" data-speak="Du isst einen Apfel." title="Écouter">🔊</button>
-            </p>
-          </article>
-
-          <article class="panel lesson">
-            <h2>💬 Phrases utiles</h2>
-            <ul class="phrase-list">
-              <li>Hallo, wie geht's? <span class="muted">— Salut, ça va&nbsp;?</span>
-                <button class="btn btn-icon btn-small" data-speak="Hallo, wie geht's?" title="Écouter">🔊</button></li>
-              <li>Ich verstehe nicht. <span class="muted">— Je ne comprends pas.</span>
-                <button class="btn btn-icon btn-small" data-speak="Ich verstehe nicht." title="Écouter">🔊</button></li>
-              <li>Kannst du das wiederholen, bitte? <span class="muted">— Tu peux répéter, s'il te plaît&nbsp;?</span>
-                <button class="btn btn-icon btn-small" data-speak="Kannst du das wiederholen, bitte?" title="Écouter">🔊</button></li>
-              <li>Danke schön! <span class="muted">— Merci beaucoup&nbsp;!</span>
-                <button class="btn btn-icon btn-small" data-speak="Danke schön!" title="Écouter">🔊</button></li>
-              <li>Tschüss, bis morgen! <span class="muted">— Salut, à demain&nbsp;!</span>
-                <button class="btn btn-icon btn-small" data-speak="Tschüss, bis morgen!" title="Écouter">🔊</button></li>
-            </ul>
-          </article>
-
+        <div class="grammar-tabs" role="tablist" aria-label="Sections de grammaire">
+          <button class="grammar-tab" id="grammar-tab-cases" type="button" data-grammar-tab="cases">Les cas</button>
+          <button class="grammar-tab" id="grammar-tab-my-verbs" type="button" data-grammar-tab="my-verbs">Mes verbes</button>
+          <button class="grammar-tab" id="grammar-tab-irregular" type="button" data-grammar-tab="irregular">Verbes irréguliers</button>
         </div>
 
-        <div class="panel">
-          <h2>✍️ Mini quiz</h2>
-          <p class="muted">Clique sur la bonne réponse, la correction est immédiate.</p>
-          <div id="quiz-container"></div>
-          <button class="btn btn-ghost" id="btn-restart-quiz">↻ Recommencer le quiz</button>
-        </div>
+        <div class="grammar-panel" id="grammar-panel-cases"></div>
+        <div class="grammar-panel hidden" id="grammar-panel-my-verbs"></div>
+        <div class="grammar-panel hidden" id="grammar-panel-irregular"></div>
       </section>
-
       <!-- ============ PAGE : SAUVEGARDE ============ -->
       <section id="page-sauvegarde" class="page">
         <header class="page-header">
@@ -610,6 +559,61 @@
       </section>
 
     </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="study-mode-modal">
+    <div class="modal-panel study-mode-panel" role="dialog" aria-modal="true" aria-labelledby="study-mode-title">
+      <button class="modal-close-btn" id="btn-close-study-mode" type="button" aria-label="Fermer">×</button>
+      <h2 id="study-mode-title">Étudier</h2>
+      <p class="muted study-mode-subtitle">Choisis comment tu veux travailler ce jeu.</p>
+
+      <div class="study-mode-list">
+        <button class="study-mode-option" type="button" data-study-mode="due" id="study-option-due">
+          <span class="study-mode-icon" aria-hidden="true">📅</span>
+          <span class="study-mode-content">
+            <span class="study-mode-title">Révision du jour</span>
+            <span class="study-mode-description">Les cartes prévues aujourd'hui. Fait avancer ta progression.</span>
+          </span>
+          <span class="study-mode-badge" id="study-due-badge">0 carte</span>
+        </button>
+
+        <button class="study-mode-option" type="button" data-study-mode="free" id="study-option-free">
+          <span class="study-mode-icon" aria-hidden="true">🔀</span>
+          <span class="study-mode-content">
+            <span class="study-mode-title">Entraînement libre</span>
+            <span class="study-mode-description">Toutes les cartes, dans le désordre. Ne modifie pas ta progression.</span>
+          </span>
+          <span class="study-mode-badge">Sans SRS</span>
+        </button>
+
+        <button class="study-mode-option" type="button" data-study-mode="multiple" id="study-option-multiple">
+          <span class="study-mode-icon" aria-hidden="true">✅</span>
+          <span class="study-mode-content">
+            <span class="study-mode-title">Choix multiple</span>
+            <span class="study-mode-description">4 réponses proposées, une seule est bonne.</span>
+          </span>
+          <span class="study-mode-badge" id="study-multiple-badge">Quiz</span>
+        </button>
+
+        <button class="study-mode-option" type="button" data-study-mode="written" id="study-option-written">
+          <span class="study-mode-icon" aria-hidden="true">✍️</span>
+          <span class="study-mode-content">
+            <span class="study-mode-title">Révision écrite</span>
+            <span class="study-mode-description">Tape l'article et le mot allemand toi-même.</span>
+          </span>
+          <span class="study-mode-badge">Production</span>
+        </button>
+
+        <button class="study-mode-option" type="button" data-study-mode="learning" id="study-option-learning">
+          <span class="study-mode-icon" aria-hidden="true">📖</span>
+          <span class="study-mode-content">
+            <span class="study-mode-title">Parcourir les cartes</span>
+            <span class="study-mode-description">Feuillette tranquillement, avec l'audio. Aucun impact.</span>
+          </span>
+          <span class="study-mode-badge">Lecture</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-backdrop hidden" id="deck-modal">
@@ -687,6 +691,7 @@
 
   <div id="toast" role="status"></div>
 
+  <script src="grammar-data.js"></script>
   <script src="app.js"></script>
   <script>
     // Enregistrement du service worker (mode hors ligne + installation sur mobile).
@@ -701,3 +706,4 @@
   </script>
 </body>
 </html>
+

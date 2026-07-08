@@ -34,6 +34,8 @@ const LS_SEEDED = "dfs_seeded";      // "les cartes d'exemple ont déjà été c
 const LS_DECKS = "dfs_custom_decks";
 const LS_SUBCATEGORIES = "dfs_custom_subcategories";
 const LS_LAST_EXPORT_AT = "dfs_last_export_at";
+const LS_LIBRARY_VIEW = "dfs_library_view";
+const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
 const DEFAULT_IMAGE = "data:image/svg+xml," + encodeURIComponent(
@@ -60,20 +62,6 @@ const SEED_CARDS = [
   { article: "",    de: "trinken", plural: "",       fr: "boire",  exampleDe: "Ich trinke Wasser.",   exampleFr: "Je bois de l'eau.",     level: "", category: "Verbes" },
 ];
 
-// Questions du mini quiz de grammaire
-const QUIZ_QUESTIONS = [
-  { sentence: "___ Hund ist klein.",       choices: ["der", "die", "das"],     answer: "der",   explain: "Hund (chien) est masculin → der Hund." },
-  { sentence: "___ Katze schläft.",        choices: ["der", "die", "das"],     answer: "die",   explain: "Katze (chat) est féminin → die Katze." },
-  { sentence: "___ Haus ist groß.",        choices: ["der", "die", "das"],     answer: "das",   explain: "Haus (maison) est neutre → das Haus." },
-  { sentence: "___ Mädchen singt.",        choices: ["der", "die", "das"],     answer: "das",   explain: "Les mots en -chen sont toujours neutres → das Mädchen." },
-  { sentence: "Ich sehe ___ Hund.",        choices: ["der", "den", "dem"],     answer: "den",   explain: "COD (accusatif) : le masculin der devient den." },
-  { sentence: "Ich trinke ___ Kaffee.",    choices: ["den", "dem", "das"],     answer: "den",   explain: "Kaffee est masculin et COD → accusatif : den Kaffee." },
-  { sentence: "Ich helfe ___ Frau.",       choices: ["die", "der", "den"],     answer: "der",   explain: "Le verbe helfen demande le datif : die devient der." },
-  { sentence: "Er fährt mit ___ Auto.",    choices: ["das", "dem", "der"],     answer: "dem",   explain: "mit demande toujours le datif : das devient dem." },
-  { sentence: "Du ___ Brot.",              choices: ["esse", "isst", "essen"], answer: "isst",  explain: "essen est un verbe fort : e → i à la 2e personne (du isst)." },
-  { sentence: "Ein Hund, zwei ___.",       choices: ["Hunde", "Hunden", "Hunds"], answer: "Hunde", explain: "Pluriel de Hund : die Hunde (famille des pluriels en -e)." },
-];
-
 // Variables globales de l'application
 let db = null;                       // connexion IndexedDB
 const imageUrlCache = new Map();     // imageId -> URL d'affichage (évite de recréer les URLs)
@@ -91,6 +79,7 @@ let pendingLearningCategory = null;   // catégorie choisie depuis le dashboard
 let currentReviewCategory = null;     // null = révision globale, sinon deck ciblé
 let currentReviewMode = "classic";
 let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
+let pendingStudyScope = null;         // null = toutes les cartes, sinon deck ciblé dans le modal Étudier
 let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
 let deckDetailSearch = "";
@@ -112,6 +101,10 @@ let pendingImageBlob = null;          // image compressée prête à être stock
 let isGrading = false;                // verrou anti double-clic en révision
 let libraryRenderVersion = 0;         // évite qu'un ancien rendu écrase un rendu récent
 let learningRenderVersion = 0;
+let libraryOnlyFavorites = false;
+let libraryOnlyNoImage = false;
+let libraryOnlyDue = false;
+let selectedGrammarVerb = null;
 let pendingImportFile = null;
 let pendingImportData = null;
 let pendingImportAnalysis = null;
@@ -1136,6 +1129,7 @@ function showPage(name) {
   if (name === "revision")     startReviewSession();
   if (name === "bibliotheque") renderLibrary();
   if (name === "missing-images") renderMissingImagesPage();
+  if (name === "grammaire")    renderGrammarPage();
   if (name === "ajouter") {
     refreshCategorySuggestions();
     refreshSubcategorySuggestions();
@@ -1162,21 +1156,14 @@ function setupNavigation() {
   $("btn-deck-grid-select-all").addEventListener("click", selectAllDecks);
   $("btn-deck-grid-clear").addEventListener("click", clearDeckGridSelection);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
-  $("btn-study-all-decks").addEventListener("click", () => {
-    $("learning-filter-category").value = "";
-    $("learning-filter-subcategory").value = "";
-    pendingLearningCategory = "";
-    showPage("apprentissage");
+  $("btn-study-all").addEventListener("click", () => openStudyModeModal(null));
+  $("btn-close-study-mode").addEventListener("click", closeStudyModeModal);
+  $("study-mode-modal").addEventListener("click", (event) => {
+    if (event.target === $("study-mode-modal")) closeStudyModeModal();
   });
-  $("btn-review-all-decks").addEventListener("click", () => {
-    currentReviewCategory = null;
-    reviewSessionType = "due";
-    showPage("revision");
-  });
-  $("btn-train-all-decks").addEventListener("click", () => {
-    currentReviewCategory = null;
-    reviewSessionType = "free";
-    showPage("revision");
+  $("study-mode-modal").addEventListener("click", (event) => {
+    const option = event.target.closest("[data-study-mode]");
+    if (option && !option.disabled) handleStudyModeChoice(option.dataset.studyMode);
   });
   $("btn-save-deck").addEventListener("click", saveDeckFromModal);
   $("btn-cancel-deck").addEventListener("click", closeDeckModal);
@@ -1194,6 +1181,7 @@ function setupNavigation() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       hideDeckActionMenu();
+      closeStudyModeModal();
       closeSubcategoryModal();
       closeImportPreviewModal();
     }
@@ -1214,24 +1202,11 @@ function setupNavigation() {
     const gotoBtn = event.target.closest("[data-goto]");
     if (gotoBtn) showPage(gotoBtn.dataset.goto);
 
-    const learningCategoryBtn = event.target.closest("[data-learning-category]");
-    if (learningCategoryBtn && !learningCategoryBtn.disabled) {
-      pendingLearningCategory = learningCategoryBtn.dataset.learningCategory;
-      showPage("apprentissage");
-    }
-
-    const reviewCategoryBtn = event.target.closest("[data-review-category]");
-    if (reviewCategoryBtn && !reviewCategoryBtn.disabled) {
-      currentReviewCategory = reviewCategoryBtn.dataset.reviewCategory;
-      reviewSessionType = "due";
-      showPage("revision");
-    }
-
-    const freeReviewCategoryBtn = event.target.closest("[data-free-review-category]");
-    if (freeReviewCategoryBtn && !freeReviewCategoryBtn.disabled) {
-      currentReviewCategory = freeReviewCategoryBtn.dataset.freeReviewCategory;
-      reviewSessionType = "free";
-      showPage("revision");
+    const studyDeckBtn = event.target.closest("[data-study-deck]");
+    if (studyDeckBtn && !studyDeckBtn.disabled) {
+      event.stopPropagation();
+      openStudyModeModal(studyDeckBtn.dataset.studyDeck);
+      return;
     }
 
     const addCardCategoryBtn = event.target.closest("[data-add-card-category]");
@@ -1271,24 +1246,9 @@ function setupNavigation() {
 function setupDeckDetailPage() {
   $("btn-deck-detail-back").addEventListener("click", () => showPage("dashboard"));
 
-  $("btn-deck-detail-review").addEventListener("click", () => {
+  $("btn-deck-detail-study-modal").addEventListener("click", () => {
     if (!currentDeckDetailCategory) return;
-    currentReviewCategory = currentDeckDetailCategory;
-    reviewSessionType = "due";
-    showPage("revision");
-  });
-
-  $("btn-deck-detail-train").addEventListener("click", () => {
-    if (!currentDeckDetailCategory) return;
-    currentReviewCategory = currentDeckDetailCategory;
-    reviewSessionType = "free";
-    showPage("revision");
-  });
-
-  $("btn-deck-detail-study").addEventListener("click", () => {
-    if (!currentDeckDetailCategory) return;
-    pendingLearningCategory = currentDeckDetailCategory;
-    showPage("apprentissage");
+    openStudyModeModal(currentDeckDetailCategory);
   });
 
   const addToCurrentDeck = () => {
@@ -1442,7 +1402,6 @@ function renderDecks(cards) {
     const percent = deck.total === 0 ? 0 : Math.round((deck.mastered / deck.total) * 100);
     const color = deck.color || accents[index % accents.length];
     const displayName = (deck.emoji ? deck.emoji + " " : "") + deck.name;
-    const reviewDisabled = deck.total === 0 || deck.due === 0 ? " disabled" : "";
     const emptyText = deck.total === 0 ? '<p class="deck-empty-note">Commence par ajouter une carte.</p>' : "";
     const selected = selectedDeckNames.has(deck.name);
     // En mode sélection : une checkbox remplace le menu "..."
@@ -1464,9 +1423,7 @@ function renderDecks(cards) {
           '<div class="progress-fill fill-blue" style="width:' + percent + '%"></div>' +
         '</div>' +
         '<div class="deck-actions">' +
-          '<button class="btn btn-primary btn-small" data-review-category="' + escapeHTML(deck.name) + '"' + reviewDisabled + '>Révision</button>' +
-          '<button class="btn btn-ghost btn-small" data-free-review-category="' + escapeHTML(deck.name) + '">S&apos;entraîner</button>' +
-          '<button class="btn btn-ghost btn-small" data-learning-category="' + escapeHTML(deck.name) + '">Tout étudier</button>' +
+          '<button class="btn btn-primary btn-small" type="button" data-study-deck="' + escapeHTML(deck.name) + '">Étudier</button>' +
           '<button class="btn btn-ghost btn-small" data-add-card-category="' + escapeHTML(deck.name) + '">+ Ajouter</button>' +
         '</div>' +
       '</article>'
@@ -1916,6 +1873,114 @@ async function deckHasCards(name) {
   return cards.some((card) => cardDeckName(card) === name);
 }
 
+function studyCardCountLabel(count) {
+  return count + " " + (count > 1 ? "cartes" : "carte");
+}
+
+function setStudyOptionDisabled(id, disabled) {
+  const option = $(id);
+  option.disabled = disabled;
+  option.classList.toggle("disabled", disabled);
+  option.setAttribute("aria-disabled", disabled ? "true" : "false");
+}
+
+async function getStudyScopeStats(deckName = null) {
+  const cards = await getAllCards();
+  const scopedCards = deckName
+    ? cards.filter((card) => cardDeckName(card) === deckName)
+    : cards;
+  const today = todayISO();
+  return {
+    cards: scopedCards,
+    totalCards: scopedCards.length,
+    dueCards: scopedCards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length,
+    distinctGermanWords: new Set(
+      scopedCards
+        .map((card) => String(card.de || "").trim().toLowerCase())
+        .filter(Boolean)
+    ).size,
+  };
+}
+
+async function openStudyModeModal(deckName = null) {
+  pendingStudyScope = deckName || null;
+  const stats = await getStudyScopeStats(pendingStudyScope);
+  const modal = $("study-mode-modal");
+
+  $("study-mode-title").textContent = pendingStudyScope
+    ? "Étudier : " + pendingStudyScope
+    : "Étudier : toutes les cartes";
+  $("study-due-badge").textContent = studyCardCountLabel(stats.dueCards);
+  $("study-multiple-badge").textContent = stats.distinctGermanWords >= 4 ? "Quiz" : "4 cartes minimum";
+
+  modal.dataset.dueCards = String(stats.dueCards);
+  modal.dataset.totalCards = String(stats.totalCards);
+  modal.dataset.distinctGermanWords = String(stats.distinctGermanWords);
+
+  setStudyOptionDisabled("study-option-due", stats.dueCards === 0);
+  setStudyOptionDisabled("study-option-multiple", stats.distinctGermanWords < 4);
+
+  modal.classList.remove("hidden");
+}
+
+function closeStudyModeModal() {
+  $("study-mode-modal").classList.add("hidden");
+}
+
+function handleStudyModeChoice(mode) {
+  const deckName = pendingStudyScope || null;
+  const dueCards = Number($("study-mode-modal").dataset.dueCards || "0");
+
+  if (mode === "due") {
+    currentReviewCategory = deckName;
+    reviewSessionType = "due";
+    currentReviewMode = "classic";
+    closeStudyModeModal();
+    showPage("revision");
+    return;
+  }
+
+  if (mode === "free") {
+    currentReviewCategory = deckName;
+    reviewSessionType = "free";
+    currentReviewMode = "classic";
+    closeStudyModeModal();
+    showPage("revision");
+    return;
+  }
+
+  if (mode === "multiple") {
+    currentReviewCategory = deckName;
+    reviewSessionType = dueCards > 0 ? "due" : "free";
+    currentReviewMode = "multiple";
+    closeStudyModeModal();
+    showPage("revision");
+    return;
+  }
+
+  if (mode === "written") {
+    currentReviewCategory = deckName;
+    reviewSessionType = dueCards > 0 ? "due" : "free";
+    currentReviewMode = "written";
+    closeStudyModeModal();
+    showPage("revision");
+    return;
+  }
+
+  if (mode === "learning") {
+    if (deckName) {
+      pendingLearningCategory = deckName;
+    } else {
+      pendingLearningCategory = null;
+      $("learning-filter-category").value = "";
+      $("learning-filter-subcategory").value = "";
+      currentLearningIndex = 0;
+    }
+    closeStudyModeModal();
+    showPage("apprentissage");
+  }
+}
+
 function openDeckModal(mode, deckName = "") {
   const deck = findCustomDeckByName(deckName) || { name: deckName, color: "gold", emoji: "" };
   deckModalMode = mode;
@@ -1962,9 +2027,7 @@ function showDeckActionMenu(deckName, anchorButton) {
     '<button type="button" data-deck-action="rename">Renommer</button>' +
     '<button type="button" data-deck-action="appearance">Modifier apparence</button>' +
     '<button type="button" data-deck-action="add">Ajouter une carte</button>' +
-    '<button type="button" data-deck-action="study">Tout étudier</button>' +
-    '<button type="button" data-deck-action="train">S&apos;entraîner</button>' +
-    '<button type="button" data-deck-action="review">Réviser</button>' +
+    '<button type="button" data-deck-action="study">Étudier</button>' +
     '<button type="button" data-deck-action="delete">Supprimer le jeu</button>';
   menu.classList.remove("hidden");
 
@@ -2001,20 +2064,7 @@ async function handleDeckAction(action, deckName) {
     return;
   }
   if (action === "study") {
-    pendingLearningCategory = deckName;
-    showPage("apprentissage");
-    return;
-  }
-  if (action === "review") {
-    currentReviewCategory = deckName;
-    reviewSessionType = "due";
-    showPage("revision");
-    return;
-  }
-  if (action === "train") {
-    currentReviewCategory = deckName;
-    reviewSessionType = "free";
-    showPage("revision");
+    openStudyModeModal(deckName);
     return;
   }
   if (action === "appearance") {
@@ -2055,6 +2105,7 @@ async function renameDeck(oldName) {
 
   if (currentReviewCategory === oldName) currentReviewCategory = cleanName;
   if (pendingLearningCategory === oldName) pendingLearningCategory = cleanName;
+  if (pendingStudyScope === oldName) pendingStudyScope = cleanName;
   if (currentDeckDetailCategory === oldName) currentDeckDetailCategory = cleanName;
   refreshAfterDeckChange();
   toast("Jeu renommé.");
@@ -2081,6 +2132,7 @@ async function removeDeckData(deckName, allCards) {
   // Nettoyage des états qui pointaient vers ce deck
   if (currentReviewCategory === deckName) currentReviewCategory = null;
   if (pendingLearningCategory === deckName) pendingLearningCategory = null;
+  if (pendingStudyScope === deckName) pendingStudyScope = null;
   if (currentDeckDetailCategory === deckName) {
     currentDeckDetailCategory = null;
     if ($("page-deck-detail").classList.contains("active")) showPage("dashboard");
@@ -2904,22 +2956,38 @@ async function renderLibrary() {
 
   updateCategoryFilter(allCards);
   updateLibrarySubcategoryFilter(allCards);
+  updateLibraryStats(allCards);
+  updateLibraryControls();
 
   // Filtres actifs
   const query = $("search-input").value.trim().toLowerCase();
   const category = $("filter-category").value;
   const subcategory = $("filter-subcategory").value;
+  const sortMode = $("library-sort").value;
+  const today = todayISO();
 
   const visibleCards = allCards
     .filter((card) => {
       const matchesCategory = !category || cardDeckName(card) === category;
       const matchesSubcategory = !subcategory || (subcategory === "__none__" ? !card.subcategory : card.subcategory === subcategory);
-      return matchesCardQuery(card, query) && matchesCategory && matchesSubcategory;
+      const srs = normalizeSrs(card.srs);
+      const matchesFavorites = !libraryOnlyFavorites || card.favorite === true;
+      const matchesNoImage = !libraryOnlyNoImage || !card.imageId;
+      const matchesDue = !libraryOnlyDue || srs.nextReview <= today;
+      return matchesCardQuery(card, query) &&
+        matchesCategory &&
+        matchesSubcategory &&
+        matchesFavorites &&
+        matchesNoImage &&
+        matchesDue;
     })
-    .sort((a, b) => b.id.localeCompare(a.id)); // plus récentes d'abord
+    .sort((a, b) => sortLibraryCards(a, b, sortMode));
 
   $("library-count").textContent =
     visibleCards.length + " carte(s) affichée(s) sur " + allCards.length;
+
+  const view = getLibraryView();
+  $("library-grid").className = view === "list" ? "library-list" : "library-grid";
 
   if (visibleCards.length === 0) {
     $("library-grid").innerHTML =
@@ -2931,45 +2999,117 @@ async function renderLibrary() {
   const imageUrls = await Promise.all(visibleCards.map((card) => getImageURL(card.imageId)));
   if (version !== libraryRenderVersion) return;
 
-  $("library-grid").innerHTML = visibleCards
-    .map((card, index) => libraryItemHTML(card, imageUrls[index]))
+  const container = $("library-grid");
+  container.innerHTML = visibleCards
+    .map((card, index) => view === "list"
+      ? libraryRowHTML(card, imageUrls[index])
+      : libraryItemHTML(card, imageUrls[index]))
     .join("");
 
   // Branche les boutons "supprimer" qui viennent d'être créés
-  document.querySelectorAll("[data-delete]").forEach((btn) => {
+  container.querySelectorAll("[data-delete]").forEach((btn) => {
     btn.addEventListener("click", () => handleDelete(btn.dataset.delete));
   });
 
-  document.querySelectorAll("[data-edit]").forEach((btn) => {
+  container.querySelectorAll("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", () => startEditCard(btn.dataset.edit));
   });
 
-  document.querySelectorAll("[data-favorite]").forEach((btn) => {
+  container.querySelectorAll("[data-favorite]").forEach((btn) => {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.favorite));
   });
 
-  attachImageDropHandlers($("library-grid"));
+  attachImageDropHandlers(container);
 }
 
 function renderLibraryIfVisible() {
   if ($("page-bibliotheque").classList.contains("active")) renderLibrary();
 }
 
-function libraryItemHTML(card, imageUrl) {
-  const today = todayISO();
-  const nextReviewLabel =
-    card.srs.nextReview <= today
-      ? "À réviser aujourd'hui"
-      : "Prochaine révision : " + formatDateFr(card.srs.nextReview);
+function getLibraryView() {
+  return localStorage.getItem(LS_LIBRARY_VIEW) === "list" ? "list" : "grid";
+}
 
+function setLibraryView(view) {
+  localStorage.setItem(LS_LIBRARY_VIEW, view === "list" ? "list" : "grid");
+  renderLibrary();
+}
+
+function updateLibraryStats(cards) {
+  const today = todayISO();
+  $("library-stat-total").textContent = cards.length;
+  $("library-stat-mastered").textContent = cards.filter(isMastered).length;
+  $("library-stat-due").textContent = cards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  $("library-stat-favorites").textContent = cards.filter((card) => card.favorite === true).length;
+}
+
+function updateLibraryControls() {
+  $("library-filter-favorites").classList.toggle("active", libraryOnlyFavorites);
+  $("library-filter-no-image").classList.toggle("active", libraryOnlyNoImage);
+  $("library-filter-due").classList.toggle("active", libraryOnlyDue);
+  const view = getLibraryView();
+  $("library-view-grid").classList.toggle("active", view === "grid");
+  $("library-view-list").classList.toggle("active", view === "list");
+}
+
+function sortLibraryCards(a, b, sortMode) {
+  if (sortMode === "az") {
+    return fullWord(a).localeCompare(fullWord(b), "de");
+  }
+  if (sortMode === "hard") {
+    const wrongDiff = normalizeSrs(b.srs).wrongCount - normalizeSrs(a.srs).wrongCount;
+    return wrongDiff || fullWord(a).localeCompare(fullWord(b), "de");
+  }
+  if (sortMode === "due") {
+    const dueDiff = normalizeSrs(a.srs).nextReview.localeCompare(normalizeSrs(b.srs).nextReview);
+    return dueDiff || fullWord(a).localeCompare(fullWord(b), "de");
+  }
+  const aDate = a.createdAt || a.id || "";
+  const bDate = b.createdAt || b.id || "";
+  return bDate.localeCompare(aDate) || String(b.id || "").localeCompare(String(a.id || ""));
+}
+
+function cardStatusMeta(card) {
+  const srs = normalizeSrs(card.srs);
+  if (isNewCard(card)) return { label: "Nouvelle", className: "status-new" };
+  if (srs.nextReview <= todayISO()) return { label: "À réviser", className: "status-due" };
+  if (isMastered(card)) return { label: "Acquise", className: "status-mastered" };
+  return { label: "En cours", className: "status-learning" };
+}
+
+function cardStatusHTML(card) {
+  const status = cardStatusMeta(card);
+  return (
+    '<span class="card-status ' + status.className + '">' +
+      '<span class="card-status-dot"></span>' +
+      escapeHTML(status.label) +
+    "</span>"
+  );
+}
+
+function libraryImageSearchButton(card) {
+  if (card.imageId) return "";
+  const query = getEffectiveImageQuery(card);
+  if (!query) return "";
+  return '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image">Trouver image</a>';
+}
+
+function libraryMetaHTML(card) {
+  return (
+    '<div class="library-card-meta">' +
+      '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
+      (card.subcategory ? subcategoryChipHTML(card, true) : "") +
+      cardStatusHTML(card) +
+    "</div>"
+  );
+}
+
+function libraryItemHTML(card, imageUrl) {
   const pluralText = formatPlural(card);
   const pluralLine = pluralText
     ? '<p class="library-plural">Pluriel : ' + escapeHTML(pluralText) + "</p>"
     : "";
-  const subcategoryLine = card.subcategory
-    ? '<div class="library-subcategory">' + subcategoryChipHTML(card) + "</div>"
-    : "";
-  const imageQueryLine = imageQueryHTML(card);
+  const imageSearchButton = libraryImageSearchButton(card);
 
   return (
     '<article class="library-item" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
@@ -2978,20 +3118,56 @@ function libraryItemHTML(card, imageUrl) {
         '<p class="library-fr">' + escapeHTML(card.fr) + "</p>" +
         '<div class="library-word">' + wordHTML(card) + "</div>" +
         pluralLine +
-        '<div class="library-category">' +
-          '<span>Catégorie</span>' +
-          '<strong>' + escapeHTML(cardDeckName(card)) + "</strong>" +
+        '<div class="library-card-footer">' +
+          libraryMetaHTML(card) +
         "</div>" +
-        subcategoryLine +
-        imageQueryLine +
-        '<p class="library-next">📅 ' + nextReviewLabel + "</p>" +
-        '<p class="library-score">Réussites : ' + card.srs.correctCount + " · Erreurs : " + card.srs.wrongCount + "</p>" +
       "</div>" +
       '<div class="library-actions">' +
         '<button class="btn btn-icon" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter">🔊</button>' +
         '<button class="btn btn-icon btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
+        imageSearchButton +
         '<button class="btn btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '">Modifier</button>' +
         '<button class="btn btn-icon btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer">🗑️</button>' +
+      "</div>" +
+    "</article>"
+  );
+}
+
+function libraryRowThumbHTML(card, imageUrl) {
+  if (card.imageId) {
+    return '<img class="library-row-thumb" src="' + imageUrl + '" alt="Illustration de ' + escapeHTML(card.fr || card.de) + '">';
+  }
+  return (
+    '<div class="library-row-thumb smart-placeholder" aria-label="Image manquante">' +
+      '<span class="smart-placeholder-emoji">' + deckPlaceholderMark(card) + "</span>" +
+    "</div>"
+  );
+}
+
+function libraryRowHTML(card, imageUrl) {
+  const pluralText = formatPlural(card);
+  const pluralLine = pluralText ? '<span>Pluriel : ' + escapeHTML(pluralText) + '</span>' : "";
+  const imageSearchButton = libraryImageSearchButton(card);
+
+  return (
+    '<article class="library-row" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
+      libraryRowThumbHTML(card, imageUrl) +
+      '<div class="library-row-main">' +
+        '<div class="library-row-word">' + wordHTML(card) + "</div>" +
+        '<div class="library-row-fr">' + escapeHTML(card.fr) + "</div>" +
+        '<div class="library-row-meta">' +
+          '<span>' + escapeHTML(cardDeckName(card)) + "</span>" +
+          (card.subcategory ? '<span>' + escapeHTML(card.subcategory) + "</span>" : "") +
+          pluralLine +
+        "</div>" +
+      "</div>" +
+      '<div class="library-row-status">' + cardStatusHTML(card) + "</div>" +
+      '<div class="library-row-actions">' +
+        '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter" aria-label="Écouter">🔊</button>' +
+        '<button class="btn btn-icon btn-small btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori" aria-label="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
+        imageSearchButton +
+        '<button class="btn btn-icon btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '" title="Modifier" aria-label="Modifier">✏️</button>' +
+        '<button class="btn btn-icon btn-small btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer" aria-label="Supprimer">🗑️</button>' +
       "</div>" +
     "</article>"
   );
@@ -3166,6 +3342,21 @@ function setupLibraryPage() {
   $("search-input").addEventListener("input", debouncedRenderLibrary);
   $("filter-category").addEventListener("change", renderLibrary);
   $("filter-subcategory").addEventListener("change", renderLibrary);
+  $("library-sort").addEventListener("change", renderLibrary);
+  $("library-filter-favorites").addEventListener("click", () => {
+    libraryOnlyFavorites = !libraryOnlyFavorites;
+    renderLibrary();
+  });
+  $("library-filter-no-image").addEventListener("click", () => {
+    libraryOnlyNoImage = !libraryOnlyNoImage;
+    renderLibrary();
+  });
+  $("library-filter-due").addEventListener("click", () => {
+    libraryOnlyDue = !libraryOnlyDue;
+    renderLibrary();
+  });
+  $("library-view-grid").addEventListener("click", () => setLibraryView("grid"));
+  $("library-view-list").addEventListener("click", () => setLibraryView("list"));
   $("btn-open-missing-images").addEventListener("click", () => showPage("missing-images"));
   $("btn-missing-images-library").addEventListener("click", () => showPage("bibliotheque"));
   $("btn-open-current-image-search").addEventListener("click", openCurrentMissingImageSearch);
@@ -3343,60 +3534,327 @@ function setupLearningPage() {
 
 
 /* =========================================================
-   11. GRAMMAIRE — MINI QUIZ
+   11. GRAMMAIRE
    ========================================================= */
 
-function renderQuiz() {
-  $("quiz-container").innerHTML = QUIZ_QUESTIONS.map((question, index) => {
-    const choicesHTML = question.choices
-      .map((choice) =>
-        '<button class="btn quiz-choice" data-q="' + index + '" data-choice="' + escapeHTML(choice) + '">' +
-          escapeHTML(choice) +
-        "</button>"
-      )
-      .join("");
+const GRAMMAR_TABS = ["cases", "my-verbs", "irregular"];
+const VERB_PERSONS = ["ich", "du", "er/sie/es", "wir", "ihr", "sie/Sie"];
 
-    return (
-      '<div class="quiz-question">' +
-        '<p class="quiz-sentence">' + (index + 1) + ". " + escapeHTML(question.sentence) + "</p>" +
-        '<div class="quiz-choices">' + choicesHTML + "</div>" +
-        '<p class="quiz-feedback hidden"></p>' +
-      "</div>"
-    );
-  }).join("");
-
-  document.querySelectorAll(".quiz-choice").forEach((btn) => {
-    btn.addEventListener("click", onQuizChoice);
-  });
+function getGrammarTab() {
+  const tab = localStorage.getItem(LS_GRAMMAR_TAB);
+  return GRAMMAR_TABS.includes(tab) ? tab : "cases";
 }
 
-function onQuizChoice(event) {
-  const clickedBtn = event.currentTarget;
-  const question = QUIZ_QUESTIONS[Number(clickedBtn.dataset.q)];
-  const questionBox = clickedBtn.closest(".quiz-question");
-  const feedback = questionBox.querySelector(".quiz-feedback");
-
-  // Correction immédiate : on désactive tous les choix
-  // et on met la bonne réponse en vert
-  questionBox.querySelectorAll(".quiz-choice").forEach((btn) => {
-    btn.disabled = true;
-    if (btn.dataset.choice === question.answer) btn.classList.add("correct");
+function setGrammarTab(tabName) {
+  const tab = GRAMMAR_TABS.includes(tabName) ? tabName : "cases";
+  localStorage.setItem(LS_GRAMMAR_TAB, tab);
+  document.querySelectorAll("[data-grammar-tab]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.grammarTab === tab);
   });
-
-  if (clickedBtn.dataset.choice === question.answer) {
-    feedback.textContent = "✅ Bonne réponse ! " + question.explain;
-    feedback.classList.add("ok");
-  } else {
-    clickedBtn.classList.add("wrong");
-    feedback.textContent = "❌ Raté. " + question.explain;
-    feedback.classList.add("ko");
-  }
-  feedback.classList.remove("hidden");
+  $("grammar-panel-cases").classList.toggle("hidden", tab !== "cases");
+  $("grammar-panel-my-verbs").classList.toggle("hidden", tab !== "my-verbs");
+  $("grammar-panel-irregular").classList.toggle("hidden", tab !== "irregular");
+  renderGrammarPage();
 }
 
 function setupGrammarPage() {
-  renderQuiz();
-  $("btn-restart-quiz").addEventListener("click", renderQuiz);
+  document.querySelectorAll("[data-grammar-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => setGrammarTab(btn.dataset.grammarTab));
+  });
+}
+
+function renderGrammarPage() {
+  const tab = getGrammarTab();
+  document.querySelectorAll("[data-grammar-tab]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.grammarTab === tab);
+  });
+  $("grammar-panel-cases").classList.toggle("hidden", tab !== "cases");
+  $("grammar-panel-my-verbs").classList.toggle("hidden", tab !== "my-verbs");
+  $("grammar-panel-irregular").classList.toggle("hidden", tab !== "irregular");
+
+  if (tab === "cases") renderGrammarCases();
+  if (tab === "my-verbs") renderMyVerbs();
+  if (tab === "irregular") renderIrregularVerbs();
+}
+
+function speakButtonHTML(text, label = "Écouter") {
+  return '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(text) + '" title="' + escapeHTML(label) + '" aria-label="' + escapeHTML(label) + '">🔊</button>';
+}
+
+function articleHTML(value) {
+  const clean = String(value || "");
+  if (clean === "der" || clean === "den" || clean === "dem" || clean === "einem" || clean === "einen" || clean === "ein") {
+    return '<span class="art-der">' + escapeHTML(clean) + "</span>";
+  }
+  if (clean === "die" || clean === "eine" || clean === "einer") {
+    return '<span class="art-die">' + escapeHTML(clean) + "</span>";
+  }
+  if (clean === "das") {
+    return '<span class="art-das">' + escapeHTML(clean) + "</span>";
+  }
+  return escapeHTML(clean);
+}
+
+function grammarTableHTML(headers, rows, articleCells = false) {
+  return (
+    '<div class="grammar-table-wrap"><table class="grammar-table"><thead><tr>' +
+      headers.map((item) => '<th>' + escapeHTML(item) + "</th>").join("") +
+    "</tr></thead><tbody>" +
+      rows.map((row) =>
+        "<tr>" + row.map((item, index) => '<td>' + (articleCells && index > 0 ? articleHTML(item) : escapeHTML(item)) + "</td>").join("") + "</tr>"
+      ).join("") +
+    "</tbody></table></div>"
+  );
+}
+
+function renderGrammarCases() {
+  const cases = GRAMMAR_CASES;
+  $("grammar-panel-cases").innerHTML =
+    '<section class="panel grammar-section">' +
+      "<h2>Les cas essentiels</h2>" +
+      "<p>" + escapeHTML(cases.intro) + "</p>" +
+      '<p class="muted">' + escapeHTML(cases.genitiveNote) + "</p>" +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Articles définis</h2>" +
+      grammarTableHTML(["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"], cases.definedArticles, true) +
+      '<p class="grammar-note">' + escapeHTML(cases.accusativeNote) + "</p>" +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Articles indéfinis</h2>" +
+      grammarTableHTML(["Cas", "Masculin", "Féminin", "Neutre"], cases.indefiniteArticles, true) +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Quand utiliser quel cas ?</h2>" +
+      '<div class="case-cards">' + cases.caseCards.map((item) =>
+        '<article class="case-card">' +
+          '<h3>' + escapeHTML(item.title) + "</h3>" +
+          '<p class="example-de">' + escapeHTML(item.example) + " " + speakButtonHTML(item.example) + "</p>" +
+          '<p class="example-fr">' + escapeHTML(item.fr) + "</p>" +
+        "</article>"
+      ).join("") + "</div>" +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Prépositions par cas</h2>" +
+      '<div class="prep-grid">' + cases.prepositions.map((group) =>
+        '<article class="case-card">' +
+          '<h3>' + escapeHTML(group.title) + "</h3>" +
+          '<div class="grammar-chip-row">' + group.items.map((item) => '<span class="chip">' + escapeHTML(item) + "</span>").join("") + "</div>" +
+        "</article>"
+      ).join("") + "</div>" +
+      '<p class="grammar-note">' + escapeHTML(cases.mixedRule) + "</p>" +
+      '<div class="case-cards">' + cases.mixedExamples.map((item) =>
+        '<article class="case-card">' +
+          '<p class="example-de">' + escapeHTML(item.de) + " " + speakButtonHTML(item.de) + "</p>" +
+          '<p class="example-fr">' + escapeHTML(item.fr) + "</p>" +
+        "</article>"
+      ).join("") + "</div>" +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Verbes qui exigent le datif</h2>" +
+      '<div class="grammar-chip-row">' + cases.dativeVerbs.map((verb) => '<span class="chip chip-category">' + escapeHTML(verb) + "</span>").join("") + "</div>" +
+      '<p class="example-de">' + escapeHTML(cases.dativeVerbExample.de) + " " + speakButtonHTML(cases.dativeVerbExample.de) + "</p>" +
+      '<p class="example-fr">' + escapeHTML(cases.dativeVerbExample.fr) + "</p>" +
+    "</section>" +
+    '<section class="panel grammar-section">' +
+      "<h2>Pronoms personnels</h2>" +
+      grammarTableHTML(["Nominatif", "Accusatif", "Datif"], cases.pronouns) +
+    "</section>";
+}
+
+function isUserVerbCard(card) {
+  const de = String(card.de || "").trim();
+  if (card.category === "Verbes") return de.length > 0;
+  return String(card.article || "") === "" &&
+    /^[a-zäöüß]/u.test(de) &&
+    (de.endsWith("en") || de.endsWith("eln") || de.endsWith("ern")) &&
+    !/\s/.test(de);
+}
+
+async function getUserVerbMap() {
+  const cards = await getAllCards();
+  const verbs = new Map();
+  cards.filter(isUserVerbCard).forEach((card) => {
+    const inf = String(card.de || "").trim();
+    if (!inf) return;
+    const key = inf.toLowerCase();
+    if (!verbs.has(key)) {
+      verbs.set(key, { inf: inf, fr: String(card.fr || "").trim(), cards: [card] });
+    } else {
+      const item = verbs.get(key);
+      item.cards.push(card);
+      if (!item.fr && card.fr) item.fr = String(card.fr).trim();
+    }
+  });
+  return new Map([...verbs.entries()].sort((a, b) => a[1].inf.localeCompare(b[1].inf, "de")));
+}
+
+async function renderMyVerbs() {
+  const verbs = await getUserVerbMap();
+  const list = [...verbs.values()];
+  const selectedKey = selectedGrammarVerb && verbs.has(selectedGrammarVerb) ? selectedGrammarVerb : (list[0]?.inf.toLowerCase() || null);
+  selectedGrammarVerb = selectedKey;
+
+  if (list.length === 0) {
+    selectedGrammarVerb = null;
+    $("grammar-panel-my-verbs").innerHTML =
+      '<section class="panel grammar-section"><h2>Mes verbes</h2><p class="muted">Ajoute des verbes dans tes cartes pour les voir ici.</p></section>';
+    return;
+  }
+
+  const selected = selectedKey ? verbs.get(selectedKey) : null;
+  $("grammar-panel-my-verbs").innerHTML =
+    '<section class="panel grammar-section">' +
+      "<h2>Mes verbes</h2>" +
+      '<div class="verb-chip-list" id="my-verbs-list">' +
+        list.map((verb) =>
+          '<button class="verb-chip' + (verb.inf.toLowerCase() === selectedKey ? " active" : "") + '" type="button" data-user-verb="' + escapeHTML(verb.inf.toLowerCase()) + '">' +
+            escapeHTML(verb.inf) +
+          "</button>"
+        ).join("") +
+      "</div>" +
+    "</section>" +
+    '<div id="verb-detail-panel">' + (selected ? verbDetailHTML(selected.inf, selected.fr) : "") + "</div>";
+
+  $("my-verbs-list").querySelectorAll("[data-user-verb]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedGrammarVerb = btn.dataset.userVerb;
+      renderMyVerbs();
+    });
+  });
+}
+
+function regularStem(inf) {
+  if (inf.endsWith("eln") || inf.endsWith("ern")) return inf.slice(0, -1);
+  if (inf.endsWith("en")) return inf.slice(0, -2);
+  return inf;
+}
+
+function regularPraesens(inf) {
+  const stem = regularStem(inf);
+  const needsE = /[td]$/.test(stem);
+  const noDuS = /[sßxz]$/.test(stem);
+  return [
+    stem + "e",
+    stem + (needsE ? "est" : noDuS ? "t" : "st"),
+    stem + (needsE ? "et" : "t"),
+    stem + "en",
+    stem + (needsE ? "et" : "t"),
+    stem + "en",
+  ];
+}
+
+function regularPerfekt(inf) {
+  const stem = regularStem(inf);
+  if (inf.endsWith("ieren")) return "hat " + stem + "t";
+  const noGe = ["be", "emp", "ent", "er", "ge", "miss", "ver", "zer"].some((prefix) => inf.startsWith(prefix));
+  return "hat " + (noGe ? "" : "ge") + stem + (/[td]$/.test(stem) ? "et" : "t");
+}
+
+function regularPraeteritum(inf) {
+  const stem = regularStem(inf);
+  return stem + (/[td]$/.test(stem) ? "ete" : "te");
+}
+
+function getVerbConjugation(infinitive) {
+  const inf = String(infinitive || "").trim().toLowerCase();
+  const entry = IRREGULAR_VERBS.find((verb) => String(verb.inf || "").trim().toLowerCase() === inf);
+  const generatedPraesens = regularPraesens(inf);
+  if (entry) {
+    return {
+      inf: entry.inf,
+      fr: entry.fr || null,
+      praesens: entry.praesens || generatedPraesens,
+      perfekt: entry.perfekt,
+      praeteritum: entry.praeteritum,
+      note: entry.note || "",
+    };
+  }
+  return {
+    inf: inf,
+    fr: null,
+    praesens: generatedPraesens,
+    perfekt: regularPerfekt(inf),
+    praeteritum: regularPraeteritum(inf),
+    note: "conjugaison régulière supposée",
+  };
+}
+
+function verbDetailHTML(infinitive, userTranslation = "") {
+  const verb = getVerbConjugation(infinitive);
+  const translation = userTranslation || verb.fr || "";
+  const perfektAux = verb.perfekt.startsWith("ist ") ? "bin" : "habe";
+  const perfektPart = verb.perfekt.replace(/^(hat|ist)\s+/, "");
+  const perfektSentence = "Ich " + perfektAux + " " + perfektPart + ".";
+
+  return (
+    '<section class="panel verb-detail-card">' +
+      '<div class="panel-heading-row"><div><h2>' + escapeHTML(verb.inf) + (translation ? " · " + escapeHTML(translation) : "") + "</h2>" +
+      '<p class="muted">Fiche de conjugaison</p></div>' + speakButtonHTML(verb.inf) + "</div>" +
+      '<div class="verb-conjugation-grid">' +
+        '<article class="tense-card"><h3>' + escapeHTML(TENSE_GUIDE.praesens.title) + "</h3><p>" + escapeHTML(TENSE_GUIDE.praesens.description) + "</p>" +
+          VERB_PERSONS.map((person, index) => {
+            const spoken = person.split("/")[0] + " " + verb.praesens[index];
+            return '<div class="verb-form-row"><span>' + escapeHTML(person) + '</span><strong>' + escapeHTML(verb.praesens[index]) + '</strong>' + speakButtonHTML(spoken) + "</div>";
+          }).join("") +
+        "</article>" +
+        '<article class="tense-card"><h3>' + escapeHTML(TENSE_GUIDE.perfekt.title) + "</h3><p>" + escapeHTML(TENSE_GUIDE.perfekt.description) + "</p>" +
+          '<div class="verb-form-row"><span>Perfekt</span><strong>' + escapeHTML(verb.perfekt) + '</strong>' + speakButtonHTML(verb.perfekt) + "</div>" +
+          '<p class="example-de">' + escapeHTML(perfektSentence) + " " + speakButtonHTML(perfektSentence) + "</p>" +
+        "</article>" +
+        '<article class="tense-card"><h3>' + escapeHTML(TENSE_GUIDE.praeteritum.title) + "</h3><p>" + escapeHTML(TENSE_GUIDE.praeteritum.description) + "</p>" +
+          '<div class="verb-form-row"><span>ich</span><strong>' + escapeHTML(verb.praeteritum) + '</strong>' + speakButtonHTML("ich " + verb.praeteritum) + "</div>" +
+          '<p class="grammar-note">Le Präteritum est surtout utilisé à l\'écrit, mais il est très important pour sein, haben et les verbes modaux.</p>' +
+        "</article>" +
+      "</div>" +
+      (verb.note ? '<p class="grammar-note">' + escapeHTML(verb.note) + "</p>" : "") +
+    "</section>"
+  );
+}
+
+async function renderIrregularVerbs() {
+  const userVerbs = await getUserVerbMap();
+  const searchInput = $("irregular-verb-search");
+  const shouldRefocus = document.activeElement === searchInput;
+  const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+  const rows = IRREGULAR_VERBS
+    .map((entry) => getVerbConjugation(entry.inf))
+    .filter((verb) => {
+      const haystack = [verb.inf, verb.fr, ...verb.praesens, verb.perfekt, verb.praeteritum].join(" ").toLowerCase();
+      return !query || haystack.includes(query);
+    });
+
+  $("grammar-panel-irregular").innerHTML =
+    '<section class="panel grammar-section">' +
+      '<div class="irregular-toolbar">' +
+        '<div><h2>Verbes irréguliers</h2><p class="muted">Référence rapide des formes vraiment utiles.</p></div>' +
+        '<input id="irregular-verb-search" type="search" placeholder="Rechercher un verbe…">' +
+      "</div>" +
+      '<div class="grammar-table-wrap"><table class="grammar-table irregular-table"><thead><tr>' +
+        "<th>Infinitif</th><th>Traduction</th><th>du</th><th>er/sie/es</th><th>Perfekt</th><th>Präteritum</th>" +
+      "</tr></thead><tbody>" +
+        rows.map((verb) => {
+          const inCards = userVerbs.has(verb.inf.toLowerCase());
+          return (
+            "<tr>" +
+              '<td><strong>' + escapeHTML(verb.inf) + "</strong>" + (inCards ? '<span class="grammar-badge">dans tes cartes</span>' : "") + "</td>" +
+              '<td>' + escapeHTML(verb.fr || "") + "</td>" +
+              '<td>' + escapeHTML(verb.praesens[1]) + "</td>" +
+              '<td>' + escapeHTML(verb.praesens[2]) + "</td>" +
+              '<td>' + escapeHTML(verb.perfekt) + "</td>" +
+              '<td>' + escapeHTML(verb.praeteritum) + "</td>" +
+            "</tr>"
+          );
+        }).join("") +
+      "</tbody></table></div>" +
+    "</section>";
+
+  $("irregular-verb-search").value = query;
+  $("irregular-verb-search").addEventListener("input", renderIrregularVerbs);
+  if (shouldRefocus) {
+    $("irregular-verb-search").focus();
+    $("irregular-verb-search").setSelectionRange(query.length, query.length);
+  }
 }
 
 

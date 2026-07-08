@@ -16,13 +16,14 @@
    (HTML, CSS, JS, icônes).
    ========================================================= */
 
-const CACHE_NAME = "dfs-cache-v1";
+const CACHE_NAME = "dfs-cache-v2";
 
 // Fichiers mis en cache dès l'installation
 const APP_FILES = [
   "./",
   "./index.html",
   "./style.css",
+  "./grammar-data.js",
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
