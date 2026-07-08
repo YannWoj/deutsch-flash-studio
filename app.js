@@ -1619,7 +1619,8 @@ function updateDeckGridBulkBar() {
   $("deck-grid-bulk-count").textContent = count + " jeu" + (count > 1 ? "x" : "") + " sélectionné" + (count > 1 ? "s" : "");
   $("btn-deck-grid-study").disabled = count === 0;
   $("btn-deck-grid-delete").disabled = count === 0;
-  $("btn-deck-grid-clear").disabled = count === 0;
+  $("btn-deck-grid-clear").textContent = count > 0 ? "Désélectionner" : "Quitter la sélection";
+  $("btn-deck-grid-clear").disabled = false;
   $("btn-deck-grid-select-all").disabled = visibleDeckNames.length === 0;
 }
 
@@ -1629,8 +1630,17 @@ function selectAllDecks() {
 }
 
 function clearDeckGridSelection() {
+  if (selectedDeckNames.size > 0) {
+    selectedDeckNames.clear();
+    refreshDashboard();
+    syncSelectionModeClass();
+    return;
+  }
+
+  deckGridSelectionMode = false;
   selectedDeckNames.clear();
   refreshDashboard();
+  syncSelectionModeClass();
 }
 
 function studySelectedDecks() {
