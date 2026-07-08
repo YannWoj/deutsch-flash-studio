@@ -1026,11 +1026,14 @@ function deckPlaceholderMark(card) {
 }
 
 function smartPlaceholderHTML(card) {
+  const placeholderText = card.article
+    ? '<span class="art-' + escapeHTML(card.article) + '">' + escapeHTML(card.article) + "</span> " + escapeHTML(card.de || card.fr || "Image")
+    : escapeHTML(card.de || card.fr || "Image");
+
   return (
     '<div class="smart-placeholder" aria-label="Image manquante">' +
       '<span class="smart-placeholder-emoji">' + deckPlaceholderMark(card) + "</span>" +
-      '<span class="smart-placeholder-text">' + escapeHTML(card.de || card.fr || "Image") + "</span>" +
-      '<span class="paste-hint">Clique puis Ctrl+V, ou glisse une image</span>' +
+      '<span class="smart-placeholder-text">' + placeholderText + "</span>" +
     "</div>"
   );
 }
@@ -3909,17 +3912,36 @@ async function exportData() {
     customSubcategories: getCustomSubcategories(),
   };
 
-  // Création et téléchargement du fichier JSON
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const jsonString = JSON.stringify(payload, null, 2);
+  const fileName = `deutsch-flash-studio-${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
+  const file = new File([blob], fileName, { type: "application/json" });
+
+  // Mobile / iPhone : menu de partage natif
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: fileName });
+      localStorage.setItem(LS_LAST_EXPORT_AT, todayISO());
+      refreshBackupInfoIfVisible();
+      toast("Export partagé ✓");
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      console.warn("Partage impossible, téléchargement classique :", error);
+    }
+  }
+
+  // Fallback PC / navigateurs sans partage fichier
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "deutsch-flash-studio-" + todayISO() + ".json";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
   localStorage.setItem(LS_LAST_EXPORT_AT, todayISO());
   refreshBackupInfoIfVisible();
-
   toast("Export téléchargé ✓");
 }
 

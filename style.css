@@ -3099,7 +3099,7 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .page-header {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
 
   .page-header h1 {
@@ -3237,7 +3237,71 @@ input[type="file"]::file-selector-button:hover {
     min-height: 40px;
   }
 
-  .review-card,
+  #page-revision.active {
+    min-height: calc(100dvh - 120px);
+  }
+
+  #page-revision .page-header {
+    margin-bottom: 10px;
+  }
+
+  #page-revision .page-header p {
+    margin-top: 2px;
+  }
+
+  .review-setup {
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 14px;
+  }
+
+  .review-setup h2 {
+    margin-bottom: 2px;
+    font-size: 1rem;
+  }
+
+  .review-setup .muted {
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .review-setup-actions,
+  .segmented {
+    gap: 8px;
+  }
+
+  .srs-help {
+    margin-top: 0;
+    margin-bottom: 10px;
+    padding: 12px;
+  }
+
+  .srs-help p {
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .srs-help-grid {
+    gap: 6px;
+  }
+
+  .srs-help-grid span {
+    padding: 7px 8px;
+    font-size: 0.78rem;
+  }
+
+  .review-counter {
+    margin-bottom: 8px;
+    font-size: 0.86rem;
+  }
+
+  .review-card {
+    width: 100%;
+    max-width: none;
+    padding: 14px;
+    border-radius: 16px;
+  }
+
   .learning-card {
     width: 100%;
     max-width: none;
@@ -3245,19 +3309,60 @@ input[type="file"]::file-selector-button:hover {
   }
 
   #review-image,
+  .review-card img,
+  .review-card .smart-placeholder {
+    height: min(220px, 30dvh);
+    max-height: min(220px, 30dvh);
+    object-fit: contain;
+    margin-bottom: 12px;
+  }
+
   #learning-image {
     height: min(52vw, 220px);
     max-height: 220px;
     object-fit: contain;
   }
 
+  .review-front-fr,
+  .review-word {
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+    line-height: 1.12;
+  }
+
   .review-front-fr {
+    margin-bottom: 4px;
+  }
+
+  .learning-word {
     font-size: 1.75rem;
   }
 
-  .review-word,
-  .learning-word {
-    font-size: 1.75rem;
+  .review-front-hint {
+    margin-bottom: 14px;
+    font-size: 0.86rem;
+  }
+
+  #review-answer {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .review-answer-word {
+    margin-bottom: 10px;
+  }
+
+  .answer-line {
+    margin-bottom: 10px;
+  }
+
+  .example-block {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+
+  .example-de,
+  .example-fr {
+    font-size: 0.92rem;
   }
 
   .grade-buttons {
@@ -3266,22 +3371,48 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .grade-buttons .btn {
-    min-height: 48px;
+    min-height: 52px;
+    padding: 10px 8px;
+  }
+
+  .grade-buttons .btn span {
+    display: block;
+    font-size: 0.72rem;
+    opacity: 0.82;
   }
 
   #btn-show-answer,
   #btn-check-written,
   #btn-free-next {
     width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
   }
 
-  .multiple-choice,
+  .multiple-choice {
+    grid-template-columns: 1fr;
+    margin: 14px 0 4px;
+  }
+
+  .multiple-choice .btn {
+    min-height: 46px;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: normal;
+  }
+
   .written-fields {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .written-fields input {
     font-size: 16px;
+    min-height: 46px;
+  }
+
+  .written-review {
+    margin: 14px 0 8px;
   }
 
   .learning-actions {
@@ -3301,12 +3432,16 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .segmented {
-    width: max-content;
-    max-width: none;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .segmented .btn {
+    flex: 1 1 120px;
     min-height: 42px;
+    white-space: normal;
   }
 
   .srs-help-grid {
@@ -3355,6 +3490,37 @@ input[type="file"]::file-selector-button:hover {
 
   .review-setup-actions .segmented .btn {
     flex: 1 1 120px;
+  }
+
+  #review-image,
+  .review-card img,
+  .review-card .smart-placeholder {
+    height: min(180px, 28dvh);
+    max-height: min(180px, 28dvh);
+  }
+}
+
+@media (max-width: 360px) {
+  .review-card {
+    padding: 12px;
+  }
+
+  .grade-buttons {
+    gap: 8px;
+  }
+
+  .grade-buttons .btn {
+    min-height: 50px;
+    padding: 9px 6px;
+    font-size: 0.9rem;
+  }
+
+  .grade-buttons .btn span {
+    font-size: 0.68rem;
+  }
+
+  .review-setup-actions .btn {
+    font-size: 0.78rem;
   }
 }
 
