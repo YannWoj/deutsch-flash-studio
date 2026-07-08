@@ -16,7 +16,7 @@
    (HTML, CSS, JS, icônes).
    ========================================================= */
 
-const CACHE_NAME = "dfs-cache-v2";
+const CACHE_NAME = "dfs-cache-v3";
 
 // Fichiers mis en cache dès l'installation
 const APP_FILES = [
@@ -28,6 +28,8 @@ const APP_FILES = [
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
+  "./icon-192-maskable.png",
+  "./icon-512-maskable.png",
 ];
 
 // Installation : on pré-remplit le cache
