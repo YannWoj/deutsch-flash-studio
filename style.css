@@ -921,6 +921,71 @@ main {
   margin: -4px 0 16px;
 }
 
+#deck-grid-bulk-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  margin: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: rgba(27, 32, 43, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(232, 185, 75, 0.4);
+  animation: bulk-bar-in 0.2s ease;
+}
+
+@keyframes bulk-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.selection-mode-active {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.selection-mode-active #deck-grid {
+  padding-bottom: 180px;
+}
+
+body.selection-mode-active #toast {
+  bottom: calc(250px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 801px) {
+  #deck-grid-bulk-bar {
+    left: 50%;
+    right: auto;
+    bottom: 24px;
+    width: min(680px, calc(100vw - 48px));
+    transform: translateX(-50%);
+  }
+
+  body.selection-mode-active #deck-grid {
+    padding-bottom: 110px;
+  }
+
+  @keyframes bulk-bar-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+}
+
 .deck-bulk-actions {
   display: flex;
   flex-wrap: wrap;

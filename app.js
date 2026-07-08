@@ -129,6 +129,13 @@ function wasLongPressJustFired() {
   return Date.now() - longPressFiredAt < 400;
 }
 
+function syncSelectionModeClass() {
+  document.body.classList.toggle(
+    "selection-mode-active",
+    deckGridSelectionMode || deckDetailSelectionMode
+  );
+}
+
 function attachLongPress(element, callback, options = {}) {
   const delay = options.delay || 450;
   const moveTolerance = options.moveTolerance || 8;
@@ -158,6 +165,7 @@ function attachLongPress(element, callback, options = {}) {
       timer = null;
       longPressFiredAt = Date.now();
       element.classList.remove("pressing");
+      if (window.getSelection) window.getSelection().removeAllRanges();
       if (navigator.vibrate) navigator.vibrate(10);
       callback();
     }, delay);
@@ -1566,6 +1574,7 @@ function renderDecks(cards) {
       if (!deckGridSelectionMode) {
         deckGridSelectionMode = true;
         selectedDeckNames.add(name);
+        syncSelectionModeClass();
         refreshDashboard();
         return;
       }
@@ -1579,6 +1588,7 @@ function renderDecks(cards) {
 function toggleDeckGridSelectionMode() {
   deckGridSelectionMode = !deckGridSelectionMode;
   if (!deckGridSelectionMode) selectedDeckNames.clear();
+  syncSelectionModeClass();
   hideDeckActionMenu();
   refreshDashboard();
 }
@@ -1601,6 +1611,7 @@ function setDeckNameSelected(deckName, selected) {
 }
 
 function updateDeckGridBulkBar() {
+  syncSelectionModeClass();
   $("btn-select-decks").textContent = deckGridSelectionMode ? "Annuler sélection" : "Sélectionner";
   $("deck-grid-bulk-bar").classList.toggle("hidden", !deckGridSelectionMode);
 
@@ -1631,6 +1642,7 @@ function studySelectedDecks() {
   openStudyModeModal(scope);
   deckGridSelectionMode = false;
   selectedDeckNames.clear();
+  syncSelectionModeClass();
   updateDeckGridBulkBar();
   refreshDashboard();
 }
@@ -1655,6 +1667,7 @@ async function deleteSelectedDecks() {
 
   selectedDeckNames.clear();
   deckGridSelectionMode = false;
+  syncSelectionModeClass();
   refreshAfterDeckChange();
   refreshSubcategorySuggestions();
   toast(names.length + " jeu" + (plural ? "x" : "") + " supprimé" + (plural ? "s" : "") + ".");
@@ -1768,6 +1781,7 @@ async function renderDeckDetail() {
       if (!deckDetailSelectionMode) {
         deckDetailSelectionMode = true;
         selectedDeckCardIds.add(id);
+        syncSelectionModeClass();
         renderDeckDetail();
         return;
       }
@@ -1781,6 +1795,7 @@ async function renderDeckDetail() {
 function toggleDeckSelectionMode() {
   deckDetailSelectionMode = !deckDetailSelectionMode;
   if (!deckDetailSelectionMode) selectedDeckCardIds.clear();
+  syncSelectionModeClass();
   renderDeckDetail();
 }
 
@@ -1790,6 +1805,7 @@ function setDeckCardSelected(cardId, selected) {
   } else {
     selectedDeckCardIds.delete(cardId);
   }
+  syncSelectionModeClass();
   updateDeckBulkBar();
 }
 
@@ -1804,6 +1820,7 @@ function clearDeckSelection() {
 }
 
 function updateDeckBulkBar() {
+  syncSelectionModeClass();
   $("btn-deck-detail-select").textContent = deckDetailSelectionMode ? "Annuler sélection" : "Sélectionner";
   $("deck-bulk-bar").classList.toggle("hidden", !deckDetailSelectionMode);
   const count = selectedDeckCardIds.size;
@@ -1917,6 +1934,7 @@ async function saveSubcategoryChoice() {
   refreshSubcategorySuggestions();
   selectedDeckCardIds.clear();
   if (pendingSubcategoryCardIds.length) deckDetailSelectionMode = false;
+  syncSelectionModeClass();
   renderDeckDetailIfVisible();
   renderLibraryIfVisible();
   renderLearningIfVisible();
@@ -4481,6 +4499,7 @@ async function deleteEverything() {
   clearImageUrlCache();
   selectedDeckNames.clear();
   deckGridSelectionMode = false;
+  syncSelectionModeClass();
   if (editingCard) resetCardForm();
 
   toast("Tous les jeux, cartes, images et sous-catégories ont été supprimés.");
