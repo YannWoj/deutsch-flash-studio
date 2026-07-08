@@ -1019,6 +1019,34 @@ main {
   margin-bottom: 14px;
 }
 
+.review-session-mini-header {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.review-session-mini-header strong {
+  color: var(--gold-strong);
+  font-size: 0.95rem;
+}
+
+.review-session-mini-header span {
+  min-width: 0;
+}
+
+.review-session-mini-header .review-counter {
+  margin-bottom: 0;
+}
+
+#page-revision.session-active .review-setup,
+#page-revision.session-active .srs-help {
+  display: none;
+}
+
 .review-setup {
   display: flex;
   justify-content: space-between;
@@ -3247,6 +3275,93 @@ input[type="file"]::file-selector-button:hover {
 
   #page-revision .page-header p {
     margin-top: 2px;
+  }
+
+  #page-revision.session-active .page-header {
+    display: none;
+  }
+
+  #page-revision.session-active .review-session-mini-header {
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 10px;
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
+  #page-revision.session-active #review-session-label {
+    flex: 1 1 auto;
+  }
+
+  #page-revision.session-active .review-session-mini-header strong {
+    flex: 0 0 auto;
+    font-size: 0.86rem;
+  }
+
+  #page-revision.session-active .review-card {
+    margin-top: 0;
+    padding: 14px;
+  }
+
+  #page-revision.session-active .review-category-top {
+    margin-bottom: 8px;
+  }
+
+  #page-revision.session-active #review-image,
+  #page-revision.session-active .review-card img,
+  #page-revision.session-active .review-card .smart-placeholder {
+    height: min(170px, 24dvh);
+    max-height: min(170px, 24dvh);
+    margin-bottom: 10px;
+  }
+
+  #page-revision.session-active .review-front-fr,
+  #page-revision.session-active .review-word {
+    font-size: clamp(1.4rem, 7vw, 1.85rem);
+    margin-top: 10px;
+  }
+
+  #page-revision.session-active .review-front-hint {
+    margin-bottom: 10px;
+  }
+
+  #page-revision.session-active #btn-show-answer {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 12px;
+  }
+
+  #page-revision.session-active #review-answer {
+    margin-top: 10px;
+    padding-top: 12px;
+  }
+
+  #page-revision.session-active .review-answer-word {
+    margin-bottom: 8px;
+  }
+
+  #page-revision.session-active .answer-line {
+    margin-bottom: 8px;
+  }
+
+  #page-revision.session-active .example-block {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  #page-revision.session-active .grade-question {
+    margin-bottom: 8px;
+  }
+
+  #page-revision.session-active .grade-buttons {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  #page-revision.session-active .grade-buttons .btn {
+    min-height: 50px;
   }
 
   .review-setup {

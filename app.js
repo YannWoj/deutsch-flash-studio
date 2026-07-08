@@ -2238,8 +2238,23 @@ function updateReviewSetup(scopedCards) {
   }
 }
 
+function setReviewSessionActive(active) {
+  $("page-revision").classList.toggle("session-active", active);
+}
+
+function reviewSessionLabelText() {
+  const parts = [
+    reviewSessionType === "free" ? "Entraînement libre" : "Révision du jour",
+    currentReviewCategory || "toutes les catégories",
+  ];
+  if (currentReviewMode === "multiple") parts.push("Choix multiple");
+  if (currentReviewMode === "written") parts.push("Écrit");
+  return parts.join(" · ");
+}
+
 function showReviewEmpty(message, canStartFreePractice = false) {
   currentCard = null;
+  setReviewSessionActive(false);
   $("review-area").classList.add("hidden");
   $("review-empty").classList.remove("hidden");
   $("review-empty-text").textContent = message;
@@ -2251,6 +2266,7 @@ function showReviewEmpty(message, canStartFreePractice = false) {
 function showSessionSummary() {
   const stats = reviewSessionStats || { seen: 0, correct: 0, wrong: 0, failedCards: [] };
   const successRate = stats.seen ? Math.round((stats.correct / stats.seen) * 100) : 0;
+  setReviewSessionActive(false);
   $("review-area").classList.add("hidden");
   $("review-empty").classList.remove("hidden");
   $("review-empty-text").textContent = "Résumé de séance";
@@ -2328,6 +2344,8 @@ async function showNextReviewCard() {
 
   $("review-empty").classList.add("hidden");
   $("review-area").classList.remove("hidden");
+  setReviewSessionActive(true);
+  $("review-session-label").textContent = reviewSessionLabelText();
   $("review-counter").textContent = "Cartes restantes : " + (reviewQueue.length + 1);
 
   // --- Face avant : image + traduction française ---
