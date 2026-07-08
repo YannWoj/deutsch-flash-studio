@@ -720,20 +720,24 @@
   </div>
 
   <div class="modal-backdrop hidden" id="import-preview-modal">
-    <div class="modal-panel import-preview-panel">
-      <h2>Prévisualisation de l'import</h2>
-      <p class="import-preview-summary" id="import-preview-summary">Ce fichier contient 0 carte.</p>
-
-      <div class="import-preview-stats" id="import-preview-stats"></div>
-
-      <div class="import-preview-categories">
-        <strong>Catégories détectées</strong>
-        <p id="import-preview-categories" class="muted">Aucune catégorie détectée.</p>
+    <div class="modal-panel import-preview-panel" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">
+      <div class="import-preview-header">
+        <h2 id="import-preview-title">Prévisualisation de l'import</h2>
+        <p class="import-preview-summary" id="import-preview-summary">Ce fichier contient 0 carte.</p>
       </div>
 
-      <div class="import-preview-warnings hidden" id="import-preview-warnings"></div>
+      <div class="import-preview-scroll">
+        <div class="import-preview-stats" id="import-preview-stats"></div>
 
-      <p class="danger-warning hidden" id="import-replace-warning">Attention : toutes les cartes et images actuelles seront remplacées.</p>
+        <div class="import-preview-categories">
+          <strong>Catégories détectées</strong>
+          <p id="import-preview-categories" class="muted">Aucune catégorie détectée.</p>
+        </div>
+
+        <div class="import-preview-warnings hidden" id="import-preview-warnings"></div>
+
+        <p class="danger-warning hidden" id="import-replace-warning">Attention : toutes les cartes et images actuelles seront remplacées.</p>
+      </div>
 
       <div class="modal-actions import-preview-actions">
         <button class="btn btn-primary" id="btn-import-preview-merge" type="button">Fusionner avec mes données</button>

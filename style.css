@@ -2413,32 +2413,59 @@ input[type="file"]::file-selector-button:hover {
   margin-top: 16px;
 }
 
-.import-preview-panel {
-  max-width: 720px;
+#import-preview-modal {
+  padding: 16px;
+  align-items: center;
 }
 
-.import-preview-summary {
+#import-preview-modal .import-preview-panel {
+  width: min(720px, calc(100vw - 32px));
+  max-width: 720px;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+#import-preview-modal .import-preview-header {
+  padding: 22px 22px 0;
+}
+
+#import-preview-modal .import-preview-header h2 {
+  margin-bottom: 8px;
+}
+
+#import-preview-modal .import-preview-summary {
   color: var(--gold-strong);
   font-size: 1.12rem;
   font-weight: 800;
   margin: 8px 0 16px;
 }
 
-.import-preview-stats {
+#import-preview-modal .import-preview-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 22px 16px;
+  scrollbar-gutter: stable;
+}
+
+#import-preview-modal .import-preview-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin: 14px 0;
 }
 
-.import-preview-stat {
+#import-preview-modal .import-preview-stat {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
   background: var(--surface-2);
 }
 
-.import-preview-stat span {
+#import-preview-modal .import-preview-stat span {
   display: block;
   color: var(--muted);
   font-size: 0.76rem;
@@ -2446,18 +2473,18 @@ input[type="file"]::file-selector-button:hover {
   text-transform: uppercase;
 }
 
-.import-preview-stat strong {
+#import-preview-modal .import-preview-stat strong {
   display: block;
   margin-top: 4px;
   color: var(--text);
   font-size: 1.05rem;
 }
 
-.import-preview-categories {
+#import-preview-modal .import-preview-categories {
   margin-top: 14px;
 }
 
-.import-preview-warnings {
+#import-preview-modal .import-preview-warnings {
   margin-top: 14px;
   padding: 12px 14px;
   border: 1px solid rgba(240, 163, 64, 0.42);
@@ -2466,12 +2493,107 @@ input[type="file"]::file-selector-button:hover {
   background: rgba(240, 163, 64, 0.08);
 }
 
-.import-preview-warnings ul {
+#import-preview-modal .import-preview-warnings ul {
   margin: 8px 0 0 18px;
 }
 
-.import-preview-actions {
+#import-preview-modal .import-preview-actions {
+  margin: 0;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--border);
+  background: rgba(20, 23, 31, 0.98);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   justify-content: flex-end;
+}
+
+@media (min-width: 801px) and (max-height: 820px) {
+  #import-preview-modal .import-preview-header {
+    padding: 18px 20px 0;
+  }
+
+  #import-preview-modal .import-preview-scroll {
+    padding: 0 20px 12px;
+  }
+
+  #import-preview-modal .import-preview-actions {
+    padding: 12px 20px 14px;
+  }
+
+  #import-preview-modal .import-preview-summary {
+    margin: 6px 0 12px;
+    font-size: 1rem;
+  }
+
+  #import-preview-modal .import-preview-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 10px 0;
+  }
+
+  #import-preview-modal .import-preview-stat {
+    padding: 10px;
+  }
+
+  #import-preview-modal .import-preview-warnings {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  #import-preview-modal {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  #import-preview-modal .import-preview-panel {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: 100dvh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  #import-preview-modal .import-preview-header {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 0;
+  }
+
+  #import-preview-modal .import-preview-scroll {
+    padding: 0 16px 14px;
+  }
+
+  #import-preview-modal .import-preview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #import-preview-modal .import-preview-stat {
+    padding: 10px;
+  }
+
+  #import-preview-modal .import-preview-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  #import-preview-modal .import-preview-actions .btn {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 380px) {
+  #import-preview-modal .import-preview-stats {
+    grid-template-columns: 1fr;
+  }
+
+  #import-preview-modal .import-preview-header h2 {
+    font-size: 1.25rem;
+  }
 }
 
 .btn-danger-action {
