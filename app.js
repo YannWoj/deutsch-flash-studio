@@ -112,6 +112,7 @@ let pendingImportAnalysis = null;
 let replaceImportArmed = false;
 let imageInputVersion = 0;
 let lastImageTargetCardId = null;
+let imagePickerTargetCardId = null;
 let skippedMissingImageIds = new Set();
 let longPressFiredAt = 0;             // timestamp du dernier long-press déclenché
 
@@ -310,11 +311,11 @@ function openImageSearchForCard(card) {
   window.open(imageSearchURL(query), "dfs-images");
 }
 
-function imageQueryHTML(card) {
+function imageQueryHTML(card, includeAction = true) {
   const manualQuery = String(card.imageQuery || "").trim();
   const query = getEffectiveImageQuery(card);
   if (!query) return "";
-  const searchButton = !card.imageId
+  const searchButton = includeAction && !card.imageId
     ? '<span class="image-query-actions">' +
       '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image">Trouver image</a>' +
       "</span>"
@@ -1061,6 +1062,60 @@ async function applyImageToCard(cardId, file) {
   }
 }
 
+function openImagePickerForCard(cardId) {
+  imagePickerTargetCardId = cardId;
+  const input = $("card-image-picker");
+  input.value = "";
+  input.click();
+}
+
+function setupImagePicker() {
+  $("card-image-picker").addEventListener("change", async () => {
+    const file = $("card-image-picker").files[0];
+    const cardId = imagePickerTargetCardId;
+    $("card-image-picker").value = "";
+    imagePickerTargetCardId = null;
+    if (file && cardId) await applyImageToCard(cardId, file);
+  });
+}
+
+async function pasteImageFromClipboardForCard(cardId) {
+  if (!navigator.clipboard || !navigator.clipboard.read) {
+    toast("Le collage n'est pas supporté sur ce navigateur.");
+    return;
+  }
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find((candidate) => candidate.startsWith("image/"));
+      if (!type) continue;
+      const blob = await item.getType(type);
+      const file = new File([blob], "collage.png", { type });
+      await applyImageToCard(cardId, file);
+      return;
+    }
+    toast("Aucune image dans le presse-papiers.");
+  } catch (error) {
+    console.warn("Collage impossible :", error);
+    toast("Autorise l'accès au presse-papiers, ou utilise « Choisir une image ».");
+  }
+}
+
+function attachImageActionHandlers(container) {
+  container.querySelectorAll("[data-pick-image]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openImagePickerForCard(btn.dataset.pickImage);
+    });
+  });
+  container.querySelectorAll("[data-paste-image]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      pasteImageFromClipboardForCard(btn.dataset.pasteImage);
+    });
+  });
+}
+
 function isImagePastePageActive() {
   return $("page-bibliotheque").classList.contains("active") ||
     $("page-deck-detail").classList.contains("active") ||
@@ -1100,6 +1155,7 @@ function attachImageDropHandlers(container) {
     el.addEventListener("click", (event) => {
       if (event.target.closest("button, input, select, textarea, a")) return;
       setImageTarget(cardId, el);
+      if (event.target.closest(".smart-placeholder")) openImagePickerForCard(cardId);
     });
     el.addEventListener("dragenter", (event) => {
       event.preventDefault();
@@ -1155,6 +1211,7 @@ function smartPlaceholderHTML(card) {
     '<div class="smart-placeholder" aria-label="Image manquante">' +
       '<span class="smart-placeholder-emoji">' + deckPlaceholderMark(card) + "</span>" +
       '<span class="smart-placeholder-text">' + placeholderText + "</span>" +
+      '<span class="paste-hint">Touche pour choisir une image</span>' +
     "</div>"
   );
 }
@@ -1822,6 +1879,7 @@ async function renderDeckDetail() {
       renderDeckDetail();
     });
   });
+  attachImageActionHandlers(grid);
   attachImageDropHandlers(grid);
 }
 
@@ -2045,6 +2103,9 @@ function deckDetailCardHTML(card, imageUrl) {
     ? '<div class="deck-detail-subcategory-line"><span class="chip-subcategory-compact">' + escapeHTML(card.subcategory) + "</span></div>"
     : "";
   const imageQueryLine = imageQueryHTML(card);
+  const imageActionLine = card.imageId
+    ? ""
+    : '<div class="image-inline-actions">' + imagePickButtonHTML(card, true) + imagePasteButtonHTML(card, true) + "</div>";
   const selected = selectedDeckCardIds.has(card.id);
   const selectBox = deckDetailSelectionMode
     ? '<label class="deck-detail-select" title="Sélectionner"><input type="checkbox" data-deck-select="' + escapeHTML(card.id) + '"' + (selected ? " checked" : "") + '><span></span></label>'
@@ -2066,6 +2127,7 @@ function deckDetailCardHTML(card, imageUrl) {
         subcategoryLine +
         pluralLine +
         imageQueryLine +
+        imageActionLine +
         exampleLine +
       "</div>" +
       '<div class="deck-detail-card-actions compact">' +
@@ -3270,6 +3332,7 @@ async function renderLibrary() {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.favorite));
   });
 
+  attachImageActionHandlers(container);
   attachImageDropHandlers(container);
 }
 
@@ -3342,7 +3405,17 @@ function libraryImageSearchButton(card) {
   if (card.imageId) return "";
   const query = getEffectiveImageQuery(card);
   if (!query) return "";
-  return '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image">Trouver image</a>';
+  return '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image"><svg class="btn-svg-icon"><use href="#icon-search"></use></svg> Trouver image</a>';
+}
+
+function imagePickButtonHTML(card, compact = false) {
+  if (card.imageId) return "";
+  return '<button class="btn btn-small ' + (compact ? "btn-icon " : "") + 'btn-primary" type="button" data-pick-image="' + escapeHTML(card.id) + '" title="Choisir une image" aria-label="Choisir une image"><svg class="btn-svg-icon"><use href="#icon-upload"></use></svg>' + (compact ? "" : " Choisir une image") + "</button>";
+}
+
+function imagePasteButtonHTML(card, compact = false) {
+  if (card.imageId) return "";
+  return '<button class="btn btn-small ' + (compact ? "btn-icon " : "btn-ghost ") + '" type="button" data-paste-image="' + escapeHTML(card.id) + '" title="Coller une image" aria-label="Coller une image"><svg class="btn-svg-icon"><use href="#icon-clipboard"></use></svg>' + (compact ? "" : " Coller") + "</button>";
 }
 
 function libraryMetaHTML(card) {
@@ -3377,6 +3450,8 @@ function libraryItemHTML(card, imageUrl) {
         '<button class="btn btn-icon" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter">🔊</button>' +
         '<button class="btn btn-icon btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
         imageSearchButton +
+        imagePickButtonHTML(card, true) +
+        imagePasteButtonHTML(card, true) +
         '<button class="btn btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '">Modifier</button>' +
         '<button class="btn btn-icon btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer">🗑️</button>' +
       "</div>" +
@@ -3417,6 +3492,8 @@ function libraryRowHTML(card, imageUrl) {
         '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter" aria-label="Écouter">🔊</button>' +
         '<button class="btn btn-icon btn-small btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori" aria-label="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
         imageSearchButton +
+        imagePickButtonHTML(card, true) +
+        imagePasteButtonHTML(card, true) +
         '<button class="btn btn-icon btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '" title="Modifier" aria-label="Modifier">✏️</button>' +
         '<button class="btn btn-icon btn-small btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer" aria-label="Supprimer">🗑️</button>' +
       "</div>" +
@@ -3446,6 +3523,7 @@ async function renderMissingImagesPage() {
       renderMissingImagesPage();
     });
   });
+  attachImageActionHandlers($("missing-images-grid"));
   attachImageDropHandlers($("missing-images-grid"));
   if (currentCard) {
     const currentEl = Array.from($("missing-images-grid").querySelectorAll("[data-image-target-card]"))
@@ -3473,13 +3551,14 @@ async function advanceMissingImageWorkflow() {
   const nextEl = Array.from($("missing-images-grid").querySelectorAll("[data-image-target-card]"))
     .find((el) => el.dataset.imageTargetCard === nextCard.id);
   if (nextEl) setImageTarget(nextCard.id, nextEl);
-  openImageSearchForCard(nextCard);
+  if (window.matchMedia("(min-width: 801px)").matches) openImageSearchForCard(nextCard);
 }
 
 function missingImageCardHTML(card) {
   const subcategory = card.subcategory
     ? '<span class="chip chip-subcategory chip-subcategory-compact">' + escapeHTML(card.subcategory) + "</span>"
     : "";
+  const query = getEffectiveImageQuery(card);
   return (
     '<article class="missing-image-card" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
       '<div class="image-drop-zone">' +
@@ -3492,9 +3571,12 @@ function missingImageCardHTML(card) {
           '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
           subcategory +
         "</div>" +
-        imageQueryHTML(card) +
+        imageQueryHTML(card, false) +
       "</div>" +
       '<div class="missing-image-actions">' +
+        (query ? '<a class="btn btn-small btn-ghost" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer"><svg class="btn-svg-icon"><use href="#icon-search"></use></svg> Trouver</a>' : "") +
+        imagePickButtonHTML(card) +
+        imagePasteButtonHTML(card) +
         '<button class="btn btn-ghost btn-small" type="button" data-missing-skip="' + escapeHTML(card.id) + '">Passer</button>' +
       "</div>" +
     "</article>"
@@ -4582,6 +4664,7 @@ async function startApp() {
   setupLibraryPage();
   setupGrammarPage();
   setupBackupPage();
+  setupImagePicker();
   warmUpVoices();
 
   // 4. Rouvre le dernier onglet visité (ou le dashboard)

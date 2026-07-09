@@ -1871,6 +1871,7 @@ input[type="file"]::file-selector-button:hover {
   min-height: 120px;
   padding: 12px;
   color: var(--text);
+  cursor: pointer;
   text-align: center;
   background:
     radial-gradient(circle at 50% 20%, rgba(232, 185, 75, 0.18), transparent 42%),
@@ -1907,6 +1908,17 @@ input[type="file"]::file-selector-button:hover {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.25;
+}
+
+.btn-svg-icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 16px;
 }
 
 [data-image-target-card] {
@@ -2142,8 +2154,16 @@ input[type="file"]::file-selector-button:hover {
 .missing-image-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.image-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .library-next {
@@ -3627,6 +3647,16 @@ input[type="file"]::file-selector-button:hover {
   .btn-small {
     min-height: 36px;
     padding: 7px 10px;
+  }
+
+  .missing-image-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .missing-image-actions .btn {
+    width: 100%;
+    min-height: 44px;
   }
 
   .stats-grid {
