@@ -310,33 +310,53 @@
           <p>Les cartes du jour et les cartes en retard.</p>
         </header>
 
-        <div class="panel review-setup">
-          <div>
-            <h2 id="review-scope-title">Révision : toutes les catégories</h2>
-            <p class="muted" id="review-mode-help">Choisis un mode, puis révise les cartes dues.</p>
-          </div>
-          <div class="review-setup-actions">
-            <button class="btn btn-ghost btn-small" id="btn-review-all">Réviser toutes les catégories</button>
-            <div class="segmented">
-              <button class="btn btn-small active" id="btn-review-type-due" type="button">Révision du jour</button>
-              <button class="btn btn-small" id="btn-review-type-free" type="button">Entraînement libre</button>
+        <div id="review-hub">
+          <section class="panel hub-summary">
+            <div class="hub-summary-head">
+              <div>
+                <h2 id="hub-title">Prêt à réviser</h2>
+                <p class="muted" id="hub-subtitle">Choisis ce que tu veux travailler.</p>
+              </div>
             </div>
-            <div class="segmented">
-              <button class="btn btn-small active" id="btn-review-mode-classic" type="button">Cartes classiques</button>
-              <button class="btn btn-small" id="btn-review-mode-multiple" type="button">Réponses multiples</button>
-              <button class="btn btn-small" id="btn-review-mode-written" type="button">Révision écrite</button>
+            <div class="hub-stat-grid">
+              <div class="hub-stat hub-stat-new"><span>Nouvelles</span><strong id="hub-stat-new">0</strong></div>
+              <div class="hub-stat hub-stat-review"><span>À revoir</span><strong id="hub-stat-review">0</strong></div>
+              <div class="hub-stat hub-stat-hard"><span>Difficiles</span><strong id="hub-stat-hard">0</strong></div>
             </div>
-          </div>
-        </div>
+            <p class="hub-note hidden" id="hub-cap-note"></p>
+          </section>
 
-        <div class="panel srs-help">
-          <strong>Comment ça marche ?</strong>
-          <p>Révision du jour utilise la répétition espacée : si tu connais une carte, elle revient plus tard. Si tu la rates, elle revient vite. Entraînement libre te laisse réviser quand tu veux sans modifier ta progression.</p>
-          <div class="srs-help-grid">
-            <span>Raté : revient aujourd'hui</span>
-            <span>Difficile : revient demain</span>
-            <span>Normal : revient plus tard</span>
-            <span>Facile : revient encore plus tard</span>
+          <section class="panel">
+            <h2>Que réviser ?</h2>
+            <div class="hub-scope-chips" id="hub-scope-chips"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Comment ?</h2>
+            <div class="hub-mode-grid" id="hub-mode-grid">
+              <button class="hub-mode" type="button" data-hub-mode="classic">
+                <span class="hub-mode-title">Classique</span>
+                <span class="hub-mode-desc">Je révèle la réponse et je m'auto-évalue.</span>
+              </button>
+              <button class="hub-mode" type="button" data-hub-mode="multiple" id="hub-mode-multiple">
+                <span class="hub-mode-title">Choix multiple</span>
+                <span class="hub-mode-desc">Je choisis parmi 4 réponses.</span>
+              </button>
+              <button class="hub-mode" type="button" data-hub-mode="written">
+                <span class="hub-mode-title">Écrit</span>
+                <span class="hub-mode-desc">J'écris l'article et le mot.</span>
+              </button>
+              <button class="hub-mode" type="button" data-hub-mode="learning">
+                <span class="hub-mode-title">Découverte</span>
+                <span class="hub-mode-desc">Je feuillette sans toucher à ma progression.</span>
+              </button>
+            </div>
+          </section>
+
+          <div class="hub-cta">
+            <button class="btn btn-primary btn-large" type="button" id="btn-hub-start">Commencer</button>
+            <button class="btn btn-ghost" type="button" id="btn-hub-free">Entraînement libre</button>
+            <p class="muted hub-cta-note" id="hub-cta-note"></p>
           </div>
         </div>
 

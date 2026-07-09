@@ -36,6 +36,7 @@ const LS_SUBCATEGORIES = "dfs_custom_subcategories";
 const LS_LAST_EXPORT_AT = "dfs_last_export_at";
 const LS_LIBRARY_VIEW = "dfs_library_view";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
+const LS_REVIEW_MODE = "dfs_review_mode";
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
 const DEFAULT_IMAGE = "data:image/svg+xml," + encodeURIComponent(
@@ -78,9 +79,10 @@ let currentLearningIndex = 0;         // index de la carte affichée en Apprenti
 let pendingLearningCategory = null;   // null = tout, string = un deck, array = plusieurs decks
 let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks
 let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks
-let currentReviewMode = "classic";
+let currentReviewMode = localStorage.getItem(LS_REVIEW_MODE) || "classic";
 let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
 let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks
+let skipHubOnce = false;
 let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
 let deckDetailSearch = "";
@@ -1312,7 +1314,15 @@ function showPage(name) {
   if (name === "dashboard")    refreshDashboard();
   if (name === "deck-detail")  renderDeckDetail();
   if (name === "apprentissage") renderLearningPage();
-  if (name === "revision")     startReviewSession();
+  if (name === "revision") {
+    if (skipHubOnce) {
+      skipHubOnce = false;
+      $("review-hub").classList.add("hidden");
+      startReviewSession();
+    } else {
+      showReviewHub();
+    }
+  }
   if (name === "bibliotheque") renderLibrary();
   if (name === "missing-images") renderMissingImagesPage();
   if (name === "grammaire")    renderGrammarPage();
@@ -1338,10 +1348,6 @@ function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!btn.dataset.page) return;
-      if (btn.dataset.page === "revision") {
-        currentReviewCategory = null;
-        reviewSessionType = "due";
-      }
       showPage(btn.dataset.page);
     });
   });
@@ -2181,6 +2187,32 @@ async function getStudyScopeStats(scope = null) {
   };
 }
 
+async function getReviewHubStats(scope = null) {
+  const cards = await getAllCards();
+  const today = todayISO();
+  const scoped = cards.filter((card) => cardInScope(card, scope));
+  const due = scoped.filter((card) => normalizeSrs(card.srs).nextReview <= today);
+  const newDue = due.filter(isNewCard);
+  const reviewDue = due.filter((card) => !isNewCard(card));
+  const hard = scoped.filter((card) => normalizeSrs(card.srs).wrongCount >= 3);
+
+  return {
+    scoped,
+    totalCards: scoped.length,
+    dueCards: due.length,
+    newCards: newDue.length,
+    reviewCards: reviewDue.length,
+    hardCards: hard.length,
+    sessionSize: buildReviewQueue(scoped).length,
+    cappedNewCards: Math.max(0, newDue.length - MAX_NEW_CARDS_PER_DAY),
+    distinctGermanWords: new Set(
+      scoped
+        .map((card) => String(card.de || "").trim().toLowerCase())
+        .filter(Boolean)
+    ).size,
+  };
+}
+
 async function openStudyModeModal(scope = null) {
   pendingStudyScope = normalizeScope(scope);
   const stats = await getStudyScopeStats(pendingStudyScope);
@@ -2216,6 +2248,8 @@ function handleStudyModeChoice(mode) {
     reviewSessionType = "due";
     currentReviewMode = "classic";
     closeStudyModeModal();
+    skipHubOnce = true;
+    $("review-hub").classList.add("hidden");
     showPage("revision");
     return;
   }
@@ -2225,6 +2259,8 @@ function handleStudyModeChoice(mode) {
     reviewSessionType = "free";
     currentReviewMode = "classic";
     closeStudyModeModal();
+    skipHubOnce = true;
+    $("review-hub").classList.add("hidden");
     showPage("revision");
     return;
   }
@@ -2234,6 +2270,9 @@ function handleStudyModeChoice(mode) {
     reviewSessionType = dueCards > 0 ? "due" : "free";
     currentReviewMode = "multiple";
     closeStudyModeModal();
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+    skipHubOnce = true;
+    $("review-hub").classList.add("hidden");
     showPage("revision");
     return;
   }
@@ -2243,6 +2282,9 @@ function handleStudyModeChoice(mode) {
     reviewSessionType = dueCards > 0 ? "due" : "free";
     currentReviewMode = "written";
     closeStudyModeModal();
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+    skipHubOnce = true;
+    $("review-hub").classList.add("hidden");
     showPage("revision");
     return;
   }
@@ -2448,7 +2490,10 @@ function refreshAfterDeckChange() {
   renderLibraryIfVisible();
   renderLearningIfVisible();
   renderDeckDetailIfVisible();
-  if ($("page-revision").classList.contains("active")) startReviewSession();
+  if ($("page-revision").classList.contains("active")) {
+    if (isSessionRunning()) startReviewSession();
+    else renderReviewHub();
+  }
 }
 
 /* =========================================================
@@ -2461,7 +2506,113 @@ function refreshAfterDeckChange() {
    - Facile    -> box + 2, revient selon la nouvelle box
    ========================================================= */
 
+function isSessionRunning() {
+  return !$("review-area").classList.contains("hidden");
+}
+
+function showReviewHub() {
+  $("review-hub").classList.remove("hidden");
+  $("review-area").classList.add("hidden");
+  $("review-empty").classList.add("hidden");
+  $("session-summary").classList.add("hidden");
+  $("page-revision").classList.remove("session-active");
+  setReviewSessionActive(false);
+  renderReviewHub();
+}
+
+async function renderReviewHub() {
+  currentReviewCategory = normalizeScope(currentReviewCategory);
+  if (!["classic", "multiple", "written", "learning"].includes(currentReviewMode)) {
+    currentReviewMode = "classic";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+  }
+  const stats = await getReviewHubStats(currentReviewCategory);
+  await renderHubScopeChips();
+
+  $("hub-stat-new").textContent = stats.newCards;
+  $("hub-stat-review").textContent = stats.reviewCards;
+  $("hub-stat-hard").textContent = stats.hardCards;
+
+  $("hub-subtitle").textContent =
+    "Périmètre : " + scopeLabel(currentReviewCategory) + " · " + stats.totalCards + " carte(s)";
+
+  $("hub-cap-note").classList.toggle("hidden", stats.cappedNewCards === 0);
+  if (stats.cappedNewCards > 0) {
+    $("hub-cap-note").textContent =
+      stats.cappedNewCards + " nouvelle(s) carte(s) sont gardées pour les prochains jours (max " +
+      MAX_NEW_CARDS_PER_DAY + " par jour) pour ne pas te surcharger.";
+  }
+
+  const multipleOk = stats.distinctGermanWords >= 4;
+  $("hub-mode-multiple").disabled = !multipleOk;
+  $("hub-mode-multiple").classList.toggle("disabled", !multipleOk);
+  if (!multipleOk && currentReviewMode === "multiple") {
+    currentReviewMode = "classic";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+  }
+
+  document.querySelectorAll("[data-hub-mode]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.hubMode === currentReviewMode);
+  });
+
+  const learningMode = currentReviewMode === "learning";
+  const nothingDue = stats.sessionSize === 0;
+  $("btn-hub-start").disabled = learningMode ? stats.totalCards === 0 : nothingDue;
+  $("btn-hub-start").textContent = learningMode
+    ? (stats.totalCards === 0
+        ? "Aucune carte à découvrir"
+        : "Découvrir · " + stats.totalCards + " carte" + (stats.totalCards > 1 ? "s" : ""))
+    : (nothingDue
+        ? "Rien à réviser aujourd'hui"
+        : "Commencer · " + stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : ""));
+  $("btn-hub-free").classList.toggle("hidden", stats.totalCards === 0);
+  $("hub-cta-note").textContent = learningMode
+    ? "Découverte ne modifie pas ta progression."
+    : nothingDue
+    ? (stats.totalCards === 0
+        ? "Aucune carte dans ce périmètre. Ajoute des cartes pour commencer."
+        : "Tout est à jour ici. Tu peux quand même t'entraîner librement.")
+    : "L'entraînement libre ne modifie pas ta progression.";
+}
+
+async function renderHubScopeChips() {
+  const cards = await getAllCards();
+  const today = todayISO();
+  const decks = [...new Set([
+    ...cards.map(cardDeckName),
+    ...getCustomDecks().map((deck) => deck.name),
+  ])].filter(Boolean).sort((a, b) => a.localeCompare(b, "fr"));
+
+  const normalizedScope = normalizeScope(currentReviewCategory);
+  const selected = Array.isArray(normalizedScope)
+    ? normalizedScope
+    : (normalizedScope ? [normalizedScope] : []);
+
+  $("hub-scope-chips").innerHTML =
+    '<button class="hub-chip' + (selected.length === 0 ? " active" : "") + '" type="button" data-hub-scope="__all__">Tout</button>' +
+    decks.map((name) => {
+      const due = cards.filter((card) => cardDeckName(card) === name && normalizeSrs(card.srs).nextReview <= today).length;
+      return '<button class="hub-chip' + (selected.includes(name) ? " active" : "") + '" type="button" data-hub-scope="' + escapeHTML(name) + '">' +
+        escapeHTML(name) + (due ? '<span class="hub-chip-badge">' + due + "</span>" : "") + "</button>";
+    }).join("");
+
+  $("hub-scope-chips").querySelectorAll("[data-hub-scope]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const value = chip.dataset.hubScope;
+      if (value === "__all__") {
+        currentReviewCategory = null;
+      } else {
+        const next = new Set(selected);
+        next.has(value) ? next.delete(value) : next.add(value);
+        currentReviewCategory = next.size === 0 ? null : [...next];
+      }
+      renderReviewHub();
+    });
+  });
+}
+
 async function startReviewSession() {
+  $("review-hub").classList.add("hidden");
   const cards = await getAllCards();
   currentReviewCategory = normalizeScope(currentReviewCategory);
   const scopedCards = cards.filter((card) => cardInScope(card, currentReviewCategory));
@@ -2470,7 +2621,10 @@ async function startReviewSession() {
   isGrading = false;
   setGradeButtonsDisabled(false);
   reviewChoicePool = scopedCards;
-  updateReviewSetup(scopedCards);
+  if (currentReviewMode === "multiple" && new Set(scopedCards.map((card) => fullWord(card))).size < 4) {
+    currentReviewMode = "classic";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+  }
   reviewQueue = reviewSessionType === "due"
     ? buildReviewQueue(scopedCards)
     : buildFreePracticeQueue(scopedCards);
@@ -2493,27 +2647,11 @@ async function startReviewSession() {
 }
 
 function updateReviewSetup(scopedCards) {
-  const sessionLabel = reviewSessionType === "free" ? "Entraînement libre" : "Révision du jour";
-  $("review-scope-title").textContent = sessionLabel + " : " + scopeLabel(currentReviewCategory);
-
   const distinctChoices = new Set(scopedCards.map((card) => fullWord(card))).size;
   const multipleAvailable = distinctChoices >= 4;
-  $("btn-review-mode-multiple").disabled = !multipleAvailable;
   if (!multipleAvailable && currentReviewMode === "multiple") {
     currentReviewMode = "classic";
-  }
-
-  $("btn-review-type-due").classList.toggle("active", reviewSessionType === "due");
-  $("btn-review-type-free").classList.toggle("active", reviewSessionType === "free");
-  $("btn-review-mode-classic").classList.toggle("active", currentReviewMode === "classic");
-  $("btn-review-mode-multiple").classList.toggle("active", currentReviewMode === "multiple");
-  $("btn-review-mode-written").classList.toggle("active", currentReviewMode === "written");
-  if (reviewSessionType === "free") {
-    $("review-mode-help").textContent = "Entraînement libre : ta progression SRS ne sera pas modifiée.";
-  } else {
-    $("review-mode-help").textContent = multipleAvailable
-      ? "Révision du jour : seules les cartes dues modifient ta progression SRS."
-      : "Réponses multiples disponibles avec 4 réponses allemandes distinctes dans ce deck.";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
 }
 
@@ -2540,12 +2678,13 @@ function exitReviewSession() {
   isGrading = false;
   setGradeButtonsDisabled(false);
   setReviewSessionActive(false);
-  showPage("dashboard");
+  showReviewHub();
 }
 
 function showReviewEmpty(message, canStartFreePractice = false) {
   currentCard = null;
   setReviewSessionActive(false);
+  $("review-hub").classList.add("hidden");
   $("review-area").classList.add("hidden");
   $("review-empty").classList.remove("hidden");
   $("review-empty-text").textContent = message;
@@ -2558,6 +2697,7 @@ function showSessionSummary() {
   const stats = reviewSessionStats || { seen: 0, correct: 0, wrong: 0, failedCards: [] };
   const successRate = stats.seen ? Math.round((stats.correct / stats.seen) * 100) : 0;
   setReviewSessionActive(false);
+  $("review-hub").classList.add("hidden");
   $("review-area").classList.add("hidden");
   $("review-empty").classList.remove("hidden");
   $("review-empty-text").textContent = "Résumé de séance";
@@ -2575,6 +2715,7 @@ function showSessionSummary() {
         stats.failedCards.map((card) => '<li>' + escapeHTML(fullWord(card)) + "</li>").join("") +
         "</ul></div>"
       : '<p class="muted">Aucune carte ratée dans cette séance.</p>');
+  $("session-summary").insertAdjacentHTML("beforeend", '<button class="btn btn-primary" type="button" data-review-hub-return>Retour</button>');
 }
 
 function buildReviewQueue(cards) {
@@ -2898,31 +3039,33 @@ async function handleGrade(grade) {
 function setupReviewPage() {
   $("btn-show-answer").addEventListener("click", showAnswer);
   $("btn-review-exit").addEventListener("click", exitReviewSession);
-  $("btn-review-all").addEventListener("click", () => {
-    currentReviewCategory = null;
+  document.querySelectorAll("[data-hub-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      currentReviewMode = btn.dataset.hubMode;
+      localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+      renderReviewHub();
+    });
+  });
+  $("btn-hub-start").addEventListener("click", () => {
+    if (currentReviewMode === "learning") {
+      pendingLearningCategory = normalizeScope(currentReviewCategory);
+      showPage("apprentissage");
+      return;
+    }
     reviewSessionType = "due";
+    $("review-hub").classList.add("hidden");
     startReviewSession();
   });
-  $("btn-review-type-due").addEventListener("click", () => {
-    reviewSessionType = "due";
-    startReviewSession();
-  });
-  $("btn-review-type-free").addEventListener("click", () => {
+  $("btn-hub-free").addEventListener("click", () => {
     reviewSessionType = "free";
+    currentReviewMode = currentReviewMode === "learning" ? "classic" : currentReviewMode;
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+    $("review-hub").classList.add("hidden");
     startReviewSession();
   });
-  $("btn-review-mode-classic").addEventListener("click", () => {
-    currentReviewMode = "classic";
-    startReviewSession();
-  });
-  $("btn-review-mode-multiple").addEventListener("click", () => {
-    if ($("btn-review-mode-multiple").disabled) return;
-    currentReviewMode = "multiple";
-    startReviewSession();
-  });
-  $("btn-review-mode-written").addEventListener("click", () => {
-    currentReviewMode = "written";
-    startReviewSession();
+  $("session-summary").addEventListener("click", (event) => {
+    if (event.target.closest("[data-review-hub-return]")) showReviewHub();
   });
   $("multiple-choice").addEventListener("click", (event) => {
     const btn = event.target.closest("[data-choice]");
@@ -4435,7 +4578,8 @@ async function importData(file, mode = "merge", options = {}) {
     renderDeckDetailIfVisible();
     renderMissingImagesIfVisible();
     if ($("page-revision").classList.contains("active")) {
-      startReviewSession();
+      if (isSessionRunning()) startReviewSession();
+      else renderReviewHub();
     }
   } catch (error) {
     console.error("Erreur d'import :", error);
@@ -4538,7 +4682,8 @@ function refreshAfterDangerAction() {
   renderMissingImagesIfVisible();
 
   if ($("page-revision").classList.contains("active")) {
-    startReviewSession();
+    if (isSessionRunning()) startReviewSession();
+    else renderReviewHub();
   }
 }
 
