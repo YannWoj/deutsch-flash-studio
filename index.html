@@ -307,8 +307,6 @@
         </div>
 
         <div id="learning-area" class="learning-area hidden">
-          <p class="review-counter" id="learning-counter"></p>
-
           <article class="learning-card">
             <div class="chips learning-category-top">
               <span class="chip chip-category" id="learning-category"></span>
@@ -361,7 +359,7 @@
               </div>
             </div>
             <div class="hub-stat-grid">
-              <div class="hub-stat hub-stat-new"><span>Nouvelles</span><strong id="hub-stat-new">0</strong></div>
+              <div class="hub-stat hub-stat-new"><span>Nouvelles en attente</span><strong id="hub-stat-new">0</strong></div>
               <div class="hub-stat hub-stat-review"><span>À revoir</span><strong id="hub-stat-review">0</strong></div>
               <div class="hub-stat hub-stat-hard"><span>Difficiles</span><strong id="hub-stat-hard">0</strong></div>
             </div>
@@ -682,6 +680,12 @@
           <p class="muted">Tu pourras choisir Fusionner ou Tout remplacer après la prévisualisation.</p>
         </div>
 
+        <div class="panel">
+          <h2>Mise à jour</h2>
+          <p class="muted">Si l'application se comporte bizarrement après une mise à jour, force le rechargement complet.</p>
+          <button class="btn btn-ghost" type="button" id="btn-force-update">Vider le cache et recharger</button>
+        </div>
+
         <div class="panel danger-zone">
           <h2>Danger Zone</h2>
           <p class="danger-warning">Actions irréversibles.</p>
@@ -850,17 +854,6 @@
 
   <script src="grammar-data.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Enregistrement du service worker (mode hors ligne + installation sur mobile).
-    // Le chemin relatif "sw.js" fonctionne aussi bien en local que sur GitHub Pages.
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").catch((error) => {
-          console.warn("Service worker non enregistré :", error);
-        });
-      });
-    }
-  </script>
 </body>
 </html>
 

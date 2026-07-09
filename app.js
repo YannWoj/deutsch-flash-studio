@@ -2247,6 +2247,7 @@ async function getReviewHubStats(scope = null) {
   const newDue = due.filter(isNewCard);
   const reviewDue = due.filter((card) => !isNewCard(card));
   const hard = scoped.filter((card) => normalizeSrs(card.srs).wrongCount >= 3);
+  const queue = buildReviewQueue(scoped);
 
   return {
     scoped,
@@ -2255,7 +2256,9 @@ async function getReviewHubStats(scope = null) {
     newCards: newDue.length,
     reviewCards: reviewDue.length,
     hardCards: hard.length,
-    sessionSize: buildReviewQueue(scoped).length,
+    sessionSize: queue.length,
+    sessionNewCards: queue.filter(isNewCard).length,
+    sessionReviewCards: queue.filter((card) => !isNewCard(card)).length,
     cappedNewCards: Math.max(0, newDue.length - MAX_NEW_CARDS_PER_DAY),
     distinctGermanWords: new Set(
       scoped
@@ -2591,12 +2594,21 @@ async function renderReviewHub() {
   $("hub-subtitle").textContent =
     "Périmètre : " + scopeLabel(currentReviewCategory) + " · " + stats.totalCards + " carte(s)";
 
-  $("hub-cap-note").classList.toggle("hidden", stats.cappedNewCards === 0);
-  if (stats.cappedNewCards > 0) {
-    $("hub-cap-note").textContent =
-      stats.cappedNewCards + " nouvelle(s) carte(s) sont gardées pour les prochains jours (max " +
-      MAX_NEW_CARDS_PER_DAY + " par jour) pour ne pas te surcharger.";
+  const sessionParts = [];
+  if (stats.sessionNewCards > 0) {
+    sessionParts.push(stats.sessionNewCards + " nouvelle" + (stats.sessionNewCards > 1 ? "s" : ""));
   }
+  if (stats.sessionReviewCards > 0) {
+    sessionParts.push(stats.sessionReviewCards + " à revoir");
+  }
+  $("hub-cap-note").classList.remove("hidden");
+  $("hub-cap-note").innerHTML = stats.sessionSize > 0
+    ? '<strong>Session du jour : ' + stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : "") + "</strong>" +
+      (sessionParts.length ? " · " + sessionParts.join(" + ") : "") +
+      (stats.cappedNewCards > 0
+        ? '<span class="hub-cap-detail">Les ' + stats.cappedNewCards + " autres nouvelles cartes arriveront les prochains jours (max " + MAX_NEW_CARDS_PER_DAY + " par jour).</span>"
+        : "")
+    : "<strong>Rien à réviser aujourd'hui dans ce périmètre.</strong>";
 
   const multipleOk = stats.distinctGermanWords >= 4;
   $("hub-mode-multiple").disabled = !multipleOk;
@@ -4840,6 +4852,7 @@ async function deleteEverything() {
 
 function setupBackupPage() {
   $("btn-export").addEventListener("click", exportData);
+  $("btn-force-update").addEventListener("click", forceUpdateAppCache);
   $("btn-delete-everything").addEventListener("click", deleteEverything);
   $("btn-export-before-reset").addEventListener("click", exportData);
   $("btn-reset-srs").addEventListener("click", resetAllSrsProgress);
@@ -4863,30 +4876,100 @@ function setupBackupPage() {
   $("btn-import-preview-cancel").addEventListener("click", closeImportPreviewModal);
 }
 
+async function forceUpdateAppCache() {
+  const confirmed = confirm(
+    "Vider le cache et recharger l'application ?\n\nTes cartes et ta progression ne sont pas touchées."
+  );
+  if (!confirmed) return;
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+  } catch (error) {
+    console.warn("Nettoyage du cache incomplet :", error);
+  }
+  window.location.reload();
+}
+
+function setupServiceWorkerUpdates() {
+  if (!("serviceWorker" in navigator)) return;
+
+  navigator.serviceWorker.register("./sw.js").then((registration) => {
+    registration.update();
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) registration.update();
+    });
+
+    registration.addEventListener("updatefound", () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+          toast("Nouvelle version disponible. Relance l'app pour l'appliquer.");
+        }
+      });
+    });
+  }).catch((error) => console.warn("Service worker non enregistré :", error));
+
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+}
+
 
 /* =========================================================
    13. DÉMARRAGE DE L'APPLICATION
    ========================================================= */
 
 async function startApp() {
-  await initDB();       // 1. Ouvre la base de données
-  requestPersistentStorage();
-  await seedIfEmpty();  // 2. Ajoute les cartes d'exemple au premier lancement
+  function runSetup(name, fn) {
+    try {
+      fn();
+    } catch (error) {
+      console.error("Échec du setup « " + name + " » :", error);
+    }
+  }
 
-  // 3. Branche tous les boutons et formulaires
-  setupNavigation();
-  setupLearningPage();
-  setupReviewPage();
-  setupAddForm();
-  setupLibraryPage();
-  setupGrammarPage();
-  setupBackupPage();
-  setupImagePicker();
-  warmUpVoices();
+  try {
+    await initDB();
+    requestPersistentStorage();
+    await seedIfEmpty();
+  } catch (error) {
+    console.error("Échec du démarrage :", error);
+    toast("Erreur au démarrage. Certaines données peuvent être indisponibles.");
+  }
 
-  // 4. Rouvre le dernier onglet visité (ou le dashboard)
-  const lastPage = localStorage.getItem(LS_LAST_PAGE) || "dashboard";
-  showPage(lastPage);
+  runSetup("navigation", setupNavigation);
+  runSetup("learning", setupLearningPage);
+  runSetup("review", setupReviewPage);
+  runSetup("addForm", setupAddForm);
+  runSetup("library", setupLibraryPage);
+  runSetup("grammar", setupGrammarPage);
+  runSetup("backup", setupBackupPage);
+  runSetup("imagePicker", setupImagePicker);
+  runSetup("serviceWorker", setupServiceWorkerUpdates);
+  runSetup("voices", warmUpVoices);
+
+  // On ne restaure jamais une page de session ou un détail de deck :
+  // au lancement, l'utilisateur veut voir ses jeux.
+  const RESTORABLE_PAGES = ["dashboard", "bibliotheque", "ajouter", "grammaire"];
+  const lastPage = localStorage.getItem(LS_LAST_PAGE);
+  try {
+    showPage(RESTORABLE_PAGES.includes(lastPage) ? lastPage : "dashboard");
+  } catch (error) {
+    console.error("Échec de l'affichage initial :", error);
+    document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
+    $("page-dashboard").classList.add("active");
+    toast("Erreur d'affichage. Retour aux jeux.");
+  }
 }
 
 // On attend que le HTML soit chargé avant de démarrer
