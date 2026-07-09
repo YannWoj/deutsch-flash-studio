@@ -37,6 +37,7 @@ const LS_LAST_EXPORT_AT = "dfs_last_export_at";
 const LS_LIBRARY_VIEW = "dfs_library_view";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 const LS_REVIEW_MODE = "dfs_review_mode";
+const LS_LEARNING_FILTER = "dfs_learning_filter";
 const FAVORITES_SCOPE = "__favorites__";
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
@@ -77,6 +78,7 @@ let editingCard = null;              // carte en cours de modification, ou null 
 let imageMarkedForRemoval = false;   // indique que l'image actuelle doit être retirée en édition
 let learningCards = [];              // cartes visibles dans le mode Apprentissage
 let currentLearningIndex = 0;         // index de la carte affichée en Apprentissage
+let learningOnlyNew = true;
 let pendingLearningCategory = null;   // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks, "__favorites__" = favoris
@@ -1321,7 +1323,7 @@ function showPage(name) {
   // Rafraîchit le contenu de la page qu'on vient d'ouvrir
   if (name === "dashboard")    refreshDashboard();
   if (name === "deck-detail")  renderDeckDetail();
-  if (name === "apprentissage") renderLearningPage();
+  if (name === "apprentissage") renderLearningPage(true);
   if (name === "revision") {
     if (skipHubOnce) {
       skipHubOnce = false;
@@ -1356,6 +1358,10 @@ function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!btn.dataset.page) return;
+      if (btn.dataset.page === "apprentissage") {
+        pendingLearningCategory = null;
+        currentLearningScope = null;
+      }
       showPage(btn.dataset.page);
     });
   });
@@ -2341,8 +2347,6 @@ function handleStudyModeChoice(mode) {
     } else {
       pendingLearningCategory = null;
       currentLearningScope = null;
-      $("learning-filter-category").value = "";
-      $("learning-filter-subcategory").value = "";
       currentLearningIndex = 0;
     }
     closeStudyModeModal();
@@ -3115,7 +3119,8 @@ function setupReviewPage() {
   });
   $("btn-hub-start").addEventListener("click", () => {
     if (currentReviewMode === "learning") {
-      pendingLearningCategory = normalizeScope(currentReviewCategory);
+      currentLearningScope = normalizeScope(currentReviewCategory);
+      pendingLearningCategory = currentLearningScope;
       showPage("apprentissage");
       return;
     }
@@ -3929,32 +3934,32 @@ async function renderLearningPage(resetIndex = false) {
   const version = ++learningRenderVersion;
   const allCards = await getAllCards();
   if (version !== learningRenderVersion) return;
-  updateLearningCategoryFilter(allCards);
-  updateLearningSubcategoryFilter(allCards);
 
-  if (pendingLearningCategory) {
+  if (pendingLearningCategory !== null) {
     currentLearningScope = normalizeScope(pendingLearningCategory);
-    $("learning-filter-category").value = Array.isArray(currentLearningScope) ? "" : currentLearningScope;
-    $("learning-filter-subcategory").value = "";
     pendingLearningCategory = null;
     resetIndex = true;
-    updateLearningSubcategoryFilter(allCards);
   }
 
   if (resetIndex) currentLearningIndex = 0;
 
-  const query = $("learning-search").value.trim().toLowerCase();
-  const category = $("learning-filter-category").value;
-  const subcategory = $("learning-filter-subcategory").value;
+  $("learning-scope-title").textContent = "Découverte : " + scopeLabel(currentLearningScope);
+  document.querySelectorAll("[data-learning-filter]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.learningFilter === (learningOnlyNew ? "new" : "all"));
+  });
 
-  learningCards = allCards
-    .filter((card) => {
-      const matchesScope = cardInScope(card, currentLearningScope);
-      const matchesCategory = !category || cardDeckName(card) === category;
-      const matchesSubcategory = !subcategory || (subcategory === "__none__" ? !card.subcategory : card.subcategory === subcategory);
-      return matchesCardQuery(card, query) && matchesScope && matchesCategory && matchesSubcategory;
-    })
+  const scopedCards = allCards.filter((card) => cardInScope(card, currentLearningScope));
+  learningCards = scopedCards
+    .filter((card) => !learningOnlyNew || isNewCard(card))
     .sort((a, b) => fullWord(a).localeCompare(fullWord(b), "de"));
+
+  if (learningOnlyNew && learningCards.length === 0 && scopedCards.length > 0) {
+    learningOnlyNew = false;
+    localStorage.setItem(LS_LEARNING_FILTER, "all");
+    toast("Toutes tes cartes de ce périmètre sont déjà vues — affichage complet.");
+    renderLearningPage(true);
+    return;
+  }
 
   if (currentLearningIndex >= learningCards.length) {
     currentLearningIndex = Math.max(0, learningCards.length - 1);
@@ -3968,7 +3973,7 @@ async function renderLearningPage(resetIndex = false) {
 
   if (learningCards.length === 0) {
     $("btn-learning-shuffle").disabled = true;
-    showLearningEmpty("Aucune carte ne correspond à ces filtres.");
+    showLearningEmpty(currentLearningScope ? "Aucune carte dans ce périmètre." : "Aucune carte à découvrir.");
     return;
   }
 
@@ -3986,6 +3991,7 @@ function showLearningEmpty(message) {
   $("learning-area").classList.add("hidden");
   $("learning-empty").classList.remove("hidden");
   $("learning-empty-text").textContent = message;
+  $("learning-counter").textContent = "";
 }
 
 async function showLearningCard() {
@@ -4032,38 +4038,22 @@ async function showLearningCard() {
   $("btn-learning-next").disabled = currentLearningIndex >= learningCards.length - 1;
 }
 
-function updateLearningCategoryFilter(cards) {
-  const select = $("learning-filter-category");
-  const currentValue = select.value;
-  const categories = [...new Set([
-    ...cards.map(cardDeckName),
-    ...getCustomDecks().map((deck) => deck.name),
-  ].filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
-
-  select.innerHTML =
-    '<option value="">Toutes les catégories</option>' +
-    categories.map((c) => '<option value="' + escapeHTML(c) + '">' + escapeHTML(c) + "</option>").join("");
-
-  if (categories.includes(currentValue)) select.value = currentValue;
-}
-
-function updateLearningSubcategoryFilter(cards) {
-  const select = $("learning-filter-subcategory");
-  const currentValue = select.value;
-  const category = $("learning-filter-category").value;
-  const scopedCards = cards.filter((card) => cardInScope(card, currentLearningScope))
-    .filter((card) => !category || cardDeckName(card) === category);
-  fillSubcategorySelect(select, scopedCards, currentValue, category);
-}
-
 function setupLearningPage() {
-  const debouncedRenderLearning = debounce(() => renderLearningPage(true), 150);
-  $("learning-search").addEventListener("input", debouncedRenderLearning);
-  $("learning-filter-category").addEventListener("change", () => {
-    currentLearningScope = null;
-    renderLearningPage(true);
+  learningOnlyNew = localStorage.getItem(LS_LEARNING_FILTER) !== "all";
+  $("btn-learning-exit").addEventListener("click", () => {
+    currentReviewCategory = currentLearningScope;
+    showPage("revision");
   });
-  $("learning-filter-subcategory").addEventListener("change", () => renderLearningPage(true));
+  document.querySelectorAll("[data-learning-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      learningOnlyNew = btn.dataset.learningFilter === "new";
+      localStorage.setItem(LS_LEARNING_FILTER, learningOnlyNew ? "new" : "all");
+      document.querySelectorAll("[data-learning-filter]").forEach((other) => {
+        other.classList.toggle("active", other === btn);
+      });
+      renderLearningPage(true);
+    });
+  });
   $("btn-learning-shuffle").addEventListener("click", () => {
     if (learningCards.length < 2) return;
     shuffleArray(learningCards);

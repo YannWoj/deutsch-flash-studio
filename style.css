@@ -1332,23 +1332,38 @@ body.selection-mode-active #toast {
   max-width: 46ch;
 }
 
+.session-mini-header,
 .review-session-mini-header {
   display: flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: 10px;
-  margin: 0 0 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
   color: var(--muted);
   font-size: 0.9rem;
 }
 
+.session-counter,
 .review-session-mini-header strong {
   color: var(--gold-strong);
+  font-weight: 700;
   font-size: 0.95rem;
+  white-space: nowrap;
 }
 
+.session-scope,
 .review-session-mini-header span {
   min-width: 0;
+}
+
+.session-header-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .review-session-mini-header .review-counter {
@@ -1784,12 +1799,14 @@ body.review-session-active .review-card {
 }
 
 @media (min-width: 801px) and (max-height: 820px) {
-  #review-image {
+  #review-image,
+  #learning-image {
     max-height: min(240px, 28dvh);
     margin-bottom: 10px;
   }
 
-  .review-card {
+  .review-card,
+  .learning-card {
     padding: 16px 22px 18px;
   }
 
@@ -2483,22 +2500,6 @@ input[type="file"]::file-selector-button:hover {
 }
 
 /* ---------- 13. Apprentissage ---------- */
-.learning-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.learning-toolbar input[type="search"] {
-  flex: 1;
-  min-width: 220px;
-}
-
-.learning-toolbar select {
-  width: auto;
-}
-
 .learning-card {
   max-width: 640px;
   margin: 0 auto;
@@ -2512,12 +2513,13 @@ input[type="file"]::file-selector-button:hover {
 
 #learning-image {
   width: 100%;
-  height: 320px;
+  height: auto;
+  max-height: min(300px, 32dvh);
   object-fit: contain;
   background: #f8f8f8;
   border-radius: 12px;
   border: 1px solid var(--border);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .learning-category-top {
@@ -2553,11 +2555,6 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 18px;
 }
 
-.learning-meta {
-  justify-content: center;
-  margin: 18px 0;
-}
-
 .learning-actions {
   display: flex;
   justify-content: center;
@@ -2569,6 +2566,21 @@ input[type="file"]::file-selector-button:hover {
   cursor: not-allowed;
   opacity: 0.5;
   transform: none;
+}
+
+.learning-scope-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.learning-scope-toggle .btn.active {
+  border-color: rgba(232, 185, 75, 0.45);
+  background: rgba(232, 185, 75, 0.14);
+  color: var(--gold-strong);
 }
 
 /* ---------- 14. Danger Zone ---------- */
@@ -3475,9 +3487,12 @@ input[type="file"]::file-selector-button:hover {
     font-size: 1.75rem;
   }
 
-  #review-image,
-  #learning-image {
+  #review-image {
     height: 260px;
+  }
+
+  #learning-image {
+    max-height: min(240px, 30dvh);
   }
 
   .deck-actions .btn,
@@ -3689,8 +3704,7 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .library-toolbar,
-  .deck-detail-toolbar,
-  .learning-toolbar {
+  .deck-detail-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
@@ -3698,10 +3712,7 @@ input[type="file"]::file-selector-button:hover {
   .library-toolbar input,
   .library-toolbar select,
   .deck-detail-toolbar input,
-  .deck-detail-toolbar select,
-  .learning-toolbar input,
-  .learning-toolbar select,
-  .learning-toolbar .btn {
+  .deck-detail-toolbar select {
     width: 100%;
     min-width: 0;
   }
@@ -4120,7 +4131,7 @@ input[type="file"]::file-selector-button:hover {
   .learning-card {
     width: 100%;
     max-width: none;
-    padding: 16px;
+    padding: 14px;
   }
 
   #review-image,
@@ -4133,9 +4144,21 @@ input[type="file"]::file-selector-button:hover {
   }
 
   #learning-image {
-    height: min(52vw, 220px);
-    max-height: 220px;
+    max-height: min(220px, 30dvh);
     object-fit: contain;
+  }
+
+  .session-mini-header {
+    padding: 8px 12px;
+  }
+
+  .session-scope {
+    font-size: 0.82rem;
+  }
+
+  .learning-scope-toggle .btn {
+    flex: 1;
+    min-height: 42px;
   }
 
   .review-front-fr,

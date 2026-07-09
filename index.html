@@ -120,6 +120,14 @@
       <path d="M17 20l4-4-4-4"></path>
       <path d="M21 16H7"></path>
     </symbol>
+
+    <symbol id="icon-shuffle" viewBox="0 0 24 24">
+      <path d="M16 3h5v5"></path>
+      <path d="M4 20L21 3"></path>
+      <path d="M21 16v5h-5"></path>
+      <path d="M15 15l6 6"></path>
+      <path d="M4 4l5 5"></path>
+    </symbol>
   </svg>
 
   <div class="app">
@@ -281,20 +289,15 @@
 
       <!-- ============ PAGE : APPRENTISSAGE ============ -->
       <section id="page-apprentissage" class="page">
-        <header class="page-header">
-          <h1>Apprentissage</h1>
-          <p>Parcours tes cartes librement, sans modifier la progression SRS.</p>
-        </header>
-
-        <div class="panel learning-toolbar">
-          <input id="learning-search" type="search" placeholder="Rechercher un mot (allemand ou français)…">
-          <select id="learning-filter-category">
-            <option value="">Toutes les catégories</option>
-          </select>
-          <select id="learning-filter-subcategory">
-            <option value="">Toutes les sous-catégories</option>
-          </select>
-          <button class="btn btn-ghost" id="btn-learning-shuffle" type="button">Mélanger</button>
+        <div class="session-mini-header">
+          <span id="learning-scope-title" class="session-scope">Découverte</span>
+          <span id="learning-counter" class="session-counter"></span>
+          <div class="session-header-actions">
+            <button class="btn btn-ghost btn-small" type="button" id="btn-learning-shuffle" title="Mélanger" aria-label="Mélanger">
+              <svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-shuffle"></use></svg>
+            </button>
+            <button class="btn btn-ghost btn-small" type="button" id="btn-learning-exit">Quitter</button>
+          </div>
         </div>
 
         <div id="learning-empty" class="empty-state hidden">
@@ -333,6 +336,10 @@
             <div class="learning-actions">
               <button class="btn btn-ghost" id="btn-learning-prev">Carte précédente</button>
               <button class="btn btn-primary" id="btn-learning-next">Carte suivante</button>
+            </div>
+            <div class="learning-scope-toggle">
+              <button class="btn btn-small active" type="button" data-learning-filter="new">Nouvelles cartes</button>
+              <button class="btn btn-small" type="button" data-learning-filter="all">Toutes</button>
             </div>
           </article>
         </div>
@@ -830,7 +837,6 @@
     <div class="modal-panel more-menu-panel">
       <h2>Plus</h2>
       <div class="more-menu-list">
-        <button class="btn" type="button" data-more-goto="apprentissage"><svg class="more-menu-icon" focusable="false"><use href="#icon-bulb"></use></svg> Apprentissage</button>
         <button class="btn" type="button" data-more-goto="grammaire"><svg class="more-menu-icon" focusable="false"><use href="#icon-book"></use></svg> Grammaire</button>
         <button class="btn" type="button" data-more-goto="sauvegarde"><svg class="more-menu-icon" focusable="false"><use href="#icon-save"></use></svg> Sauvegarde</button>
         <button class="btn" type="button" data-more-goto="missing-images"><svg class="more-menu-icon" focusable="false"><use href="#icon-image"></use></svg> Images manquantes</button>
