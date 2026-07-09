@@ -254,6 +254,10 @@ main {
   stroke-linejoin: round;
 }
 
+#btn-nav-more {
+  display: none;
+}
+
 .sidebar-note {
   margin-top: auto;
   font-size: 0.75rem;
@@ -2984,6 +2988,29 @@ input[type="file"]::file-selector-button:hover {
   cursor: pointer;
 }
 
+.more-menu-list {
+  display: grid;
+  gap: 10px;
+}
+
+.more-menu-list .btn {
+  width: 100%;
+  min-height: 50px;
+  justify-content: flex-start;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.more-menu-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .modal-close-btn:hover {
   border-color: var(--border-strong);
   color: var(--text);
@@ -3357,6 +3384,11 @@ input[type="file"]::file-selector-button:hover {
     white-space: normal;
   }
 
+  #btn-nav-more {
+    display: flex;
+  }
+
+  .nav-btn[data-page="apprentissage"],
   .nav-btn[data-page="grammaire"],
   .nav-btn[data-page="sauvegarde"],
   .nav-btn[data-page="missing-images"] {
@@ -3384,6 +3416,19 @@ input[type="file"]::file-selector-button:hover {
     height: 22px;
     flex-basis: 22px;
     line-height: 1;
+  }
+
+  .more-menu-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .more-menu-panel {
+    width: 100%;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
+    padding: 20px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    animation: bulk-bar-in 0.2s ease;
   }
 
   main {

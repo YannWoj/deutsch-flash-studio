@@ -1243,6 +1243,10 @@ function showPage(name) {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.page === name);
   });
+  const moreBtn = $("btn-nav-more");
+  if (moreBtn) {
+    moreBtn.classList.toggle("active", ["apprentissage", "grammaire", "sauvegarde", "missing-images"].includes(name));
+  }
 
   // Mémorise le dernier onglet ouvert (petit réglage -> localStorage suffit)
   localStorage.setItem(LS_LAST_PAGE, name);
@@ -1265,9 +1269,18 @@ function showPage(name) {
   window.scrollTo({ top: 0 });
 }
 
+function openMoreMenu() {
+  $("more-menu-modal").classList.remove("hidden");
+}
+
+function closeMoreMenu() {
+  $("more-menu-modal").classList.add("hidden");
+}
+
 function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (!btn.dataset.page) return;
       if (btn.dataset.page === "revision") {
         currentReviewCategory = null;
         reviewSessionType = "due";
@@ -1283,6 +1296,15 @@ function setupNavigation() {
   $("btn-deck-grid-study").addEventListener("click", studySelectedDecks);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
   $("btn-study-all").addEventListener("click", () => openStudyModeModal(null));
+  $("btn-nav-more").addEventListener("click", openMoreMenu);
+  $("more-menu-modal").addEventListener("click", (event) => {
+    if (event.target === $("more-menu-modal")) closeMoreMenu();
+    const gotoBtn = event.target.closest("[data-more-goto]");
+    if (gotoBtn) {
+      closeMoreMenu();
+      showPage(gotoBtn.dataset.moreGoto);
+    }
+  });
   $("btn-close-study-mode").addEventListener("click", closeStudyModeModal);
   $("study-mode-modal").addEventListener("click", (event) => {
     if (event.target === $("study-mode-modal")) closeStudyModeModal();
@@ -1310,6 +1332,7 @@ function setupNavigation() {
       closeStudyModeModal();
       closeSubcategoryModal();
       closeImportPreviewModal();
+      closeMoreMenu();
     }
   });
 

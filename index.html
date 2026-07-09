@@ -63,6 +63,12 @@
       <circle cx="8" cy="10" r="1.5"></circle>
       <path d="M21 16l-5-5-4 4-2-2-5 5"></path>
     </symbol>
+
+    <symbol id="icon-more" viewBox="0 0 24 24">
+      <path d="M5 12h.01"></path>
+      <path d="M12 12h.01"></path>
+      <path d="M19 12h.01"></path>
+    </symbol>
   </svg>
 
   <div class="app">
@@ -86,6 +92,7 @@
         <button class="nav-btn" data-page="grammaire"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-book"></use></svg></span> Grammaire</button>
         <button class="nav-btn" data-page="sauvegarde"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-save"></use></svg></span> Sauvegarde</button>
         <button class="nav-btn" data-page="missing-images"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-image"></use></svg></span> Images manquantes</button>
+        <button class="nav-btn" id="btn-nav-more" type="button"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-more"></use></svg></span> Plus</button>
       </nav>
 
       <p class="sidebar-note">Fonctionne 100&nbsp;% en local 🔒<br>Aucune donnée n'est envoyée sur internet.</p>
@@ -744,6 +751,18 @@
         <button class="btn btn-primary" id="btn-import-preview-merge" type="button">Fusionner avec mes données</button>
         <button class="btn btn-danger-action" id="btn-import-preview-replace" type="button">Tout remplacer</button>
         <button class="btn btn-ghost" id="btn-import-preview-cancel" type="button">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="more-menu-modal" class="modal-backdrop more-menu-backdrop hidden">
+    <div class="modal-panel more-menu-panel">
+      <h2>Plus</h2>
+      <div class="more-menu-list">
+        <button class="btn" type="button" data-more-goto="apprentissage"><svg class="more-menu-icon" focusable="false"><use href="#icon-bulb"></use></svg> Apprentissage</button>
+        <button class="btn" type="button" data-more-goto="grammaire"><svg class="more-menu-icon" focusable="false"><use href="#icon-book"></use></svg> Grammaire</button>
+        <button class="btn" type="button" data-more-goto="sauvegarde"><svg class="more-menu-icon" focusable="false"><use href="#icon-save"></use></svg> Sauvegarde</button>
+        <button class="btn" type="button" data-more-goto="missing-images"><svg class="more-menu-icon" focusable="false"><use href="#icon-image"></use></svg> Images manquantes</button>
       </div>
     </div>
   </div>
