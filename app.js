@@ -26,7 +26,6 @@
 
 const DB_NAME = "deutsch-flash-studio";
 const DB_VERSION = 2;
-const MAX_NEW_CARDS_PER_DAY = 20;
 
 // Clés utilisées dans localStorage (uniquement pour de petits réglages)
 const LS_LAST_PAGE = "dfs_lastPage"; // dernier onglet ouvert
@@ -38,7 +37,10 @@ const LS_LIBRARY_VIEW = "dfs_library_view";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
+const LS_MAX_NEW_CARDS = "dfs_max_new_cards";
 const FAVORITES_SCOPE = "__favorites__";
+const DEFAULT_MAX_NEW_CARDS = 20;
+const MAX_NEW_CARDS_OPTIONS = [5, 10, 20, 50, Infinity];
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
 const DEFAULT_IMAGE = "data:image/svg+xml," + encodeURIComponent(
@@ -208,6 +210,17 @@ function isMastered(card) {
 function isNewCard(card) {
   const srs = normalizeSrs(card.srs);
   return srs.correctCount === 0 && srs.wrongCount === 0;
+}
+
+function getMaxNewCardsPerDay() {
+  const raw = localStorage.getItem(LS_MAX_NEW_CARDS);
+  if (raw === "unlimited") return Infinity;
+  const value = Number(raw);
+  return MAX_NEW_CARDS_OPTIONS.includes(value) ? value : DEFAULT_MAX_NEW_CARDS;
+}
+
+function setMaxNewCardsPerDay(value) {
+  localStorage.setItem(LS_MAX_NEW_CARDS, value === Infinity ? "unlimited" : String(value));
 }
 
 function cardDeckName(card) {
@@ -1376,6 +1389,14 @@ function setupNavigation() {
   $("btn-nav-more").addEventListener("click", openMoreMenu);
   $("more-menu-modal").addEventListener("click", (event) => {
     if (event.target === $("more-menu-modal")) closeMoreMenu();
+    if (event.target.closest("[data-more-favorites]")) {
+      closeMoreMenu();
+      libraryOnlyFavorites = true;
+      libraryOnlyNoImage = false;
+      libraryOnlyDue = false;
+      showPage("bibliotheque");
+      return;
+    }
     const gotoBtn = event.target.closest("[data-more-goto]");
     if (gotoBtn) {
       closeMoreMenu();
@@ -2259,7 +2280,7 @@ async function getReviewHubStats(scope = null) {
     sessionSize: queue.length,
     sessionNewCards: queue.filter(isNewCard).length,
     sessionReviewCards: queue.filter((card) => !isNewCard(card)).length,
-    cappedNewCards: Math.max(0, newDue.length - MAX_NEW_CARDS_PER_DAY),
+    cappedNewCards: Math.max(0, newDue.length - getMaxNewCardsPerDay()),
     distinctGermanWords: new Set(
       scoped
         .map((card) => String(card.de || "").trim().toLowerCase())
@@ -2594,6 +2615,9 @@ async function renderReviewHub() {
   $("hub-subtitle").textContent =
     "Périmètre : " + scopeLabel(currentReviewCategory) + " · " + stats.totalCards + " carte(s)";
 
+  const maxNew = getMaxNewCardsPerDay();
+  $("hub-max-new").value = maxNew === Infinity ? "unlimited" : String(maxNew);
+  const paceLabel = maxNew === Infinity ? "illimité" : maxNew + " par jour";
   const sessionParts = [];
   if (stats.sessionNewCards > 0) {
     sessionParts.push(stats.sessionNewCards + " nouvelle" + (stats.sessionNewCards > 1 ? "s" : ""));
@@ -2606,7 +2630,7 @@ async function renderReviewHub() {
     ? '<strong>Session du jour : ' + stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : "") + "</strong>" +
       (sessionParts.length ? " · " + sessionParts.join(" + ") : "") +
       (stats.cappedNewCards > 0
-        ? '<span class="hub-cap-detail">Les ' + stats.cappedNewCards + " autres nouvelles cartes arriveront les prochains jours (max " + MAX_NEW_CARDS_PER_DAY + " par jour).</span>"
+        ? '<span class="hub-cap-detail">Ton rythme est réglé sur ' + paceLabel + " : les " + stats.cappedNewCards + " autres nouvelles cartes arriveront les jours suivants. Passe à « Illimité » pour tout voir aujourd'hui.</span>"
         : "")
     : "<strong>Rien à réviser aujourd'hui dans ce périmètre.</strong>";
 
@@ -2819,7 +2843,7 @@ function buildReviewQueue(cards) {
   });
 
   shuffleArray(newCards);
-  newCards.slice(0, MAX_NEW_CARDS_PER_DAY).forEach((card) => {
+  newCards.slice(0, getMaxNewCardsPerDay()).forEach((card) => {
       const date = card.srs.nextReview;
       if (!groups[date]) groups[date] = [];
       groups[date].push(card);
@@ -3128,6 +3152,11 @@ function setupReviewPage() {
       localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
       renderReviewHub();
     });
+  });
+  $("hub-max-new").addEventListener("change", () => {
+    const raw = $("hub-max-new").value;
+    setMaxNewCardsPerDay(raw === "unlimited" ? Infinity : Number(raw));
+    renderReviewHub();
   });
   $("btn-hub-start").addEventListener("click", () => {
     if (currentReviewMode === "learning") {
@@ -3521,6 +3550,15 @@ async function renderLibrary() {
         matchesDue;
     })
     .sort((a, b) => sortLibraryCards(a, b, sortMode));
+
+  const favoritesBar = $("library-favorites-bar");
+  const favoriteCount = allCards.filter((card) => card.favorite === true).length;
+  const showBar = libraryOnlyFavorites && favoriteCount > 0;
+  favoritesBar.classList.toggle("hidden", !showBar);
+  if (showBar) {
+    $("library-favorites-label").textContent =
+      favoriteCount + " carte" + (favoriteCount > 1 ? "s" : "") + " en favori";
+  }
 
   $("library-count").textContent =
     visibleCards.length + " carte(s) affichée(s) sur " + allCards.length;
@@ -3932,6 +3970,10 @@ function setupLibraryPage() {
   });
   $("library-view-grid").addEventListener("click", () => setLibraryView("grid"));
   $("library-view-list").addEventListener("click", () => setLibraryView("list"));
+  $("btn-review-favorites").addEventListener("click", () => {
+    currentReviewCategory = FAVORITES_SCOPE;
+    showPage("revision");
+  });
   $("btn-open-missing-images").addEventListener("click", () => showPage("missing-images"));
   $("btn-missing-images-library").addEventListener("click", () => showPage("bibliotheque"));
   $("btn-open-current-image-search").addEventListener("click", openCurrentMissingImageSearch);

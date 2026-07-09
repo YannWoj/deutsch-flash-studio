@@ -1233,6 +1233,35 @@ body.selection-mode-active #toast {
   font-size: 0.82rem;
 }
 
+.hub-pace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.hub-pace label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.hub-pace select {
+  min-height: 40px;
+  min-width: 130px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
 .hub-scope-chips {
   display: flex;
   flex-wrap: wrap;
@@ -2065,6 +2094,24 @@ input[type="file"]::file-selector-button:hover {
   border-color: rgba(232, 185, 75, 0.45);
   background: rgba(232, 185, 75, 0.14);
   color: var(--gold-strong);
+}
+
+.library-favorites-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 2px 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(239, 90, 96, 0.32);
+  border-radius: var(--radius-small);
+  background: rgba(239, 90, 96, 0.08);
+}
+
+.library-favorites-bar span {
+  font-weight: 700;
+  color: #ffb3b6;
 }
 
 #library-count {
@@ -4174,6 +4221,25 @@ input[type="file"]::file-selector-button:hover {
   .learning-scope-toggle .btn {
     flex: 1;
     min-height: 42px;
+  }
+
+  .hub-pace {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hub-pace select {
+    width: 100%;
+  }
+
+  .library-favorites-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .library-favorites-bar .btn {
+    width: 100%;
+    min-height: 44px;
   }
 
   .review-front-fr,

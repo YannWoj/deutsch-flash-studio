@@ -364,6 +364,16 @@
               <div class="hub-stat hub-stat-hard"><span>Difficiles</span><strong id="hub-stat-hard">0</strong></div>
             </div>
             <p class="hub-note hidden" id="hub-cap-note"></p>
+            <div class="hub-pace">
+              <label for="hub-max-new">Nouvelles cartes par jour</label>
+              <select id="hub-max-new">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="unlimited">Illimité</option>
+              </select>
+            </div>
           </section>
 
           <section class="panel">
@@ -611,6 +621,11 @@
           </div>
         </div>
 
+        <div id="library-favorites-bar" class="library-favorites-bar hidden">
+          <span id="library-favorites-label"></span>
+          <button class="btn btn-primary btn-small" type="button" id="btn-review-favorites">Réviser mes favoris</button>
+        </div>
+
         <p id="library-count" class="muted"></p>
         <div id="library-grid" class="library-grid"></div>
       </section>
@@ -841,6 +856,7 @@
     <div class="modal-panel more-menu-panel">
       <h2>Plus</h2>
       <div class="more-menu-list">
+        <button class="btn" type="button" data-more-favorites><svg class="more-menu-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</button>
         <button class="btn" type="button" data-more-goto="grammaire"><svg class="more-menu-icon" focusable="false"><use href="#icon-book"></use></svg> Grammaire</button>
         <button class="btn" type="button" data-more-goto="sauvegarde"><svg class="more-menu-icon" focusable="false"><use href="#icon-save"></use></svg> Sauvegarde</button>
         <button class="btn" type="button" data-more-goto="missing-images"><svg class="more-menu-icon" focusable="false"><use href="#icon-image"></use></svg> Images manquantes</button>
