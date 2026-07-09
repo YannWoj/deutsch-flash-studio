@@ -37,6 +37,7 @@ const LS_LAST_EXPORT_AT = "dfs_last_export_at";
 const LS_LIBRARY_VIEW = "dfs_library_view";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 const LS_REVIEW_MODE = "dfs_review_mode";
+const FAVORITES_SCOPE = "__favorites__";
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
 const DEFAULT_IMAGE = "data:image/svg+xml," + encodeURIComponent(
@@ -76,12 +77,12 @@ let editingCard = null;              // carte en cours de modification, ou null 
 let imageMarkedForRemoval = false;   // indique que l'image actuelle doit être retirée en édition
 let learningCards = [];              // cartes visibles dans le mode Apprentissage
 let currentLearningIndex = 0;         // index de la carte affichée en Apprentissage
-let pendingLearningCategory = null;   // null = tout, string = un deck, array = plusieurs decks
-let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks
-let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks
+let pendingLearningCategory = null;   // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
+let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
+let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewMode = localStorage.getItem(LS_REVIEW_MODE) || "classic";
 let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
-let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks
+let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let skipHubOnce = false;
 let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
@@ -212,17 +213,20 @@ function cardDeckName(card) {
 }
 
 function normalizeScope(scope) {
+  if (scope === FAVORITES_SCOPE) return FAVORITES_SCOPE;
   if (Array.isArray(scope)) {
-    const clean = scope.map((name) => String(name || "").trim()).filter(Boolean);
+    const clean = scope.map((name) => String(name || "").trim()).filter((name) => name && name !== FAVORITES_SCOPE);
     return clean.length ? [...new Set(clean)] : null;
   }
   const name = String(scope || "").trim();
+  if (name === FAVORITES_SCOPE) return FAVORITES_SCOPE;
   return name ? name : null;
 }
 
 function cardInScope(card, scope) {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) return true;
+  if (normalizedScope === FAVORITES_SCOPE) return card.favorite === true;
   const deckName = cardDeckName(card);
   if (Array.isArray(normalizedScope)) return normalizedScope.includes(deckName);
   return deckName === normalizedScope;
@@ -231,6 +235,7 @@ function cardInScope(card, scope) {
 function scopeHasDeck(scope, deckName) {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) return false;
+  if (normalizedScope === FAVORITES_SCOPE) return false;
   if (Array.isArray(normalizedScope)) return normalizedScope.includes(deckName);
   return normalizedScope === deckName;
 }
@@ -238,6 +243,7 @@ function scopeHasDeck(scope, deckName) {
 function removeDeckFromScope(scope, deckName) {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) return null;
+  if (normalizedScope === FAVORITES_SCOPE) return FAVORITES_SCOPE;
   if (Array.isArray(normalizedScope)) {
     const next = normalizedScope.filter((name) => name !== deckName);
     return next.length ? next : null;
@@ -248,6 +254,7 @@ function removeDeckFromScope(scope, deckName) {
 function renameDeckInScope(scope, oldName, newName) {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) return null;
+  if (normalizedScope === FAVORITES_SCOPE) return FAVORITES_SCOPE;
   if (Array.isArray(normalizedScope)) {
     return normalizeScope(normalizedScope.map((name) => name === oldName ? newName : name));
   }
@@ -257,6 +264,7 @@ function renameDeckInScope(scope, oldName, newName) {
 function scopeLabel(scope) {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) return "toutes les catégories";
+  if (normalizedScope === FAVORITES_SCOPE) return "mes favoris";
   if (Array.isArray(normalizedScope)) return normalizedScope.join(" + ");
   return normalizedScope;
 }
@@ -1420,6 +1428,24 @@ function setupNavigation() {
     const gotoBtn = event.target.closest("[data-goto]");
     if (gotoBtn) showPage(gotoBtn.dataset.goto);
 
+    const studyFavoritesBtn = event.target.closest("#btn-study-favorites");
+    if (studyFavoritesBtn) {
+      event.stopPropagation();
+      currentReviewCategory = FAVORITES_SCOPE;
+      showPage("revision");
+      return;
+    }
+
+    const browseFavoritesBtn = event.target.closest("#btn-browse-favorites");
+    if (browseFavoritesBtn) {
+      event.stopPropagation();
+      libraryOnlyFavorites = true;
+      libraryOnlyNoImage = false;
+      libraryOnlyDue = false;
+      showPage("bibliotheque");
+      return;
+    }
+
     const studyDeckBtn = event.target.closest("[data-study-deck]");
     if (studyDeckBtn && !studyDeckBtn.disabled) {
       event.stopPropagation();
@@ -1561,6 +1587,27 @@ function hardCardRowHTML(item) {
   );
 }
 
+function favoritesDeckCardHTML(cards) {
+  const favorites = cards.filter((card) => card.favorite === true);
+  if (favorites.length === 0) return "";
+  const today = todayISO();
+  const due = favorites.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  const mastered = favorites.filter(isMastered).length;
+  const percent = Math.round((mastered / favorites.length) * 100);
+  return (
+    '<article class="deck-card deck-favorites" data-open-favorites>' +
+      '<div class="deck-name"><svg class="deck-favorites-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</div>' +
+      '<p class="deck-count">' + favorites.length + ' carte(s) · ' + due + ' à réviser</p>' +
+      '<div class="deck-progress-line"><span>' + mastered + " / " + favorites.length + ' mémorisé</span><strong>' + percent + '%</strong></div>' +
+      '<div class="progress-track deck-track"><div class="progress-fill fill-blue" style="width:' + percent + '%"></div></div>' +
+      '<div class="deck-actions">' +
+        '<button class="btn btn-primary btn-small" type="button" id="btn-study-favorites">Étudier</button>' +
+        '<button class="btn btn-ghost btn-small" type="button" id="btn-browse-favorites">Voir</button>' +
+      "</div>" +
+    "</article>"
+  );
+}
+
 function renderDecks(cards) {
   const container = $("deck-grid");
   const empty = $("deck-empty");
@@ -1616,7 +1663,7 @@ function renderDecks(cards) {
   }
 
   empty.classList.add("hidden");
-  container.innerHTML = decks.map((deck, index) => {
+  container.innerHTML = favoritesDeckCardHTML(cards) + decks.map((deck, index) => {
     const percent = deck.total === 0 ? 0 : Math.round((deck.mastered / deck.total) * 100);
     const color = deck.color || accents[index % accents.length];
     const displayName = (deck.emoji ? deck.emoji + " " : "") + deck.name;
@@ -2526,6 +2573,11 @@ async function renderReviewHub() {
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
   const stats = await getReviewHubStats(currentReviewCategory);
+  if (currentReviewCategory === FAVORITES_SCOPE && stats.totalCards === 0) {
+    currentReviewCategory = null;
+    renderReviewHub();
+    return;
+  }
   await renderHubScopeChips();
 
   $("hub-stat-new").textContent = stats.newCards;
@@ -2577,6 +2629,8 @@ async function renderReviewHub() {
 async function renderHubScopeChips() {
   const cards = await getAllCards();
   const today = todayISO();
+  const favoriteCards = cards.filter((card) => card.favorite === true);
+  const favoriteDue = favoriteCards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
   const decks = [...new Set([
     ...cards.map(cardDeckName),
     ...getCustomDecks().map((deck) => deck.name),
@@ -2585,10 +2639,16 @@ async function renderHubScopeChips() {
   const normalizedScope = normalizeScope(currentReviewCategory);
   const selected = Array.isArray(normalizedScope)
     ? normalizedScope
-    : (normalizedScope ? [normalizedScope] : []);
+    : [];
+  const favoritesChip = favoriteCards.length
+    ? '<button class="hub-chip hub-chip-favorites' + (normalizedScope === FAVORITES_SCOPE ? " active" : "") + '" type="button" data-hub-scope="' + FAVORITES_SCOPE + '">' +
+      '<svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris' +
+      (favoriteDue ? '<span class="hub-chip-badge">' + favoriteDue + "</span>" : "") + "</button>"
+    : "";
 
   $("hub-scope-chips").innerHTML =
-    '<button class="hub-chip' + (selected.length === 0 ? " active" : "") + '" type="button" data-hub-scope="__all__">Tout</button>' +
+    '<button class="hub-chip' + (!normalizedScope ? " active" : "") + '" type="button" data-hub-scope="__all__">Tout</button>' +
+    favoritesChip +
     decks.map((name) => {
       const due = cards.filter((card) => cardDeckName(card) === name && normalizeSrs(card.srs).nextReview <= today).length;
       return '<button class="hub-chip' + (selected.includes(name) ? " active" : "") + '" type="button" data-hub-scope="' + escapeHTML(name) + '">' +
@@ -2600,6 +2660,8 @@ async function renderHubScopeChips() {
       const value = chip.dataset.hubScope;
       if (value === "__all__") {
         currentReviewCategory = null;
+      } else if (value === FAVORITES_SCOPE) {
+        currentReviewCategory = FAVORITES_SCOPE;
       } else {
         const next = new Set(selected);
         next.has(value) ? next.delete(value) : next.add(value);
@@ -2631,18 +2693,23 @@ async function startReviewSession() {
   if (cards.length === 0) {
     showReviewEmpty("Ta bibliothèque est vide. Commence par ajouter quelques cartes ! 📝");
   } else if (scopedCards.length === 0 && currentReviewCategory) {
-    showReviewEmpty(isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.");
+    showReviewEmpty(reviewEmptyScopeMessage());
   } else if (reviewQueue.length === 0) {
     if (reviewSessionType === "due") {
       showReviewEmpty("Aucune carte prévue aujourd'hui. Tu peux lancer Entraînement libre pour réviser quand même.", scopedCards.length > 0);
     } else {
       showReviewEmpty(currentReviewCategory
-        ? (isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.")
+        ? reviewEmptyScopeMessage()
         : "Aucune carte à entraîner.");
     }
   } else {
     showNextReviewCard();
   }
+}
+
+function reviewEmptyScopeMessage() {
+  if (currentReviewCategory === FAVORITES_SCOPE) return "Aucune carte dans tes favoris.";
+  return isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.";
 }
 
 function updateReviewSetup(scopedCards) {
@@ -3761,6 +3828,7 @@ async function toggleFavorite(cardId) {
   renderDeckDetailIfVisible();
   renderMissingImagesIfVisible();
   refreshDashboard();
+  if ($("page-revision").classList.contains("active") && !isSessionRunning()) renderReviewHub();
 }
 
 async function handleDelete(cardId) {

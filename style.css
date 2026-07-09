@@ -566,6 +566,28 @@ main {
 .deck-red { --deck-accent: var(--red); }
 .deck-purple { --deck-accent: #b48cff; }
 
+.deck-favorites {
+  --deck-accent: var(--red);
+  border-color: rgba(239, 90, 96, 0.3);
+}
+
+.deck-favorites .deck-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 0;
+}
+
+.deck-favorites-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  stroke: var(--red);
+  fill: var(--red);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
 .deck-menu-btn {
   position: absolute;
   top: 14px;
@@ -1229,6 +1251,22 @@ body.selection-mode-active #toast {
   background: rgba(232, 185, 75, 0.2);
   color: var(--gold-strong);
   font-size: 0.72rem;
+}
+
+.hub-chip-favorites .btn-svg-icon {
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.hub-chip-favorites.active {
+  border-color: rgba(239, 90, 96, 0.5);
+  background: rgba(239, 90, 96, 0.12);
+  color: #ffb3b6;
+}
+
+.hub-chip-favorites.active .hub-chip-badge {
+  background: rgba(239, 90, 96, 0.22);
+  color: #ffb3b6;
 }
 
 .hub-mode-grid {
