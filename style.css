@@ -331,7 +331,7 @@ main {
   font-size: 0.85rem;
 }
 
-/* Bouton rond pour les icônes (🔊, 🗑️…) */
+/* Bouton rond pour les icones */
 .btn-icon {
   width: 40px;
   height: 40px;
@@ -855,28 +855,43 @@ main {
   margin-top: 2px;
 }
 
-.deck-detail-card-actions {
-  grid-column: 1 / -1;
+.card-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
   align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
 }
 
-.deck-detail-card-actions .btn-icon {
-  flex: 0 0 auto;
+.deck-detail-card .card-actions {
+  grid-column: 1 / -1;
 }
 
-.deck-detail-card-actions .btn-small {
-  min-width: 34px;
-}
-
-.deck-detail-card-actions.compact .btn {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+.card-actions .btn-icon {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
+  flex: 0 0 36px;
+}
+
+.card-actions .btn-svg-icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.btn-favorite .btn-svg-icon {
+  fill: none;
+}
+
+.btn-favorite.active .btn-svg-icon {
+  fill: currentColor;
+}
+
+.btn-image-action {
+  border-color: rgba(232, 185, 75, 0.45);
+  color: var(--gold-strong);
 }
 
 .deck-detail-select {
@@ -2313,13 +2328,6 @@ input[type="file"]::file-selector-button:hover {
   gap: 8px;
 }
 
-.image-inline-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
 .library-next {
   color: var(--muted);
   font-size: 0.8rem;
@@ -2332,19 +2340,12 @@ input[type="file"]::file-selector-button:hover {
   margin-top: 4px;
 }
 
-.library-actions {
-  display: flex;
-  flex-wrap: wrap;
+.library-item .card-actions {
+  grid-column: 1 / -1;
   justify-content: flex-end;
-  gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.015);
-}
-
-.library-actions .btn {
-  border-color: var(--border-strong);
-  background: var(--surface-2);
 }
 
 .library-list {
@@ -2424,21 +2425,8 @@ input[type="file"]::file-selector-button:hover {
   justify-self: end;
 }
 
-.library-row-actions {
-  display: flex;
+.library-row .card-actions {
   justify-content: flex-end;
-  gap: 6px;
-}
-
-.library-row-actions .btn-icon {
-  width: 34px;
-  height: 34px;
-}
-
-.library-row-actions .image-query-action {
-  min-height: 34px;
-  padding: 6px 8px;
-  font-size: 0.72rem;
 }
 
 .btn-favorite {
@@ -3454,10 +3442,8 @@ input[type="file"]::file-selector-button:hover {
     height: 260px;
   }
 
-  .library-actions .btn,
   .deck-actions .btn,
-  .deck-detail-actions .btn,
-  .deck-detail-card-actions .btn {
+  .deck-detail-actions .btn {
     min-height: 42px;
   }
 
@@ -3469,14 +3455,6 @@ input[type="file"]::file-selector-button:hover {
   .deck-detail-card > .smart-placeholder {
     width: 100%;
     height: 180px;
-  }
-
-  .deck-detail-card-actions {
-    justify-content: flex-end;
-  }
-
-  .deck-detail-card-actions .btn {
-    flex: 0 0 auto;
   }
 
   .deck-detail-status {
@@ -3803,6 +3781,23 @@ input[type="file"]::file-selector-button:hover {
     padding: 7px 10px;
   }
 
+  .card-actions {
+    gap: 5px;
+  }
+
+  .card-actions .btn-icon {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
+  }
+
+  .library-row .card-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    margin-top: 6px;
+  }
+
   .hub-mode-grid {
     grid-template-columns: 1fr;
   }
@@ -3921,14 +3916,6 @@ input[type="file"]::file-selector-button:hover {
     text-align: left;
   }
 
-  .deck-detail-card-actions {
-    justify-content: flex-start;
-  }
-
-  .deck-detail-card-actions .btn {
-    min-height: 40px;
-  }
-
   .library-item > img,
   .library-item > .smart-placeholder {
     width: 100%;
@@ -3938,16 +3925,6 @@ input[type="file"]::file-selector-button:hover {
 
   .library-body {
     padding: 16px;
-  }
-
-  .library-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 12px;
-  }
-
-  .library-actions .btn {
-    min-height: 40px;
   }
 
   #page-revision.active {
@@ -4264,8 +4241,7 @@ input[type="file"]::file-selector-button:hover {
     grid-template-columns: 1fr;
   }
 
-  .deck-actions,
-  .library-actions {
+  .deck-actions {
     grid-template-columns: 1fr;
   }
 
@@ -4463,14 +4439,9 @@ input[type="file"]::file-selector-button:hover {
     align-items: start;
   }
 
-  .library-row-status,
-  .library-row-actions {
+  .library-row-status {
     grid-column: 2;
     justify-self: start;
-  }
-
-  .library-row-actions {
-    flex-wrap: wrap;
   }
 }
 
@@ -4524,7 +4495,4 @@ input[type="file"]::file-selector-button:hover {
     padding: 10px;
   }
 
-  .library-row-actions .image-query-action {
-    width: 100%;
-  }
 }

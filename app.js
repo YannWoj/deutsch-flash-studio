@@ -1845,11 +1845,20 @@ async function renderDeckDetail() {
   grid.querySelectorAll("[data-deck-detail-edit]").forEach((btn) => {
     btn.addEventListener("click", () => startEditCard(btn.dataset.deckDetailEdit));
   });
+  grid.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => startEditCard(btn.dataset.edit));
+  });
   grid.querySelectorAll("[data-deck-detail-delete]").forEach((btn) => {
     btn.addEventListener("click", () => handleDelete(btn.dataset.deckDetailDelete));
   });
+  grid.querySelectorAll("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", () => handleDelete(btn.dataset.delete));
+  });
   grid.querySelectorAll("[data-deck-detail-favorite]").forEach((btn) => {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.deckDetailFavorite));
+  });
+  grid.querySelectorAll("[data-favorite]").forEach((btn) => {
+    btn.addEventListener("click", () => toggleFavorite(btn.dataset.favorite));
   });
   grid.querySelectorAll("[data-deck-detail-sub-edit]").forEach((btn) => {
     btn.addEventListener("click", () => openSubcategoryModal(btn.dataset.deckDetailSubEdit));
@@ -2109,9 +2118,6 @@ function deckDetailCardHTML(card, imageUrl) {
     ? '<div class="deck-detail-subcategory-line"><span class="chip-subcategory-compact">' + escapeHTML(card.subcategory) + "</span></div>"
     : "";
   const imageQueryLine = imageQueryHTML(card);
-  const imageActionLine = card.imageId
-    ? ""
-    : '<div class="image-inline-actions">' + imagePickButtonHTML(card, true) + imagePasteButtonHTML(card, true) + "</div>";
   const selected = selectedDeckCardIds.has(card.id);
   const selectBox = deckDetailSelectionMode
     ? '<label class="deck-detail-select" title="Sélectionner"><input type="checkbox" data-deck-select="' + escapeHTML(card.id) + '"' + (selected ? " checked" : "") + '><span></span></label>'
@@ -2133,16 +2139,9 @@ function deckDetailCardHTML(card, imageUrl) {
         subcategoryLine +
         pluralLine +
         imageQueryLine +
-        imageActionLine +
         exampleLine +
       "</div>" +
-      '<div class="deck-detail-card-actions compact">' +
-        '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter" aria-label="Écouter">🔊</button>' +
-        '<button class="btn btn-icon btn-small btn-favorite ' + (card.favorite ? "active" : "") + '" data-deck-detail-favorite="' + escapeHTML(card.id) + '" title="Favori" aria-label="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
-        '<button class="btn btn-icon btn-small" data-deck-detail-sub-edit="' + escapeHTML(card.id) + '" title="Changer la sous-catégorie" aria-label="Changer la sous-catégorie">↔️</button>' +
-        '<button class="btn btn-icon btn-small btn-edit" data-deck-detail-edit="' + escapeHTML(card.id) + '" title="Modifier la carte" aria-label="Modifier la carte">✏️</button>' +
-        '<button class="btn btn-icon btn-small btn-danger" data-deck-detail-delete="' + escapeHTML(card.id) + '" title="Supprimer" aria-label="Supprimer">🗑️</button>' +
-      "</div>" +
+      cardActionsHTML(card, { subcategory: true }) +
     "</article>"
   );
 }
@@ -3086,12 +3085,12 @@ function setupReviewPage() {
   });
   $("btn-free-next").addEventListener("click", () => handleGrade("good"));
 
-  // 🔊 lire le mot avec son article : "der Hund"
+  // Lire le mot avec son article : "der Hund"
   $("btn-answer-speak-word").addEventListener("click", () => {
     if (currentCard) speakGerman(fullWord(currentCard));
   });
 
-  // 🔊 lire la phrase d'exemple : "Der Hund ist klein."
+  // Lire la phrase d'exemple : "Der Hund ist klein."
   $("btn-speak-sentence").addEventListener("click", () => {
     if (currentCard && currentCard.exampleDe) speakGerman(currentCard.exampleDe);
   });
@@ -3548,7 +3547,40 @@ function libraryImageSearchButton(card) {
   if (card.imageId) return "";
   const query = getEffectiveImageQuery(card);
   if (!query) return "";
-  return '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image"><svg class="btn-svg-icon"><use href="#icon-search"></use></svg> Trouver image</a>';
+  return '<a class="btn btn-small btn-ghost image-query-action" href="' + imageSearchURL(query) + '" target="dfs-images" rel="noopener noreferrer" title="Trouver une image">Trouver image</a>';
+}
+
+function iconButtonHTML(iconId, options = {}) {
+  const attrs = Object.entries(options.data || {})
+    .map(([key, value]) => ' data-' + key + '="' + escapeHTML(value) + '"')
+    .join("");
+  const classes = "btn btn-icon btn-small " + (options.className || "");
+  return '<button class="' + classes.trim() + '" type="button"' + attrs +
+    ' title="' + escapeHTML(options.label) + '" aria-label="' + escapeHTML(options.label) + '">' +
+    '<svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#' + iconId + '"></use></svg>' +
+    "</button>";
+}
+
+function cardActionsHTML(card, options = {}) {
+  return '<div class="card-actions">' +
+    iconButtonHTML("icon-volume", { label: "Écouter", data: { speak: fullWord(card) } }) +
+    iconButtonHTML("icon-heart", {
+      label: "Favori",
+      className: "btn-favorite " + (card.favorite ? "active" : ""),
+      data: { favorite: card.id },
+    }) +
+    (card.imageId ? "" : iconButtonHTML("icon-image-plus", {
+      label: "Ajouter une image",
+      className: "btn-image-action",
+      data: { "pick-image": card.id },
+    })) +
+    (options.subcategory ? iconButtonHTML("icon-swap", {
+      label: "Changer la sous-catégorie",
+      data: { "deck-detail-sub-edit": card.id },
+    }) : "") +
+    iconButtonHTML("icon-pencil", { label: "Modifier", className: "btn-edit", data: { edit: card.id } }) +
+    iconButtonHTML("icon-trash", { label: "Supprimer", className: "btn-danger", data: { delete: card.id } }) +
+  "</div>";
 }
 
 function imagePickButtonHTML(card, compact = false) {
@@ -3576,8 +3608,6 @@ function libraryItemHTML(card, imageUrl) {
   const pluralLine = pluralText
     ? '<p class="library-plural">Pluriel : ' + escapeHTML(pluralText) + "</p>"
     : "";
-  const imageSearchButton = libraryImageSearchButton(card);
-
   return (
     '<article class="library-item" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
       cardImageHTML(card, imageUrl) +
@@ -3585,19 +3615,12 @@ function libraryItemHTML(card, imageUrl) {
         '<p class="library-fr">' + escapeHTML(card.fr) + "</p>" +
         '<div class="library-word">' + wordHTML(card) + "</div>" +
         pluralLine +
+        imageQueryHTML(card) +
         '<div class="library-card-footer">' +
           libraryMetaHTML(card) +
         "</div>" +
       "</div>" +
-      '<div class="library-actions">' +
-        '<button class="btn btn-icon" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter">🔊</button>' +
-        '<button class="btn btn-icon btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
-        imageSearchButton +
-        imagePickButtonHTML(card, true) +
-        imagePasteButtonHTML(card, true) +
-        '<button class="btn btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '">Modifier</button>' +
-        '<button class="btn btn-icon btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer">🗑️</button>' +
-      "</div>" +
+      cardActionsHTML(card) +
     "</article>"
   );
 }
@@ -3616,8 +3639,6 @@ function libraryRowThumbHTML(card, imageUrl) {
 function libraryRowHTML(card, imageUrl) {
   const pluralText = formatPlural(card);
   const pluralLine = pluralText ? '<span>Pluriel : ' + escapeHTML(pluralText) + '</span>' : "";
-  const imageSearchButton = libraryImageSearchButton(card);
-
   return (
     '<article class="library-row" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
       libraryRowThumbHTML(card, imageUrl) +
@@ -3629,17 +3650,10 @@ function libraryRowHTML(card, imageUrl) {
           (card.subcategory ? '<span>' + escapeHTML(card.subcategory) + "</span>" : "") +
           pluralLine +
         "</div>" +
+        imageQueryHTML(card) +
       "</div>" +
       '<div class="library-row-status">' + cardStatusHTML(card) + "</div>" +
-      '<div class="library-row-actions">' +
-        '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(fullWord(card)) + '" title="Écouter" aria-label="Écouter">🔊</button>' +
-        '<button class="btn btn-icon btn-small btn-favorite ' + (card.favorite ? "active" : "") + '" data-favorite="' + escapeHTML(card.id) + '" title="Favori" aria-label="Favori">' + (card.favorite ? "♥" : "♡") + "</button>" +
-        imageSearchButton +
-        imagePickButtonHTML(card, true) +
-        imagePasteButtonHTML(card, true) +
-        '<button class="btn btn-icon btn-small btn-edit" data-edit="' + escapeHTML(card.id) + '" title="Modifier" aria-label="Modifier">✏️</button>' +
-        '<button class="btn btn-icon btn-small btn-danger" data-delete="' + escapeHTML(card.id) + '" title="Supprimer" aria-label="Supprimer">🗑️</button>' +
-      "</div>" +
+      cardActionsHTML(card) +
     "</article>"
   );
 }
@@ -4060,7 +4074,7 @@ function renderGrammarPage() {
 }
 
 function speakButtonHTML(text, label = "Écouter") {
-  return '<button class="btn btn-icon btn-small" data-speak="' + escapeHTML(text) + '" title="' + escapeHTML(label) + '" aria-label="' + escapeHTML(label) + '">🔊</button>';
+  return iconButtonHTML("icon-volume", { label, data: { speak: text } });
 }
 
 function articleHTML(value) {
