@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards Allemand</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --example-color: #a7f3d0;
+            --btn-bg: #334155;
+            --btn-hover: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .pack-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--btn-hover);
+        }
+
+        button.active {
+            background-color: var(--accent-color);
+            color: #0f172a;
+        }
+
+        .progress {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .card-container {
+            width: 100%;
+            max-width: 450px;
+            height: 320px;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-front {
+            background-color: var(--card-bg);
+            border: 2px solid #334155;
+        }
+
+        .card-back {
+            background-color: #1e293b;
+            border: 2px solid var(--accent-color);
+            transform: rotateY(180deg);
+        }
+
+        .lang-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .word {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .example-block {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #334155;
+            width: 100%;
+        }
+
+        .ex-de {
+            color: var(--example-color);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .ex-fr {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 450px;
+            justify-content: space-between;
+        }
+
+        .controls button {
+            flex: 1;
+            padding: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🇩🇪 Devinettes Allemand 🇫🇷</h1>
+    </header>
+
+    <div class="pack-selector">
+        <button id="btn-pack1" class="active" onclick="changePack(1)">Vocabulaire 1</button>
+        <button id="btn-pack2" onclick="changePack(2)">Vocabulaire 2</button>
+        <button id="btn-pack3" onclick="changePack(3)">Vocabulaire 3 (Exemples)</button>
+    </div>
+
+    <div class="progress" id="progress-text">Carte 1 / 20</div>
+
+    <div class="card-container" onclick="flipCard()">
+        <div class="card" id="card">
+            <div class="card-face card-front">
+                <div class="lang-label">Français (À deviner)</div>
+                <div class="word" id="front-word">...</div>
+            </div>
+            <div class="card-face card-back">
+                <div class="lang-label">Allemand (Réponse)</div>
+                <div class="word" id="back-word">...</div>
+                <div class="example-block" id="example-section" style="display: none;">
+                    <div class="ex-de" id="ex-de"></div>
+                    <div class="ex-fr" id="ex-fr"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="prevCard(event)">Précédent</button>
+        <button onclick="nextCard(event)">Suivant</button>
+    </div>
+
+    <script>
+        const originalPacks = {
+            1: [
+                { de: "das Haus", fr: "la maison" },
+                { de: "das Zimmer", fr: "la pièce, la chambre" },
+                { de: "die Tür", fr: "la porte" },
+                { de: "das Fenster", fr: "la fenêtre" },
+                { de: "der Tisch", fr: "la table" },
+                { de: "der Stuhl", fr: "la chaise" },
+                { de: "das Bett", fr: "le lit" },
+                { de: "die Küche", fr: "la cuisine" },
+                { de: "das Badezimmer", fr: "la salle de bain" },
+                { de: "das Auto", fr: "la voiture" },
+                { de: "die Straße", fr: "la rue" },
+                { de: "der Bahnhof", fr: "la gare" },
+                { de: "der Schlüssel", fr: "la clé" },
+                { de: "das Buch", fr: "le livre" },
+                { de: "das Wasser", fr: "l'eau" },
+                { de: "das Brot", fr: "le pain" },
+                { de: "das Fleisch", fr: "la viande" },
+                { de: "der Käse", fr: "le fromage" },
+                { de: "der Kaffee", fr: "le café" },
+                { de: "der Traum", fr: "le rêve" }
+            ],
+            2: [
+                { de: "der Kühlschrank", fr: "le réfrigérateur" },
+                { de: "der Schrank", fr: "l'armoire" },
+                { de: "der Spiegel", fr: "le miroir" },
+                { de: "die Lampe", fr: "la lampe" },
+                { de: "die Treppe", fr: "l'escalier" },
+                { de: "der Boden", fr: "le sol" },
+                { de: "die Decke", fr: "le plafond" },
+                { de: "die Wand", fr: "le mur" },
+                { de: "der Garten", fr: "le jardin" },
+                { de: "der Balkon", fr: "le balcon" },
+                { de: "der Baum", fr: "l'arbre" },
+                { de: "die Blume", fr: "la fleur" },
+                { de: "der Hund", fr: "le chien" },
+                { de: "die Katze", fr: "le chat" },
+                { de: "der Vogel", fr: "l'oiseau" },
+                { de: "der Fisch", fr: "le poisson" },
+                { de: "die Uhr", fr: "l'horloge, la montre" },
+                { de: "die Tasche", fr: "le sac" },
+                { de: "das Handy", fr: "le téléphone portable" },
+                { de: "das Geld", fr: "l'argent" },
+                { de: "das Feuerzeug", fr: "le briquet" },
+                { de: "der Ventilator", fr: "le ventilateur" },
+                { de: "der Aufzug", fr: "l'ascenseur" },
+                { de: "Endlich", fr: "enfin" }
+            ],
+            3: [
+                { de: "der Computer", fr: "l'ordinateur", exDe: "Der Computer ist neu.", exFr: "L’ordinateur est neuf." },
+                { de: "die Maus", fr: "la souris", exDe: "Die Maus ist klein.", exFr: "La souris est petite." },
+                { de: "die Tastatur", fr: "le clavier", exDe: "Die Tastatur ist schwarz.", exFr: "Le clavier est noir." },
+                { de: "der Bildschirm", fr: "l'écran", exDe: "Der Bildschirm ist groß.", exFr: "L’écran est grand." },
+                { de: "die Brille", fr: "les lunettes", exDe: "Ich finde meine Brille nicht.", exFr: "Je ne trouve pas mes lunettes." },
+                { de: "die Flasche", fr: "la bouteille", exDe: "Die Flasche ist leer.", exFr: "La bouteille est vide." },
+                { de: "das Glas", fr: "le verre", exDe: "Das Glas ist auf dem Tisch.", exFr: "Le verre est sur la table." },
+                { de: "der Teller", fr: "l'assiette", exDe: "Der Teller ist sauber.", exFr: "L’assiette est propre." },
+                { de: "der Löffel", fr: "la cuillère", exDe: "Der Löffel liegt auf dem Tisch.", exFr: "La cuillère est sur la table." },
+                { de: "die Gabel", fr: "la fourchette", exDe: "Ich brauche eine Gabel.", exFr: "J’ai besoin d’une fourchette." },
+                { de: "das Messer", fr: "le couteau", exDe: "Das Messer ist scharf.", exFr: "Le couteau est aiguisé." },
+                { de: "der Ofen", fr: "le four", exDe: "Der Ofen ist heiß.", exFr: "Le four est chaud." },
+                { de: "die Waschmaschine", fr: "la machine à laver", exDe: "Die Waschmaschine ist neu.", exFr: "La machine à laver est neuve." },
+                { de: "der Koffer", fr: "la valise", exDe: "Mein Koffer ist schwer.", exFr: "Ma valise est lourde." },
+                { de: "der Rucksack", fr: "le sac à dos", exDe: "Der Rucksack ist bleu.", exFr: "Le sac à dos est bleu." },
+                { de: "der Regenschirm", fr: "le parapluie", exDe: "Ich habe einen Regenschirm.", exFr: "J’ai un parapluie." },
+                { de: "die Jacke", fr: "la veste", exDe: "Meine Jacke ist schwarz.", exFr: "Ma veste est noire." },
+                { de: "die Zeitung", fr: "le journal", exDe: "Ich lese die Zeitung.", exFr: "Je lis le journal." },
+                { de: "der Brief", fr: "la lettre", exDe: "Ich schreibe einen Brief.", exFr: "J’écris une lettre." },
+                { de: "der Stift", fr: "le stylo", exDe: "Der Stift ist auf dem Tisch.", exFr: "Le stylo est sur la table." }
+            ]
+        };
+
+        let currentPack = 1;
+        let currentIndex = 0;
+        let shuffledList = [];
+
+        const cardEl = document.getElementById('card');
+        const frontWordEl = document.getElementById('front-word');
+        const backWordEl = document.getElementById('back-word');
+        const progressEl = document.getElementById('progress-text');
+        const exampleSection = document.getElementById('example-section');
+        const exDeEl = document.getElementById('ex-de');
+        const exFrEl = document.getElementById('ex-fr');
+
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function initPack(packNumber) {
+            currentPack = packNumber;
+            currentIndex = 0;
+            shuffledList = shuffle([...originalPacks[currentPack]]);
+            updateCard();
+        }
+
+        function updateCard() {
+            const item = shuffledList[currentIndex];
+            
+            cardEl.classList.remove('flipped');
+            
+            setTimeout(() => {
+                frontWordEl.textContent = item.fr;
+                backWordEl.textContent = item.de;
+                progressEl.textContent = `Carte ${currentIndex + 1} / ${shuffledList.length}`;
+                
+                // Gérer l'affichage des exemples si présents dans le pack
+                if (item.exDe && item.exFr) {
+                    exampleSection.style.display = 'block';
+                    exDeEl.textContent = item.exDe;
+                    exFrEl.textContent = item.exFr;
+                } else {
+                    exampleSection.style.display = 'none';
+                }
+            }, 150);
+        }
+
+        function flipCard() {
+            cardEl.classList.toggle('flipped');
+        }
+
+        function nextCard(event) {
+            event.stopPropagation();
+            if (currentIndex < shuffledList.length - 1) {
+                currentIndex++;
+            } else {
+                currentIndex = 0;
+                shuffledList = shuffle([...originalPacks[currentPack]]);
+            }
+            updateCard();
+        }
+
+        function prevCard(event) {
+            event.stopPropagation();
+            if (currentIndex > 0) {
+                currentIndex--;
+            } else {
+                currentIndex = shuffledList.length - 1;
+            }
+            updateCard();
+        }
+
+        function changePack(packNumber) {
+            document.getElementById('btn-pack1').classList.toggle('active', packNumber === 1);
+            document.getElementById('btn-pack2').classList.toggle('active', packNumber === 2);
+            document.getElementById('btn-pack3').classList.toggle('active', packNumber === 3);
+            initPack(packNumber);
+        }
+
+        initPack(1);
+    </script>
+</body>
+</html>

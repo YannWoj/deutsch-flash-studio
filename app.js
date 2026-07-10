@@ -110,6 +110,9 @@ let packModalPackId = null;
 let selectedPackColor = PACK_COLORS[0];
 let pendingAddToPackCardIds = [];
 let pendingPackCreateAddIds = [];
+let pendingPackImportFile = null;
+let pendingPackImportData = null;
+let pendingPackImportAnalysis = null;
 let pendingFormCategory = null;
 let pendingFormSubcategory = null;
 let pendingSubcategoryCardId = null;
@@ -117,6 +120,7 @@ let pendingSubcategoryCardIds = [];
 let deckGridSelectionMode = false;    // mode sélection multiple sur le dashboard
 let selectedDeckNames = new Set();    // noms des jeux sélectionnés sur le dashboard
 let visibleDeckNames = [];            // jeux actuellement affichés sur le dashboard
+let deckCardCounts = new Map();
 let deckModalMode = "create";
 let deckModalOriginalName = "";
 let pendingImageBlob = null;          // image compressée prête à être stockée
@@ -546,6 +550,12 @@ function normalizeCard(card) {
   };
 }
 
+function cardMatchKey(card) {
+  return (String(card.article || "").trim() + "|" + String(card.de || "").trim())
+    .toLowerCase()
+    .normalize("NFC");
+}
+
 function normalizeDeck(deck) {
   const name = String(deck?.name || "").trim();
   return {
@@ -668,6 +678,15 @@ function savePacks(packs) {
 
 function getPackById(packId) {
   return getPacks().find((pack) => pack.id === packId) || null;
+}
+
+function getUniquePackName(baseName) {
+  const clean = String(baseName || "").trim() || "Pack importé";
+  const existingNames = new Set(getPacks().map((pack) => pack.name.toLowerCase()));
+  if (!existingNames.has(clean.toLowerCase())) return clean;
+  let index = 2;
+  while (existingNames.has((clean + " (" + index + ")").toLowerCase())) index++;
+  return clean + " (" + index + ")";
 }
 
 function createPack(name, color) {
@@ -1595,6 +1614,18 @@ function setupNavigation() {
     openStudyModeModal(null, "dashboard");
   });
   $("btn-create-pack").addEventListener("click", () => openPackModal("create"));
+  $("btn-import-pack").addEventListener("click", () => {
+    $("pack-import-file").click();
+  });
+  $("pack-import-file").addEventListener("change", async () => {
+    const file = $("pack-import-file").files[0];
+    if (file) await previewPackImportFile(file);
+  });
+  $("btn-confirm-pack-import").addEventListener("click", confirmPackImport);
+  $("btn-cancel-pack-import").addEventListener("click", closePackImportModal);
+  $("pack-import-modal").addEventListener("click", (event) => {
+    if (event.target === $("pack-import-modal")) closePackImportModal();
+  });
   $("btn-review-favorites-page").addEventListener("click", () => {
     openStudyModeModal(FAVORITES_SCOPE, "favoris");
   });
@@ -1657,6 +1688,7 @@ function setupNavigation() {
       closeMoreMenu();
       closePackModal();
       closeAddToPackModal();
+      closePackImportModal();
     }
   });
 
@@ -1823,9 +1855,9 @@ async function refreshDashboard() {
   // Les 3 grands chiffres
   $("stat-total").textContent = cards.length;
   $("stat-due").textContent = dueToday;
-  $("btn-study-all").textContent = dueToday > 0
-    ? "Réviser · " + dueToday + " carte" + (dueToday > 1 ? "s" : "")
-    : "Tout est à jour";
+  const badge = $("btn-study-all-badge");
+  badge.textContent = dueToday;
+  badge.classList.toggle("hidden", dueToday === 0);
   $("btn-study-all").disabled = false;
   // Une carte est "acquise" quand elle a été réussie au moins 3 fois
   $("stat-mastered").textContent = cards.filter(isMastered).length;
@@ -1902,8 +1934,10 @@ function renderDecks(cards) {
   const customDecks = getCustomDecks();
   const accents = ["gold", "blue", "green", "orange", "red", "purple"];
 
+  deckCardCounts = new Map();
   cards.forEach((card) => {
     const category = cardDeckName(card);
+    deckCardCounts.set(category, (deckCardCounts.get(category) || 0) + 1);
     if (!groups[category]) {
       groups[category] = { name: category, total: 0, mastered: 0, due: 0, color: "", emoji: "", custom: false };
     }
@@ -2106,7 +2140,13 @@ function updateDeckGridBulkBar() {
   $("deck-grid-bulk-bar").classList.toggle("hidden", !deckGridSelectionMode);
 
   const count = selectedDeckNames.size;
-  $("deck-grid-bulk-count").textContent = count + " jeu" + (count > 1 ? "x" : "") + " sélectionné" + (count > 1 ? "s" : "");
+  let cardCount = 0;
+  selectedDeckNames.forEach((name) => { cardCount += deckCardCounts.get(name) || 0; });
+
+  const deckPart = count + " jeu" + (count > 1 ? "x" : "") + " sélectionné" + (count > 1 ? "s" : "");
+  $("deck-grid-bulk-count").textContent = count > 0
+    ? deckPart + " · " + cardCount + " carte" + (cardCount > 1 ? "s" : "")
+    : "0 jeu sélectionné";
   $("btn-deck-grid-study").disabled = count === 0;
   $("btn-deck-grid-delete").disabled = count === 0;
   $("btn-deck-grid-clear").textContent = count > 0 ? "Désélectionner" : "Quitter la sélection";
@@ -2373,7 +2413,7 @@ function updateDeckBulkBar() {
   $("btn-deck-detail-select").textContent = deckDetailSelectionMode ? "Annuler sélection" : "Sélectionner";
   $("deck-bulk-bar").classList.toggle("hidden", !deckDetailSelectionMode);
   const count = selectedDeckCardIds.size;
-  $("deck-bulk-count").textContent = count + " sélectionnée" + (count > 1 ? "s" : "");
+  $("deck-bulk-count").textContent = count + " carte" + (count > 1 ? "s" : "") + " sélectionnée" + (count > 1 ? "s" : "");
   $("btn-bulk-subcategory").disabled = count === 0;
   $("btn-bulk-clear").disabled = count === 0;
   $("btn-bulk-select-all").disabled = visibleDeckDetailCardIds.length === 0;
@@ -2845,6 +2885,7 @@ function showPackActionMenu(packId, anchorButton) {
   menu.innerHTML =
     '<button type="button" data-pack-action="rename">Renommer</button>' +
     '<button type="button" data-pack-action="color">Changer la couleur</button>' +
+    '<button type="button" data-pack-action="export">Exporter ce pack</button>' +
     '<button type="button" data-pack-action="delete">Supprimer le pack</button>';
   menu.classList.remove("hidden");
 
@@ -2875,6 +2916,11 @@ async function handlePackAction(action, packId) {
 
   if (action === "rename" || action === "color") {
     openPackModal("edit", packId);
+    return;
+  }
+
+  if (action === "export") {
+    await exportPack(packId);
     return;
   }
 
@@ -5219,6 +5265,42 @@ function refreshBackupInfoIfVisible() {
   if ($("page-sauvegarde").classList.contains("active")) refreshBackupInfo();
 }
 
+function slugifyFilePart(value) {
+  const slug = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "pack";
+}
+
+async function downloadOrShareJSON(payload, fileName) {
+  const jsonString = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
+  const file = new File([blob], fileName, { type: "application/json" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: fileName });
+      return "shared";
+    } catch (error) {
+      if (error.name === "AbortError") return "aborted";
+      console.warn("Partage impossible, téléchargement classique :", error);
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return "downloaded";
+}
+
 async function exportData() {
   const cards = await getAllCards();
   const images = await getAllImages();
@@ -5243,42 +5325,247 @@ async function exportData() {
     customSubcategories: getCustomSubcategories(),
   };
 
-  const jsonString = JSON.stringify(payload, null, 2);
   const fileName = `deutsch-flash-studio-${new Date().toISOString().slice(0,10)}.json`;
-  const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
-  const file = new File([blob], fileName, { type: "application/json" });
-
-  // Mobile / iPhone : menu de partage natif
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: fileName });
-      localStorage.setItem(LS_LAST_EXPORT_AT, todayISO());
-      refreshBackupInfoIfVisible();
-      toast("Export partagé ✓");
-      return;
-    } catch (error) {
-      if (error.name === "AbortError") return;
-      console.warn("Partage impossible, téléchargement classique :", error);
-    }
-  }
-
-  // Fallback PC / navigateurs sans partage fichier
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const result = await downloadOrShareJSON(payload, fileName);
+  if (result === "aborted") return;
   localStorage.setItem(LS_LAST_EXPORT_AT, todayISO());
   refreshBackupInfoIfVisible();
-  toast("Export téléchargé ✓");
+  toast(result === "shared" ? "Export partagé ✓" : "Export téléchargé ✓");
+}
+
+async function exportPack(packId) {
+  const pack = getPackById(packId);
+  if (!pack) return;
+  const allCards = await getAllCards();
+  const cards = packCards(pack, allCards);
+  if (cards.length === 0) {
+    toast("Ce pack est vide.");
+    return;
+  }
+
+  const imageIds = [...new Set(cards.map((card) => card.imageId).filter(Boolean))];
+  const images = [];
+  for (const id of imageIds) {
+    const image = await getImage(id);
+    if (image) images.push({ id: id, data: await blobToBase64(image.blob) });
+  }
+
+  const payload = {
+    app: "Deutsch Flash Studio",
+    kind: "pack",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    pack: { name: pack.name, color: pack.color },
+    cards: cards,
+    images: images,
+  };
+
+  const fileName = "dfs-pack-" + slugifyFilePart(pack.name) + "-" + new Date().toISOString().slice(0, 10) + ".json";
+  const result = await downloadOrShareJSON(payload, fileName);
+  if (result === "aborted") return;
+  toast(result === "shared" ? "Pack partagé ✓" : "Pack téléchargé ✓");
+}
+
+function isCompleteBackupLikeFile(data) {
+  return Boolean(data) && (
+    Array.isArray(data.customDecks) ||
+    Array.isArray(data.reviews) ||
+    Array.isArray(data.packs) ||
+    Array.isArray(data.customSubcategories)
+  );
+}
+
+async function readPackImportFile(file) {
+  const text = await file.text();
+  const data = JSON.parse(text);
+
+  if (!data || data.kind !== "pack") {
+    if (isCompleteBackupLikeFile(data)) throw new Error("BACKUP_FILE_IN_PACK_IMPORT");
+    throw new Error("PACK_IMPORT_INVALID_KIND");
+  }
+
+  const packName = String(data.pack?.name || "").trim();
+  if (!packName) throw new Error("PACK_IMPORT_MISSING_NAME");
+  if (!Array.isArray(data.cards) || data.cards.length === 0) throw new Error("PACK_IMPORT_EMPTY_CARDS");
+
+  return {
+    app: data.app || "",
+    kind: "pack",
+    version: data.version || 1,
+    exportedAt: data.exportedAt || "",
+    pack: {
+      name: packName,
+      color: PACK_COLORS.includes(data.pack?.color) ? data.pack.color : PACK_COLORS[0],
+    },
+    cards: data.cards,
+    images: Array.isArray(data.images) ? data.images : [],
+  };
+}
+
+async function analysePackFile(data) {
+  const allCards = await getAllCards();
+  const localKeys = new Map(allCards.map((card) => [cardMatchKey(card), card]));
+
+  const seen = new Set();
+  const existing = [];
+  const fresh = [];
+
+  (data.cards || []).forEach((raw) => {
+    const card = normalizeCard(raw || {});
+    if (!card.de && !card.fr) return;
+    const key = cardMatchKey(card);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const local = localKeys.get(key);
+    if (local) existing.push(local);
+    else fresh.push(card);
+  });
+
+  return {
+    existing: existing,
+    fresh: fresh,
+    packName: data.pack?.name,
+    packColor: data.pack?.color,
+  };
+}
+
+async function previewPackImportFile(file) {
+  try {
+    pendingPackImportFile = file;
+    pendingPackImportData = await readPackImportFile(file);
+    pendingPackImportAnalysis = await analysePackFile(pendingPackImportData);
+    if (!pendingPackImportAnalysis.existing.length && !pendingPackImportAnalysis.fresh.length) {
+      throw new Error("PACK_IMPORT_EMPTY_CARDS");
+    }
+    renderPackImportModal();
+    $("pack-import-modal").classList.remove("hidden");
+  } catch (error) {
+    console.error("Prévisualisation pack impossible :", error);
+    closePackImportModal();
+    if (error.message === "BACKUP_FILE_IN_PACK_IMPORT") {
+      toast("Ce fichier est une sauvegarde complète. Utilise Plus → Sauvegarde → Importer.");
+    } else if (error.message === "PACK_IMPORT_MISSING_NAME") {
+      toast("Fichier pack invalide : nom de pack manquant.");
+    } else if (error.message === "PACK_IMPORT_EMPTY_CARDS") {
+      toast("Fichier pack invalide : aucune carte à importer.");
+    } else if (error instanceof SyntaxError) {
+      toast("JSON invalide : impossible d'importer ce pack.");
+    } else {
+      toast("Fichier invalide : impossible d'importer ce pack.");
+    }
+  }
+}
+
+function renderPackImportModal() {
+  const analysis = pendingPackImportAnalysis;
+  if (!analysis) return;
+  const existingPack = getPacks().find((pack) => pack.name.toLowerCase() === String(analysis.packName || "").toLowerCase()) || null;
+  const newName = getUniquePackName(analysis.packName);
+  const total = analysis.existing.length + analysis.fresh.length;
+
+  $("pack-import-name").textContent = "Pack « " + analysis.packName + " »";
+  $("pack-import-total").textContent = total + " carte" + (total > 1 ? "s" : "") + " dans le fichier";
+  $("pack-import-existing").textContent = analysis.existing.length;
+  $("pack-import-fresh").textContent = analysis.fresh.length;
+  $("pack-import-choice").classList.toggle("hidden", !existingPack);
+  $("pack-import-new-name").textContent = newName;
+  const mergeChoice = document.querySelector('input[name="pack-import-mode"][value="merge"]');
+  if (mergeChoice) mergeChoice.checked = true;
+}
+
+function closePackImportModal() {
+  $("pack-import-modal").classList.add("hidden");
+  pendingPackImportFile = null;
+  pendingPackImportData = null;
+  pendingPackImportAnalysis = null;
+  $("pack-import-file").value = "";
+}
+
+async function confirmPackImport() {
+  const data = pendingPackImportData;
+  const analysis = pendingPackImportAnalysis;
+  if (!data || !analysis) {
+    toast("Aucun pack prêt à importer.");
+    return;
+  }
+
+  try {
+    const existingPack = getPacks().find((pack) => pack.name.toLowerCase() === String(analysis.packName || "").toLowerCase()) || null;
+    const selectedMode = document.querySelector('input[name="pack-import-mode"]:checked')?.value || "merge";
+    let targetPack = existingPack && selectedMode === "merge" ? existingPack : null;
+    if (!targetPack) {
+      targetPack = createPack(existingPack ? getUniquePackName(analysis.packName) : analysis.packName, analysis.packColor);
+    }
+    if (!targetPack) {
+      targetPack = createPack(getUniquePackName(analysis.packName), analysis.packColor);
+    }
+    if (!targetPack) {
+      toast("Impossible de créer ce pack.");
+      return;
+    }
+
+    const imageById = new Map((data.images || []).filter((image) => image?.id && image?.data).map((image) => [String(image.id), image]));
+    const importedImageIds = new Map();
+    const existingIds = analysis.existing.map((card) => card.id);
+    const newIds = [];
+    let createdCount = 0;
+
+    for (const sourceCard of analysis.fresh) {
+      const oldImageId = sourceCard.imageId ? String(sourceCard.imageId) : "";
+      let nextImageId = null;
+      if (oldImageId && imageById.has(oldImageId)) {
+        if (!importedImageIds.has(oldImageId)) {
+          const nextId = uniqueId("img");
+          try {
+            await saveImage(nextId, base64ToBlob(imageById.get(oldImageId).data));
+            importedImageIds.set(oldImageId, nextId);
+          } catch (error) {
+            console.warn("Image de pack ignorée pendant l'import :", oldImageId, error);
+            importedImageIds.set(oldImageId, null);
+          }
+        }
+        nextImageId = importedImageIds.get(oldImageId);
+      }
+
+      const nextCard = normalizeCard({
+        ...sourceCard,
+        id: uniqueId("card"),
+        imageId: nextImageId,
+        srs: normalizeSrs(sourceCard.srs),
+      });
+      await saveCard(nextCard);
+      newIds.push(nextCard.id);
+      createdCount++;
+    }
+
+    addCardsToPack(targetPack.id, [...existingIds, ...newIds]);
+    purgePackCardIds(await getAllCards());
+    clearImageUrlCache();
+
+    const packName = targetPack.name;
+    const existingCount = analysis.existing.length;
+    closePackImportModal();
+    toast("Pack « " + packName + " » importé · " + createdCount + " carte(s) créée(s), " + existingCount + " déjà présente(s).");
+    renderPacksPageIfVisible();
+    refreshDashboard();
+    renderLibraryIfVisible();
+    renderReviewHubIfVisible();
+    renderDeckDetailIfVisible();
+    refreshCategorySuggestions();
+    refreshSubcategorySuggestions();
+  } catch (error) {
+    console.error("Import pack impossible :", error);
+    toast("Impossible d'importer ce pack.");
+  }
 }
 
 async function readImportFile(file) {
   const text = await file.text();
   const data = JSON.parse(text);
+
+  if (data?.kind === "pack") {
+    throw new Error("PACK_FILE_IN_BACKUP_IMPORT");
+  }
 
   if (!data || !Array.isArray(data.cards)) {
     throw new Error("Format de fichier invalide");
@@ -5356,6 +5643,10 @@ async function analyzeImportData(data) {
 async function importData(file, mode = "merge", options = {}) {
   try {
     const data = options.data || await readImportFile(file);
+    if (data?.kind === "pack") {
+      toast("Ce fichier est un pack. Utilise Mes packs → Importer un pack.");
+      return;
+    }
 
     if (mode === "replace") {
       if (!options.skipConfirm) {
@@ -5457,7 +5748,11 @@ async function previewImportFile(file) {
   } catch (error) {
     console.error("Prévisualisation import impossible :", error);
     closeImportPreviewModal();
-    toast("Fichier invalide : impossible de prévisualiser cet import.");
+    if (error.message === "PACK_FILE_IN_BACKUP_IMPORT") {
+      toast("Ce fichier est un pack. Utilise Mes packs → Importer un pack.");
+    } else {
+      toast("Fichier invalide : impossible de prévisualiser cet import.");
+    }
   }
 }
 

@@ -190,7 +190,9 @@
         </header>
 
         <div class="deck-top-actions">
-          <button class="btn btn-primary btn-large" id="btn-study-all" type="button">Étudier tout</button>
+          <button class="btn btn-primary btn-large" type="button" id="btn-study-all">
+            Réviser<span class="btn-badge hidden" id="btn-study-all-badge">0</span>
+          </button>
           <button class="btn btn-ghost" id="btn-create-deck">+ Créer un jeu</button>
           <button class="btn btn-ghost" id="btn-select-decks" type="button">Sélectionner</button>
         </div>
@@ -271,6 +273,8 @@
           <p class="muted">Des sélections personnalisées de cartes, piochées dans toutes tes catégories. Une carte peut appartenir à plusieurs packs sans quitter la sienne.</p>
           <div class="page-actions">
             <button class="btn btn-primary" type="button" id="btn-create-pack">+ Créer un pack</button>
+            <button class="btn btn-ghost" type="button" id="btn-import-pack">Importer un pack</button>
+            <input type="file" id="pack-import-file" accept="application/json,.json" class="hidden">
           </div>
         </div>
         <div id="pack-grid" class="deck-grid"></div>
@@ -325,7 +329,7 @@
         </div>
 
         <div class="deck-bulk-bar hidden" id="deck-bulk-bar">
-          <strong id="deck-bulk-count">0 sélectionnée</strong>
+          <strong id="deck-bulk-count">0 carte sélectionnée</strong>
           <div class="deck-bulk-actions">
             <button class="btn btn-primary btn-small" id="btn-bulk-subcategory" type="button">Changer sous-catégorie</button>
             <button class="btn btn-ghost btn-small" id="btn-bulk-select-all" type="button">Tout sélectionner</button>
@@ -886,6 +890,43 @@
         <button class="btn btn-ghost" type="button" id="btn-add-to-new-pack"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-layers"></use></svg> Nouveau pack</button>
         <button class="btn btn-primary" type="button" id="btn-confirm-add-to-pack">Ajouter</button>
         <button class="btn btn-ghost" type="button" id="btn-cancel-add-to-pack">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pack-import-modal" class="modal-backdrop hidden">
+    <div class="modal-panel pack-import-panel" role="dialog" aria-modal="true" aria-labelledby="pack-import-title">
+      <h2 id="pack-import-title">Importer un pack</h2>
+      <div class="pack-import-preview">
+        <p class="pack-import-name" id="pack-import-name">Pack</p>
+        <div class="pack-import-rule" aria-hidden="true"></div>
+        <p class="pack-import-total" id="pack-import-total">0 carte dans le fichier</p>
+
+        <div class="pack-import-row">
+          <strong>✓ <span id="pack-import-existing">0</span> déjà dans ta bibliothèque</strong>
+          <p>Elles seront simplement ajoutées au pack.</p>
+          <p>Leur progression n'est pas modifiée.</p>
+        </div>
+
+        <div class="pack-import-row">
+          <strong>+ <span id="pack-import-fresh">0</span> nouvelles cartes</strong>
+          <p>Elles seront créées, dans leurs catégories.</p>
+        </div>
+
+        <div class="pack-import-choice hidden" id="pack-import-choice">
+          <label>
+            <input type="radio" name="pack-import-mode" value="merge" checked>
+            <span>Fusionner dans le pack existant <em>les cartes s'ajoutent, aucune n'est retirée</em></span>
+          </label>
+          <label>
+            <input type="radio" name="pack-import-mode" value="new">
+            <span>Créer un nouveau pack nommé <strong id="pack-import-new-name">Pack (2)</strong></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="button" id="btn-confirm-pack-import">Importer</button>
+        <button class="btn btn-ghost" type="button" id="btn-cancel-pack-import">Annuler</button>
       </div>
     </div>
   </div>
