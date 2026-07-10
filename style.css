@@ -417,29 +417,37 @@ main {
   margin-top: 4px;
 }
 
+.page-actions { margin-top: 14px; }
+
+.favorites-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  border-color: rgba(239, 90, 96, 0.3);
+  background: linear-gradient(145deg, rgba(239, 90, 96, 0.07), transparent), var(--surface);
+}
+
+.favorites-hero-stats { display: flex; gap: 26px; }
+.favorites-hero-stats span { display: block; color: var(--muted); font-size: 0.76rem; font-weight: 700; }
+.favorites-hero-stats strong { display: block; margin-top: 2px; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+
+.empty-state {
+  padding: 40px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.empty-state p { margin: 0 0 6px; font-weight: 700; }
+.empty-state .muted { font-weight: 400; }
+
 .deck-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 18px;
   margin-top: 18px;
-}
-
-.packs-section { margin-top: 34px; }
-
-.packs-head h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.packs-head-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-  stroke: #a78bfa;
-  fill: none;
-  stroke-width: 2;
-  stroke-linejoin: round;
 }
 
 .pack-card .deck-name { display: flex; align-items: center; gap: 9px; }
@@ -450,25 +458,6 @@ main {
   flex: 0 0 11px;
   border-radius: 50%;
   background: var(--deck-accent);
-}
-
-.pack-card-new {
-  display: grid;
-  place-items: center;
-  min-height: 150px;
-  border: 1.5px dashed var(--border-strong);
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.pack-card-new:hover,
-.pack-card-new:active {
-  border-color: rgba(167, 139, 250, 0.6);
-  color: #c4b5fd;
 }
 
 .dashboard-insights {
@@ -2003,11 +1992,11 @@ body.review-session-active .review-card {
 .empty-state {
   max-width: 480px;
   margin: 40px auto;
+  padding: 40px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
   text-align: center;
   background: var(--surface);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
-  padding: 44px 28px;
 }
 
 .empty-emoji {
@@ -2016,8 +2005,12 @@ body.review-session-active .review-card {
 }
 
 .empty-state p {
-  color: var(--muted);
-  margin-bottom: 18px;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.empty-state .muted {
+  font-weight: 400;
 }
 
 /* ---------- 11. Formulaires ---------- */
@@ -3734,6 +3727,14 @@ input[type="file"]::file-selector-button:hover {
   }
 }
 
+@media (max-width: 640px) {
+  .favorites-hero { flex-direction: column; align-items: stretch; }
+  .favorites-hero-stats { justify-content: space-between; gap: 12px; }
+  .favorites-hero .btn-large { width: 100%; min-height: 50px; }
+  .page-actions .btn { width: 100%; }
+  .deck-top-actions #btn-study-all { grid-column: 1 / -1; flex: 1 1 100%; min-height: 52px; font-size: 1.02rem; }
+}
+
 /* ---------- 18. Mobile premium / PWA ---------- */
 @media (max-width: 900px) {
   .dash-grid,
@@ -3813,11 +3814,19 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .nav-btn[data-page="apprentissage"],
+  .nav-btn[data-page="revision"],
+  .nav-btn[data-page="bibliotheque"],
   .nav-btn[data-page="grammaire"],
   .nav-btn[data-page="sauvegarde"],
   .nav-btn[data-page="missing-images"] {
     display: none;
   }
+
+  .nav-btn[data-page="dashboard"] { order: 1; }
+  .nav-btn[data-page="packs"] { order: 2; }
+  .nav-btn[data-page="ajouter"] { order: 3; }
+  .nav-btn[data-page="favoris"] { order: 4; }
+  #btn-nav-more { order: 5; }
 
   .nav-btn[data-page="ajouter"] {
     font-size: 0;
@@ -3916,6 +3925,12 @@ input[type="file"]::file-selector-button:hover {
     flex: 0 0 auto;
     min-height: 40px;
     font-size: 0.82rem;
+  }
+
+  .deck-top-actions #btn-study-all {
+    flex: 1 1 100%;
+    min-height: 52px;
+    font-size: 1.02rem;
   }
 
   .deck-detail-actions {

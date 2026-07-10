@@ -150,6 +150,8 @@
 
       <nav class="nav">
         <button class="nav-btn" data-page="dashboard"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-grid"></use></svg></span> Mes jeux</button>
+        <button class="nav-btn" data-page="packs"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-layers"></use></svg></span> Mes packs</button>
+        <button class="nav-btn" data-page="favoris"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-heart"></use></svg></span> Favoris</button>
         <button class="nav-btn" data-page="apprentissage"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-bulb"></use></svg></span> Apprentissage</button>
         <button class="nav-btn" data-page="revision"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-repeat"></use></svg></span> Révision</button>
         <button class="nav-btn" data-page="ajouter"><span class="nav-icon" aria-hidden="true"><svg focusable="false"><use href="#icon-plus"></use></svg></span> Ajouter une carte</button>
@@ -174,8 +176,8 @@
         </header>
 
         <div class="deck-top-actions">
-          <button class="btn btn-primary btn-large" id="btn-create-deck">+ Créer un jeu</button>
-          <button class="btn btn-ghost" id="btn-study-all" type="button">Étudier tout</button>
+          <button class="btn btn-primary btn-large" id="btn-study-all" type="button">Étudier tout</button>
+          <button class="btn btn-ghost" id="btn-create-deck">+ Créer un jeu</button>
           <button class="btn btn-ghost" id="btn-select-decks" type="button">Sélectionner</button>
         </div>
 
@@ -241,20 +243,47 @@
 
         <div class="deck-grid" id="deck-grid"></div>
 
-        <section class="packs-section">
-          <div class="packs-head">
-            <h2><svg class="packs-head-icon" focusable="false" aria-hidden="true"><use href="#icon-layers"></use></svg> Mes packs</h2>
-            <p class="muted">Des sélections personnalisées de cartes, piochées dans toutes tes catégories.</p>
-          </div>
-          <div id="pack-grid" class="deck-grid"></div>
-        </section>
-
         <div class="panel deck-empty hidden" id="deck-empty">
           <p class="muted">Aucun deck pour le moment. Ajoute une carte pour créer ton premier jeu.</p>
           <button class="btn btn-primary" data-goto="ajouter">Ajouter une carte</button>
         </div>
 
         <div class="deck-action-menu hidden" id="deck-action-menu"></div>
+      </section>
+
+      <section id="page-packs" class="page">
+        <div class="page-header">
+          <h1>Mes packs</h1>
+          <p class="muted">Des sélections personnalisées de cartes, piochées dans toutes tes catégories. Une carte peut appartenir à plusieurs packs sans quitter la sienne.</p>
+          <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="btn-create-pack">+ Créer un pack</button>
+          </div>
+        </div>
+        <div id="pack-grid" class="deck-grid"></div>
+        <div id="pack-empty" class="empty-state hidden">
+          <p>Tu n'as pas encore de pack.</p>
+          <p class="muted">Crée un pack, puis ajoute-lui des cartes depuis la Bibliothèque ou avec l'icône <em>calques</em> d'une carte.</p>
+        </div>
+      </section>
+
+      <section id="page-favoris" class="page">
+        <div class="page-header">
+          <h1>Favoris</h1>
+          <p class="muted">Les cartes que tu as marquées d'un cœur.</p>
+        </div>
+        <div class="panel favorites-hero">
+          <div class="favorites-hero-stats">
+            <div><span>Total</span><strong id="fav-total">0</strong></div>
+            <div><span>À réviser</span><strong id="fav-due">0</strong></div>
+            <div><span>Mémorisées</span><strong id="fav-mastered">0</strong></div>
+          </div>
+          <button class="btn btn-primary btn-large" type="button" id="btn-review-favorites-page">Réviser mes favoris</button>
+        </div>
+        <div id="favorites-grid" class="library-grid"></div>
+        <div id="favorites-empty" class="empty-state hidden">
+          <p>Aucune carte en favori.</p>
+          <p class="muted">Touche le cœur d'une carte, dans la Bibliothèque ou pendant une révision, pour la retrouver ici.</p>
+        </div>
       </section>
 
       <!-- ============ PAGE : DÉTAIL D'UN JEU ============ -->
@@ -906,7 +935,8 @@
     <div class="modal-panel more-menu-panel">
       <h2>Plus</h2>
       <div class="more-menu-list">
-        <button class="btn" type="button" data-more-favorites><svg class="more-menu-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</button>
+        <button class="btn" type="button" data-more-goto="revision"><svg class="more-menu-icon" focusable="false"><use href="#icon-repeat"></use></svg> Révision</button>
+        <button class="btn" type="button" data-more-goto="bibliotheque"><svg class="more-menu-icon" focusable="false"><use href="#icon-library"></use></svg> Bibliothèque</button>
         <button class="btn" type="button" data-more-goto="grammaire"><svg class="more-menu-icon" focusable="false"><use href="#icon-book"></use></svg> Grammaire</button>
         <button class="btn" type="button" data-more-goto="sauvegarde"><svg class="more-menu-icon" focusable="false"><use href="#icon-save"></use></svg> Sauvegarde</button>
         <button class="btn" type="button" data-more-goto="missing-images"><svg class="more-menu-icon" focusable="false"><use href="#icon-image"></use></svg> Images manquantes</button>

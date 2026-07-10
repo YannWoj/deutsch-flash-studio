@@ -1500,7 +1500,7 @@ function warmUpVoices() {
    Une seule page HTML : on affiche/cache des sections.
    ========================================================= */
 
-const PAGES = ["dashboard", "deck-detail", "apprentissage", "revision", "ajouter", "bibliotheque", "missing-images", "grammaire", "sauvegarde"];
+const PAGES = ["dashboard", "packs", "favoris", "deck-detail", "apprentissage", "revision", "ajouter", "bibliotheque", "missing-images", "grammaire", "sauvegarde"];
 
 function showPage(name) {
   if (!PAGES.includes(name)) name = "dashboard";
@@ -1523,7 +1523,7 @@ function showPage(name) {
   });
   const moreBtn = $("btn-nav-more");
   if (moreBtn) {
-    moreBtn.classList.toggle("active", ["apprentissage", "grammaire", "sauvegarde", "missing-images"].includes(name));
+    moreBtn.classList.toggle("active", ["revision", "bibliotheque", "grammaire", "sauvegarde", "missing-images"].includes(name));
   }
 
   // Mémorise le dernier onglet ouvert (petit réglage -> localStorage suffit)
@@ -1531,6 +1531,8 @@ function showPage(name) {
 
   // Rafraîchit le contenu de la page qu'on vient d'ouvrir
   if (name === "dashboard")    refreshDashboard();
+  if (name === "packs")        renderPacksPage();
+  if (name === "favoris")      renderFavoritesPage();
   if (name === "deck-detail")  renderDeckDetail();
   if (name === "apprentissage") renderLearningPage(true);
   if (name === "revision") {
@@ -1581,18 +1583,18 @@ function setupNavigation() {
   $("btn-deck-grid-clear").addEventListener("click", clearDeckGridSelection);
   $("btn-deck-grid-study").addEventListener("click", studySelectedDecks);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
-  $("btn-study-all").addEventListener("click", () => openStudyModeModal(null));
+  $("btn-study-all").addEventListener("click", () => {
+    currentReviewCategory = null;
+    showPage("revision");
+  });
+  $("btn-create-pack").addEventListener("click", () => openPackModal("create"));
+  $("btn-review-favorites-page").addEventListener("click", () => {
+    currentReviewCategory = FAVORITES_SCOPE;
+    showPage("revision");
+  });
   $("btn-nav-more").addEventListener("click", openMoreMenu);
   $("more-menu-modal").addEventListener("click", (event) => {
     if (event.target === $("more-menu-modal")) closeMoreMenu();
-    if (event.target.closest("[data-more-favorites]")) {
-      closeMoreMenu();
-      libraryOnlyFavorites = true;
-      libraryOnlyNoImage = false;
-      libraryOnlyDue = false;
-      showPage("bibliotheque");
-      return;
-    }
     const gotoBtn = event.target.closest("[data-more-goto]");
     if (gotoBtn) {
       closeMoreMenu();
@@ -1677,10 +1679,7 @@ function setupNavigation() {
     const browseFavoritesBtn = event.target.closest("#btn-browse-favorites");
     if (browseFavoritesBtn) {
       event.stopPropagation();
-      libraryOnlyFavorites = true;
-      libraryOnlyNoImage = false;
-      libraryOnlyDue = false;
-      showPage("bibliotheque");
+      showPage("favoris");
       return;
     }
 
@@ -1747,7 +1746,7 @@ function setupNavigation() {
 }
 
 function setupDeckDetailPage() {
-  $("btn-deck-detail-back").addEventListener("click", () => showPage("dashboard"));
+  $("btn-deck-detail-back").addEventListener("click", () => showPage(currentDeckDetailPackId ? "packs" : "dashboard"));
 
   $("btn-deck-detail-study-modal").addEventListener("click", () => {
     if (currentDeckDetailPackId) {
@@ -1809,10 +1808,15 @@ function setupDeckDetailPage() {
 async function refreshDashboard() {
   const cards = await getAllCards();
   const today = todayISO();
+  const dueToday = cards.filter((c) => c.srs.nextReview <= today).length;
 
   // Les 3 grands chiffres
   $("stat-total").textContent = cards.length;
-  $("stat-due").textContent = cards.filter((c) => c.srs.nextReview <= today).length;
+  $("stat-due").textContent = dueToday;
+  $("btn-study-all").textContent = dueToday > 0
+    ? "Réviser · " + dueToday + " carte" + (dueToday > 1 ? "s" : "")
+    : "Tout est à jour";
+  $("btn-study-all").disabled = false;
   // Une carte est "acquise" quand elle a été réussie au moins 3 fois
   $("stat-mastered").textContent = cards.filter(isMastered).length;
 
@@ -1823,7 +1827,6 @@ async function refreshDashboard() {
   }
 
   renderDecks(cards);
-  renderPacks(cards);
 }
 
 async function renderDashboardStats() {
@@ -1989,8 +1992,10 @@ function renderDecks(cards) {
   });
 }
 
-function renderPacks(cards) {
+async function renderPacksPage() {
+  const cards = await getAllCards();
   const container = $("pack-grid");
+  const empty = $("pack-empty");
   if (!container) return;
   const packs = getPacks();
   const today = todayISO();
@@ -2025,11 +2030,8 @@ function renderPacks(cards) {
     );
   }).join("");
 
-  container.innerHTML = packHTML +
-    '<button class="deck-card pack-card-new" type="button" id="btn-create-pack">+ Créer un pack</button>';
-
-  const createBtn = $("btn-create-pack");
-  if (createBtn) createBtn.addEventListener("click", () => openPackModal("create"));
+  container.innerHTML = packHTML;
+  if (empty) empty.classList.toggle("hidden", packs.length > 0);
 
   container.querySelectorAll("[data-browse-pack]").forEach((btn) => {
     btn.addEventListener("click", (event) => {
@@ -2039,10 +2041,14 @@ function renderPacks(cards) {
   });
 }
 
+function renderPacksPageIfVisible() {
+  if ($("page-packs").classList.contains("active")) renderPacksPage();
+}
+
 function openPackDetail(packId) {
   if (!getPackById(packId)) {
     toast("Pack introuvable.");
-    refreshDashboard();
+    renderPacksPageIfVisible();
     return;
   }
   currentDeckDetailPackId = packId;
@@ -2184,6 +2190,7 @@ async function renderDeckDetail() {
   $("btn-deck-detail-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-empty-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-appearance").textContent = isPackDetail ? "Modifier le pack" : "Modifier apparence";
+  $("btn-deck-detail-back").textContent = isPackDetail ? "← Retour aux packs" : "← Retour aux jeux";
   $("btn-bulk-subcategory").classList.toggle("hidden", isPackDetail);
   $("deck-detail-subcategory-filter").classList.toggle("hidden", isPackDetail);
   $("deck-detail-subcategories").classList.toggle("hidden", isPackDetail);
@@ -2343,7 +2350,7 @@ function removeCardFromCurrentPack(cardId) {
   const removed = removeCardsFromPack(currentDeckDetailPackId, [cardId]);
   if (removed > 0) {
     selectedDeckCardIds.delete(cardId);
-    refreshDashboard();
+    renderPacksPageIfVisible();
     renderDeckDetail();
     renderLibraryIfVisible();
     renderReviewHubIfVisible();
@@ -2827,7 +2834,7 @@ function savePackFromModal() {
     if (!current) {
       toast("Pack introuvable.");
       closePackModal();
-      refreshDashboard();
+      renderPacksPageIfVisible();
       return;
     }
     if (packs.some((item) => item.id !== current.id && item.name.toLowerCase() === name.toLowerCase())) {
@@ -2853,7 +2860,7 @@ function savePackFromModal() {
   } else {
     toast("Pack sauvegardé.");
   }
-  refreshDashboard();
+  renderPacksPageIfVisible();
   renderReviewHubIfVisible();
   renderDeckDetailIfVisible();
 }
@@ -2861,7 +2868,7 @@ function savePackFromModal() {
 function showPackActionMenu(packId, anchorButton) {
   const pack = getPackById(packId);
   if (!pack) {
-    refreshDashboard();
+    renderPacksPageIfVisible();
     return;
   }
   const menu = $("deck-action-menu");
@@ -2895,7 +2902,7 @@ async function handlePackAction(action, packId) {
   const pack = getPackById(packId);
   if (!pack) {
     toast("Pack introuvable.");
-    refreshDashboard();
+    renderPacksPageIfVisible();
     return;
   }
 
@@ -2910,10 +2917,10 @@ async function handlePackAction(action, packId) {
     deletePack(packId);
     if (currentDeckDetailPackId === packId) {
       currentDeckDetailPackId = null;
-      showPage("dashboard");
+      showPage("packs");
     }
     if (currentReviewCategory === PACK_SCOPE_PREFIX + packId) currentReviewCategory = null;
-    refreshDashboard();
+    renderPacksPageIfVisible();
     renderReviewHubIfVisible();
     toast("Pack supprimé.");
   }
@@ -2965,7 +2972,7 @@ function confirmAddToPack() {
   librarySelectionMode = false;
   selectedLibraryCardIds.clear();
   syncSelectionModeClass();
-  refreshDashboard();
+  renderPacksPageIfVisible();
   renderLibraryIfVisible();
   renderDeckDetailIfVisible();
   renderReviewHubIfVisible();
@@ -3982,6 +3989,7 @@ function setupAddForm() {
     refreshSubcategorySuggestions();
     refreshDashboard();
     renderLibraryIfVisible();
+    renderFavoritesPageIfVisible();
     renderLearningIfVisible();
     renderDeckDetailIfVisible();
     renderMissingImagesIfVisible();
@@ -4183,8 +4191,8 @@ async function renderLibrary() {
     btn.addEventListener("click", () => toggleFavorite(btn.dataset.favorite));
   });
 
-  container.querySelectorAll("[data-add-one-to-pack]").forEach((btn) => {
-    btn.addEventListener("click", () => openAddToPackModal([btn.dataset.addOneToPack]));
+  container.querySelectorAll("[data-add-to-pack]").forEach((btn) => {
+    btn.addEventListener("click", () => openAddToPackModal([btn.dataset.addToPack]));
   });
 
   container.querySelectorAll("[data-library-select]").forEach((checkbox) => {
@@ -4226,6 +4234,57 @@ async function renderLibrary() {
 
 function renderLibraryIfVisible() {
   if ($("page-bibliotheque").classList.contains("active")) renderLibrary();
+}
+
+async function renderFavoritesPage() {
+  const cards = await getAllCards();
+  const favorites = cards
+    .filter((card) => card.favorite === true)
+    .sort((a, b) => String(b.updatedAt || b.createdAt || b.id || "").localeCompare(String(a.updatedAt || a.createdAt || a.id || "")));
+  const today = todayISO();
+  const hero = document.querySelector("#page-favoris .favorites-hero");
+  const empty = $("favorites-empty");
+  const container = $("favorites-grid");
+  const view = getLibraryView();
+
+  $("fav-total").textContent = favorites.length;
+  $("fav-due").textContent = favorites.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  $("fav-mastered").textContent = favorites.filter(isMastered).length;
+  if (hero) hero.classList.toggle("hidden", favorites.length === 0);
+  empty.classList.toggle("hidden", favorites.length > 0);
+  container.className = view === "list" ? "library-list" : "library-grid";
+
+  if (favorites.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const imageUrls = await Promise.all(favorites.map((card) => getImageURL(card.imageId)));
+  container.innerHTML = favorites
+    .map((card, index) => view === "list"
+      ? libraryRowHTML(card, imageUrls[index])
+      : libraryItemHTML(card, imageUrls[index]))
+    .join("");
+
+  container.querySelectorAll("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", () => handleDelete(btn.dataset.delete));
+  });
+  container.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => startEditCard(btn.dataset.edit));
+  });
+  container.querySelectorAll("[data-favorite]").forEach((btn) => {
+    btn.addEventListener("click", () => toggleFavorite(btn.dataset.favorite));
+  });
+  container.querySelectorAll("[data-add-to-pack]").forEach((btn) => {
+    btn.addEventListener("click", () => openAddToPackModal([btn.dataset.addToPack]));
+  });
+
+  attachImageActionHandlers(container);
+  attachImageDropHandlers(container);
+}
+
+function renderFavoritesPageIfVisible() {
+  if ($("page-favoris").classList.contains("active")) renderFavoritesPage();
 }
 
 function getLibraryView() {
@@ -4370,7 +4429,7 @@ function cardActionsHTML(card, options = {}) {
     (options.addToPack ? iconButtonHTML("icon-layers", {
       label: "Ajouter à un pack",
       className: "btn-add-pack",
-      data: { "add-one-to-pack": card.id },
+      data: { "add-to-pack": card.id },
     }) : "") +
     (options.extraActions || "") +
     iconButtonHTML("icon-pencil", { label: "Modifier", className: "btn-edit", data: { edit: card.id } }) +
@@ -4562,6 +4621,7 @@ async function toggleFavorite(cardId) {
   card.updatedAt = todayISO();
   await saveCard(card);
   renderLibraryIfVisible();
+  renderFavoritesPageIfVisible();
   renderLearningIfVisible();
   renderDeckDetailIfVisible();
   renderMissingImagesIfVisible();
@@ -4582,6 +4642,7 @@ async function handleDelete(cardId) {
 
   toast("Carte supprimée.");
   renderLibrary();
+  renderFavoritesPageIfVisible();
   refreshDashboard();
   refreshCategorySuggestions();
   refreshSubcategorySuggestions();
@@ -5700,7 +5761,7 @@ async function startApp() {
 
   // On ne restaure jamais une page de session ou un détail de deck :
   // au lancement, l'utilisateur veut voir ses jeux.
-  const RESTORABLE_PAGES = ["dashboard", "bibliotheque", "ajouter", "grammaire"];
+  const RESTORABLE_PAGES = ["dashboard", "packs", "favoris", "bibliotheque", "ajouter", "grammaire"];
   const lastPage = localStorage.getItem(LS_LAST_PAGE);
   try {
     showPage(RESTORABLE_PAGES.includes(lastPage) ? lastPage : "dashboard");
