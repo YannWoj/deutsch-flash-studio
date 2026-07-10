@@ -47,6 +47,12 @@
       <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path>
     </symbol>
 
+    <symbol id="icon-layers" viewBox="0 0 24 24">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+      <path d="M2 17l10 5 10-5"></path>
+      <path d="M2 12l10 5 10-5"></path>
+    </symbol>
+
     <symbol id="icon-book" viewBox="0 0 24 24">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"></path>
       <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"></path>
@@ -234,6 +240,14 @@
         </div>
 
         <div class="deck-grid" id="deck-grid"></div>
+
+        <section class="packs-section">
+          <div class="packs-head">
+            <h2><svg class="packs-head-icon" focusable="false" aria-hidden="true"><use href="#icon-layers"></use></svg> Mes packs</h2>
+            <p class="muted">Des sélections personnalisées de cartes, piochées dans toutes tes catégories.</p>
+          </div>
+          <div id="pack-grid" class="deck-grid"></div>
+        </section>
 
         <div class="panel deck-empty hidden" id="deck-empty">
           <p class="muted">Aucun deck pour le moment. Ajoute une carte pour créer ton premier jeu.</p>
@@ -607,6 +621,7 @@
             <option value="due">Prochaine révision</option>
           </select>
           <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
+          <button class="btn btn-ghost" id="btn-library-select" type="button">Sélectionner</button>
         </div>
 
         <div class="library-toolbar-extra">
@@ -627,6 +642,14 @@
         </div>
 
         <p id="library-count" class="muted"></p>
+        <div class="deck-bulk-bar hidden" id="library-bulk-bar">
+          <strong id="library-bulk-count">0 carte sélectionnée</strong>
+          <div class="deck-bulk-actions">
+            <button class="btn btn-primary btn-small" id="btn-library-add-to-pack" type="button">Ajouter à un pack</button>
+            <button class="btn btn-ghost btn-small" id="btn-library-select-all" type="button">Tout sélectionner</button>
+            <button class="btn btn-ghost btn-small" id="btn-library-clear" type="button">Désélectionner</button>
+          </div>
+        </div>
         <div id="library-grid" class="library-grid"></div>
       </section>
 
@@ -800,6 +823,33 @@
       <div class="modal-actions">
         <button class="btn btn-primary" id="btn-save-deck" type="button">Sauvegarder</button>
         <button class="btn btn-ghost" id="btn-cancel-deck" type="button">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pack-modal" class="modal-backdrop hidden">
+    <div class="modal-panel">
+      <h2 id="pack-modal-title">Créer un pack</h2>
+      <label for="pack-name-input">Nom du pack</label>
+      <input type="text" id="pack-name-input" maxlength="40" placeholder="Voyage à Berlin">
+      <p class="muted">Choisis une couleur</p>
+      <div class="pack-color-picker" id="pack-color-picker"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="button" id="btn-save-pack">Enregistrer</button>
+        <button class="btn btn-ghost" type="button" id="btn-cancel-pack">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="add-to-pack-modal" class="modal-backdrop hidden">
+    <div class="modal-panel">
+      <h2>Ajouter à un pack</h2>
+      <p class="muted" id="add-to-pack-summary">0 carte sélectionnée</p>
+      <div class="add-to-pack-list" id="add-to-pack-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-add-to-new-pack"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-layers"></use></svg> Nouveau pack</button>
+        <button class="btn btn-primary" type="button" id="btn-confirm-add-to-pack">Ajouter</button>
+        <button class="btn btn-ghost" type="button" id="btn-cancel-add-to-pack">Annuler</button>
       </div>
     </div>
   </div>

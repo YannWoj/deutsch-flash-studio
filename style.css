@@ -424,6 +424,53 @@ main {
   margin-top: 18px;
 }
 
+.packs-section { margin-top: 34px; }
+
+.packs-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.packs-head-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  stroke: #a78bfa;
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.pack-card .deck-name { display: flex; align-items: center; gap: 9px; }
+
+.pack-dot {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border-radius: 50%;
+  background: var(--deck-accent);
+}
+
+.pack-card-new {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  border: 1.5px dashed var(--border-strong);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.pack-card-new:hover,
+.pack-card-new:active {
+  border-color: rgba(167, 139, 250, 0.6);
+  color: #c4b5fd;
+}
+
 .dashboard-insights {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
@@ -916,6 +963,12 @@ main {
   color: var(--gold-strong);
 }
 
+.btn-add-pack,
+.btn-remove-pack {
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+}
+
 .deck-detail-select {
   position: absolute;
   top: 10px;
@@ -950,6 +1003,22 @@ main {
   background: linear-gradient(145deg, rgba(232, 185, 75, 0.08), rgba(255, 255, 255, 0.02)), var(--surface);
 }
 
+.library-select {
+  top: 12px;
+  left: 12px;
+}
+
+.library-item,
+.library-row {
+  position: relative;
+}
+
+.library-item.selected,
+.library-row.selected {
+  border-color: rgba(167, 139, 250, 0.72);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.16), var(--shadow);
+}
+
 .deck-bulk-bar {
   display: flex;
   align-items: center;
@@ -977,6 +1046,21 @@ main {
   animation: bulk-bar-in 0.2s ease;
 }
 
+#library-bulk-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  margin: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: rgba(27, 32, 43, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(167, 139, 250, 0.45);
+  animation: bulk-bar-in 0.2s ease;
+}
+
 @keyframes bulk-bar-in {
   from {
     opacity: 0;
@@ -998,6 +1082,10 @@ body.selection-mode-active #deck-grid {
   padding-bottom: 180px;
 }
 
+body.selection-mode-active #library-grid {
+  padding-bottom: 180px;
+}
+
 body.selection-mode-active #toast {
   bottom: calc(250px + env(safe-area-inset-bottom, 0px));
 }
@@ -1011,7 +1099,19 @@ body.selection-mode-active #toast {
     transform: translateX(-50%);
   }
 
+  #library-bulk-bar {
+    left: 50%;
+    right: auto;
+    bottom: 24px;
+    width: min(680px, calc(100vw - 48px));
+    transform: translateX(-50%);
+  }
+
   body.selection-mode-active #deck-grid {
+    padding-bottom: 110px;
+  }
+
+  body.selection-mode-active #library-grid {
     padding-bottom: 110px;
   }
 
@@ -1311,6 +1411,22 @@ body.selection-mode-active #toast {
 .hub-chip-favorites.active .hub-chip-badge {
   background: rgba(239, 90, 96, 0.22);
   color: #ffb3b6;
+}
+
+.hub-chip-group-label {
+  width: 100%;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hub-chip-pack.active {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.13);
+  color: #c4b5fd;
 }
 
 .hub-mode-grid {
@@ -3245,6 +3361,47 @@ input[type="file"]::file-selector-button:hover {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 16px;
+}
+
+.pack-color-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+
+.pack-color-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pack-color-swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px currentColor;
+}
+
+.add-to-pack-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(320px, 45vh);
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.add-to-pack-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.add-to-pack-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: #a78bfa;
 }
 
 .modal-close-btn {
