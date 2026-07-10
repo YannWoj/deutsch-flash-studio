@@ -47,6 +47,20 @@
       <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path>
     </symbol>
 
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="3" y="6" width="13" height="15" rx="2"></rect>
+      <path d="M8 3h10a2 2 0 0 1 2 2v11"></path>
+    </symbol>
+
+    <symbol id="icon-list-check" viewBox="0 0 24 24">
+      <path d="M11 6h10"></path>
+      <path d="M11 12h10"></path>
+      <path d="M11 18h10"></path>
+      <path d="M3 6.5l1.5 1.5L7 5.5"></path>
+      <path d="M3 12.5l1.5 1.5L7 11.5"></path>
+      <path d="M3 18.5l1.5 1.5L7 17.5"></path>
+    </symbol>
+
     <symbol id="icon-layers" viewBox="0 0 24 24">
       <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
       <path d="M2 17l10 5 10-5"></path>
@@ -772,57 +786,50 @@
     </main>
   </div>
 
-  <div class="modal-backdrop hidden" id="study-mode-modal">
-    <div class="modal-panel study-mode-panel" role="dialog" aria-modal="true" aria-labelledby="study-mode-title">
-      <button class="modal-close-btn" id="btn-close-study-mode" type="button" aria-label="Fermer">×</button>
-      <h2 id="study-mode-title">Étudier</h2>
-      <p class="muted study-mode-subtitle" id="study-mode-subtitle">Choisis comment tu veux travailler ce jeu.</p>
+  <div id="study-mode-modal" class="modal-backdrop sheet-backdrop hidden">
+    <div class="modal-panel sheet-panel">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="study-mode-title">Comment veux-tu réviser ?</h2>
+      <p class="muted" id="study-mode-scope"></p>
 
-      <div class="study-mode-list">
-        <button class="study-mode-option" type="button" data-study-mode="due" id="study-option-due">
-          <span class="study-mode-icon" aria-hidden="true">📅</span>
-          <span class="study-mode-content">
-            <span class="study-mode-title">Révision du jour</span>
-            <span class="study-mode-description">Les cartes prévues aujourd'hui. Fait avancer ta progression.</span>
-          </span>
-          <span class="study-mode-badge" id="study-due-badge">0 carte</span>
+      <div class="sheet-segmented" id="study-scope-toggle">
+        <button class="sheet-seg active" type="button" data-session-type="due">
+          <span class="sheet-seg-title">Session du jour</span>
+          <span class="sheet-seg-count" id="seg-count-due">0 cartes</span>
         </button>
+        <button class="sheet-seg" type="button" data-session-type="free">
+          <span class="sheet-seg-title">Tout revoir</span>
+          <span class="sheet-seg-count" id="seg-count-free">0 cartes</span>
+        </button>
+      </div>
+      <p class="sheet-hint" id="study-session-hint"></p>
 
-        <button class="study-mode-option" type="button" data-study-mode="free" id="study-option-free">
-          <span class="study-mode-icon" aria-hidden="true">🔀</span>
-          <span class="study-mode-content">
-            <span class="study-mode-title">Entraînement libre</span>
-            <span class="study-mode-description">Toutes les cartes, dans le désordre. Ne modifie pas ta progression.</span>
-          </span>
-          <span class="study-mode-badge">Sans SRS</span>
+      <div class="sheet-modes">
+        <button class="sheet-mode" type="button" data-study-mode="classic">
+          <span class="sheet-mode-icon icon-blue"><svg focusable="false" aria-hidden="true"><use href="#icon-cards"></use></svg></span>
+          <span class="sheet-mode-text"><strong>Cartes</strong><em>Je révèle la réponse et je m'auto-évalue</em></span>
+          <span class="sheet-mode-chevron" aria-hidden="true">›</span>
         </button>
+        <button class="sheet-mode" type="button" data-study-mode="multiple" id="sheet-mode-multiple">
+          <span class="sheet-mode-icon icon-orange"><svg focusable="false" aria-hidden="true"><use href="#icon-list-check"></use></svg></span>
+          <span class="sheet-mode-text"><strong>Choix multiple</strong><em>Je choisis parmi 4 réponses</em></span>
+          <span class="sheet-mode-chevron" aria-hidden="true">›</span>
+        </button>
+        <button class="sheet-mode" type="button" data-study-mode="written">
+          <span class="sheet-mode-icon icon-purple"><svg focusable="false" aria-hidden="true"><use href="#icon-pencil"></use></svg></span>
+          <span class="sheet-mode-text"><strong>Écrit</strong><em>J'écris l'article et le mot</em></span>
+          <span class="sheet-mode-chevron" aria-hidden="true">›</span>
+        </button>
+        <button class="sheet-mode" type="button" data-study-mode="learning">
+          <span class="sheet-mode-icon icon-teal"><svg focusable="false" aria-hidden="true"><use href="#icon-bulb"></use></svg></span>
+          <span class="sheet-mode-text"><strong>Découverte</strong><em>Je feuillette sans toucher à ma progression</em></span>
+          <span class="sheet-mode-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
 
-        <button class="study-mode-option" type="button" data-study-mode="multiple" id="study-option-multiple">
-          <span class="study-mode-icon" aria-hidden="true">✅</span>
-          <span class="study-mode-content">
-            <span class="study-mode-title">Choix multiple</span>
-            <span class="study-mode-description">4 réponses proposées, une seule est bonne.</span>
-          </span>
-          <span class="study-mode-badge" id="study-multiple-badge">Quiz</span>
-        </button>
-
-        <button class="study-mode-option" type="button" data-study-mode="written" id="study-option-written">
-          <span class="study-mode-icon" aria-hidden="true">✍️</span>
-          <span class="study-mode-content">
-            <span class="study-mode-title">Révision écrite</span>
-            <span class="study-mode-description">Tape l'article et le mot allemand toi-même.</span>
-          </span>
-          <span class="study-mode-badge">Production</span>
-        </button>
-
-        <button class="study-mode-option" type="button" data-study-mode="learning" id="study-option-learning">
-          <span class="study-mode-icon" aria-hidden="true">📖</span>
-          <span class="study-mode-content">
-            <span class="study-mode-title">Parcourir les cartes</span>
-            <span class="study-mode-description">Feuillette tranquillement, avec l'audio. Aucun impact.</span>
-          </span>
-          <span class="study-mode-badge">Lecture</span>
-        </button>
+      <div class="sheet-footer">
+        <button class="btn btn-ghost btn-small" type="button" id="btn-study-advanced">Réglages avancés</button>
+        <button class="btn btn-ghost btn-small" type="button" id="btn-close-study-mode">Annuler</button>
       </div>
     </div>
   </div>

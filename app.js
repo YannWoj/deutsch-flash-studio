@@ -90,6 +90,8 @@ let currentReviewCategory = null;     // null = révision globale, string = un d
 let currentReviewMode = localStorage.getItem(LS_REVIEW_MODE) || "classic";
 let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
 let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks, "__favorites__" = favoris
+let pendingSessionType = "due";
+let reviewReturnPage = "dashboard";
 let skipHubOnce = false;
 let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
@@ -1502,6 +1504,11 @@ function warmUpVoices() {
 
 const PAGES = ["dashboard", "packs", "favoris", "deck-detail", "apprentissage", "revision", "ajouter", "bibliotheque", "missing-images", "grammaire", "sauvegarde"];
 
+function currentPageName() {
+  const active = document.querySelector(".page.active");
+  return active?.id?.replace(/^page-/, "") || "dashboard";
+}
+
 function showPage(name) {
   if (!PAGES.includes(name)) name = "dashboard";
   hideDeckActionMenu();
@@ -1572,6 +1579,7 @@ function setupNavigation() {
       if (btn.dataset.page === "apprentissage") {
         pendingLearningCategory = null;
         currentLearningScope = null;
+        reviewReturnPage = "revision";
       }
       showPage(btn.dataset.page);
     });
@@ -1584,13 +1592,11 @@ function setupNavigation() {
   $("btn-deck-grid-study").addEventListener("click", studySelectedDecks);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
   $("btn-study-all").addEventListener("click", () => {
-    currentReviewCategory = null;
-    showPage("revision");
+    openStudyModeModal(null, "dashboard");
   });
   $("btn-create-pack").addEventListener("click", () => openPackModal("create"));
   $("btn-review-favorites-page").addEventListener("click", () => {
-    currentReviewCategory = FAVORITES_SCOPE;
-    showPage("revision");
+    openStudyModeModal(FAVORITES_SCOPE, "favoris");
   });
   $("btn-nav-more").addEventListener("click", openMoreMenu);
   $("more-menu-modal").addEventListener("click", (event) => {
@@ -1605,10 +1611,17 @@ function setupNavigation() {
   $("study-mode-modal").addEventListener("click", (event) => {
     if (event.target === $("study-mode-modal")) closeStudyModeModal();
   });
+  $("study-scope-toggle").addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-session-type]");
+    if (!btn || btn.disabled) return;
+    pendingSessionType = btn.dataset.sessionType;
+    syncStudySheet();
+  });
   $("study-mode-modal").addEventListener("click", (event) => {
     const option = event.target.closest("[data-study-mode]");
     if (option && !option.disabled) handleStudyModeChoice(option.dataset.studyMode);
   });
+  $("btn-study-advanced").addEventListener("click", openAdvancedReviewSettings);
   $("btn-save-deck").addEventListener("click", saveDeckFromModal);
   $("btn-cancel-deck").addEventListener("click", closeDeckModal);
   $("btn-save-pack").addEventListener("click", savePackFromModal);
@@ -1671,8 +1684,7 @@ function setupNavigation() {
     const studyFavoritesBtn = event.target.closest("#btn-study-favorites");
     if (studyFavoritesBtn) {
       event.stopPropagation();
-      currentReviewCategory = FAVORITES_SCOPE;
-      showPage("revision");
+      openStudyModeModal(FAVORITES_SCOPE, "dashboard");
       return;
     }
 
@@ -1686,15 +1698,14 @@ function setupNavigation() {
     const studyDeckBtn = event.target.closest("[data-study-deck]");
     if (studyDeckBtn && !studyDeckBtn.disabled) {
       event.stopPropagation();
-      openStudyModeModal(studyDeckBtn.dataset.studyDeck);
+      openStudyModeModal(studyDeckBtn.dataset.studyDeck, "dashboard");
       return;
     }
 
     const studyPackBtn = event.target.closest("[data-study-pack]");
     if (studyPackBtn && !studyPackBtn.disabled) {
       event.stopPropagation();
-      currentReviewCategory = PACK_SCOPE_PREFIX + studyPackBtn.dataset.studyPack;
-      showPage("revision");
+      openStudyModeModal(PACK_SCOPE_PREFIX + studyPackBtn.dataset.studyPack, "packs");
       return;
     }
 
@@ -1750,12 +1761,11 @@ function setupDeckDetailPage() {
 
   $("btn-deck-detail-study-modal").addEventListener("click", () => {
     if (currentDeckDetailPackId) {
-      currentReviewCategory = PACK_SCOPE_PREFIX + currentDeckDetailPackId;
-      showPage("revision");
+      openStudyModeModal(PACK_SCOPE_PREFIX + currentDeckDetailPackId, "packs");
       return;
     }
     if (!currentDeckDetailCategory) return;
-    openStudyModeModal(currentDeckDetailCategory);
+    openStudyModeModal(currentDeckDetailCategory, "dashboard");
   });
 
   const addToCurrentDeck = () => {
@@ -2129,7 +2139,7 @@ function studySelectedDecks() {
     toast("Sélectionne au moins un jeu.");
     return;
   }
-  openStudyModeModal(scope);
+  openStudyModeModal(scope, "dashboard");
   deckGridSelectionMode = false;
   selectedDeckNames.clear();
   syncSelectionModeClass();
@@ -2600,33 +2610,6 @@ async function deckHasCards(name) {
   return cards.some((card) => cardDeckName(card) === name);
 }
 
-function studyCardCountLabel(count) {
-  return count + " " + (count > 1 ? "cartes" : "carte");
-}
-
-function setStudyOptionDisabled(id, disabled) {
-  const option = $(id);
-  option.disabled = disabled;
-  option.classList.toggle("disabled", disabled);
-  option.setAttribute("aria-disabled", disabled ? "true" : "false");
-}
-
-async function getStudyScopeStats(scope = null) {
-  const cards = await getAllCards();
-  const scopedCards = cards.filter((card) => cardInScope(card, scope));
-  const today = todayISO();
-  return {
-    cards: scopedCards,
-    totalCards: scopedCards.length,
-    dueCards: scopedCards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length,
-    distinctGermanWords: new Set(
-      scopedCards
-        .map((card) => String(card.de || "").trim().toLowerCase())
-        .filter(Boolean)
-    ).size,
-  };
-}
-
 async function getReviewHubStats(scope = null) {
   const cards = await getAllCards();
   const today = todayISO();
@@ -2656,26 +2639,48 @@ async function getReviewHubStats(scope = null) {
   };
 }
 
-async function openStudyModeModal(scope = null) {
+async function openStudyModeModal(scope = null, originPage = "") {
   pendingStudyScope = normalizeScope(scope);
-  const stats = await getStudyScopeStats(pendingStudyScope);
-  const modal = $("study-mode-modal");
+  pendingSessionType = "due";
+  reviewReturnPage = originPage || currentPageName();
 
-  $("study-mode-title").textContent = "Étudier : " + scopeLabel(pendingStudyScope);
-  $("study-mode-subtitle").textContent = pendingStudyScope
-    ? (isMultiScope(pendingStudyScope) ? "Choisis comment tu veux travailler cette sélection." : "Choisis comment tu veux travailler ce jeu.")
-    : "Choisis comment tu veux travailler toutes tes cartes.";
-  $("study-due-badge").textContent = studyCardCountLabel(stats.dueCards);
-  $("study-multiple-badge").textContent = stats.distinctGermanWords >= 4 ? "Quiz" : "4 cartes minimum";
+  const stats = await getReviewHubStats(pendingStudyScope);
+  $("study-mode-scope").textContent = "Périmètre : " + scopeLabel(pendingStudyScope);
+  $("seg-count-due").textContent = stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : "");
+  $("seg-count-free").textContent = stats.totalCards + " carte" + (stats.totalCards > 1 ? "s" : "");
 
-  modal.dataset.dueCards = String(stats.dueCards);
-  modal.dataset.totalCards = String(stats.totalCards);
-  modal.dataset.distinctGermanWords = String(stats.distinctGermanWords);
+  if (stats.sessionSize === 0) pendingSessionType = "free";
+  syncStudySheet(stats);
 
-  setStudyOptionDisabled("study-option-due", stats.dueCards === 0);
-  setStudyOptionDisabled("study-option-multiple", stats.distinctGermanWords < 4);
+  $("study-mode-modal").dataset.studyStats = JSON.stringify({
+    sessionSize: stats.sessionSize,
+    totalCards: stats.totalCards,
+    distinctGermanWords: stats.distinctGermanWords,
+  });
+  $("study-mode-modal").classList.remove("hidden");
+}
 
-  modal.classList.remove("hidden");
+function syncStudySheet(stats) {
+  const data = stats || JSON.parse($("study-mode-modal").dataset.studyStats || "{}");
+  const sessionSize = Number(data.sessionSize) || 0;
+  const totalCards = Number(data.totalCards) || 0;
+  const distinctGermanWords = Number(data.distinctGermanWords) || 0;
+  if (sessionSize === 0) pendingSessionType = "free";
+
+  document.querySelectorAll("[data-session-type]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.sessionType === pendingSessionType);
+    btn.disabled = btn.dataset.sessionType === "due" && sessionSize === 0;
+  });
+
+  $("study-session-hint").textContent = pendingSessionType === "due"
+    ? "Les cartes dues aujourd'hui. Ta progression avance."
+    : "Toutes les cartes du périmètre, mélangées. Ta progression n'est pas modifiée.";
+
+  document.querySelectorAll("#study-mode-modal [data-study-mode]").forEach((btn) => {
+    const disabled = totalCards === 0 || (btn.dataset.studyMode === "multiple" && distinctGermanWords < 4);
+    btn.disabled = disabled;
+    btn.classList.toggle("disabled", disabled);
+  });
 }
 
 function closeStudyModeModal() {
@@ -2683,66 +2688,28 @@ function closeStudyModeModal() {
 }
 
 function handleStudyModeChoice(mode) {
-  const scope = normalizeScope(pendingStudyScope);
-  const dueCards = Number($("study-mode-modal").dataset.dueCards || "0");
-
-  if (mode === "due") {
-    currentReviewCategory = scope;
-    reviewSessionType = "due";
-    currentReviewMode = "classic";
-    closeStudyModeModal();
-    skipHubOnce = true;
-    $("review-hub").classList.add("hidden");
-    showPage("revision");
-    return;
-  }
-
-  if (mode === "free") {
-    currentReviewCategory = scope;
-    reviewSessionType = "free";
-    currentReviewMode = "classic";
-    closeStudyModeModal();
-    skipHubOnce = true;
-    $("review-hub").classList.add("hidden");
-    showPage("revision");
-    return;
-  }
-
-  if (mode === "multiple") {
-    currentReviewCategory = scope;
-    reviewSessionType = dueCards > 0 ? "due" : "free";
-    currentReviewMode = "multiple";
-    closeStudyModeModal();
-    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-    skipHubOnce = true;
-    $("review-hub").classList.add("hidden");
-    showPage("revision");
-    return;
-  }
-
-  if (mode === "written") {
-    currentReviewCategory = scope;
-    reviewSessionType = dueCards > 0 ? "due" : "free";
-    currentReviewMode = "written";
-    closeStudyModeModal();
-    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-    skipHubOnce = true;
-    $("review-hub").classList.add("hidden");
-    showPage("revision");
-    return;
-  }
+  closeStudyModeModal();
+  currentReviewMode = mode;
+  localStorage.setItem(LS_REVIEW_MODE, mode);
 
   if (mode === "learning") {
-    if (scope) {
-      pendingLearningCategory = scope;
-    } else {
-      pendingLearningCategory = null;
-      currentLearningScope = null;
-      currentLearningIndex = 0;
-    }
-    closeStudyModeModal();
+    currentLearningScope = pendingStudyScope;
+    pendingLearningCategory = pendingStudyScope;
     showPage("apprentissage");
+    return;
   }
+
+  currentReviewCategory = pendingStudyScope;
+  reviewSessionType = pendingSessionType;
+  skipHubOnce = true;
+  showPage("revision");
+}
+
+function openAdvancedReviewSettings() {
+  closeStudyModeModal();
+  currentReviewCategory = pendingStudyScope;
+  skipHubOnce = false;
+  showPage("revision");
 }
 
 function openDeckModal(mode, deckName = "") {
@@ -3030,7 +2997,7 @@ async function handleDeckAction(action, deckName) {
     return;
   }
   if (action === "study") {
-    openStudyModeModal(deckName);
+    openStudyModeModal(deckName, "dashboard");
     return;
   }
   if (action === "appearance") {
@@ -3154,6 +3121,7 @@ function isSessionRunning() {
 }
 
 function showReviewHub() {
+  reviewReturnPage = "revision";
   $("review-hub").classList.remove("hidden");
   $("review-area").classList.add("hidden");
   $("review-empty").classList.add("hidden");
@@ -3375,6 +3343,16 @@ function exitReviewSession() {
   isGrading = false;
   setGradeButtonsDisabled(false);
   setReviewSessionActive(false);
+  leaveReviewSession();
+}
+
+function leaveReviewSession() {
+  if (reviewReturnPage && reviewReturnPage !== "revision") {
+    const target = reviewReturnPage;
+    reviewReturnPage = "dashboard";
+    showPage(target);
+    return;
+  }
   showReviewHub();
 }
 
@@ -3768,7 +3746,7 @@ function setupReviewPage() {
     startReviewSession();
   });
   $("session-summary").addEventListener("click", (event) => {
-    if (event.target.closest("[data-review-hub-return]")) showReviewHub();
+    if (event.target.closest("[data-review-hub-return]")) leaveReviewSession();
   });
   $("multiple-choice").addEventListener("click", (event) => {
     const btn = event.target.closest("[data-choice]");
@@ -4843,8 +4821,7 @@ async function showLearningCard() {
 function setupLearningPage() {
   learningOnlyNew = localStorage.getItem(LS_LEARNING_FILTER) !== "all";
   $("btn-learning-exit").addEventListener("click", () => {
-    currentReviewCategory = currentLearningScope;
-    showPage("revision");
+    leaveReviewSession();
   });
   document.querySelectorAll("[data-learning-filter]").forEach((btn) => {
     btn.addEventListener("click", () => {
