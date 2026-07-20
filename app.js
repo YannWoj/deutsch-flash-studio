@@ -4101,6 +4101,7 @@ async function showNextReviewCard() {
   $("btn-free-next").classList.add("hidden");
   $("manual-review-actions").classList.add("hidden");
   syncAnswerDifficultButton(currentCard);
+  syncAnswerFavoriteButton(currentCard);
 
   if (currentReviewMode === "written") {
     $("btn-show-answer").classList.add("hidden");
@@ -4197,6 +4198,7 @@ function showAnswer() {
   $("manual-review-actions").classList.toggle("hidden", !difficultMode);
   $("btn-free-next").classList.toggle("hidden", !freeMode);
   syncAnswerDifficultButton(card);
+  syncAnswerFavoriteButton(card);
 }
 
 async function saveReviewLogSafely(card, grade) {
@@ -4310,6 +4312,18 @@ function setupReviewPage() {
   $("btn-answer-speak-word").addEventListener("click", () => {
     if (currentCard) speakGerman(fullWord(currentCard));
   });
+
+  const handleCurrentCardFavoriteToggle = async () => {
+    if (!currentCard) return;
+    const updatedCard = await toggleFavorite(currentCard.id);
+    if (updatedCard) {
+      currentCard.favorite = updatedCard.favorite;
+      currentCard.updatedAt = updatedCard.updatedAt;
+    }
+    syncAnswerFavoriteButton(currentCard);
+  };
+  $("btn-answer-favorite").addEventListener("click", handleCurrentCardFavoriteToggle);
+  $("btn-written-favorite").addEventListener("click", handleCurrentCardFavoriteToggle);
 
   // Lire la phrase d'exemple : "Der Hund ist klein."
   $("btn-speak-sentence").addEventListener("click", () => {
@@ -5371,10 +5385,25 @@ async function toggleFavorite(cardId) {
     renderMissingImagesIfVisible();
     refreshDashboard();
     if ($("page-revision").classList.contains("active") && !isSessionRunning()) renderReviewHub();
+    return card;
   } catch (error) {
     console.error("Échec de modification du favori :", error);
     toast("Impossible de modifier le favori.");
+    return null;
   }
+}
+
+function syncAnswerFavoriteButton(card) {
+  if (!card) return;
+  const isFavorite = card.favorite === true;
+  ["btn-answer-favorite", "btn-written-favorite"].forEach((id) => {
+    const btn = $(id);
+    if (!btn) return;
+    btn.classList.toggle("active", isFavorite);
+    btn.setAttribute("aria-pressed", String(isFavorite));
+    btn.title = isFavorite ? "Retirer des favoris" : "Ajouter aux favoris";
+    btn.setAttribute("aria-label", btn.title);
+  });
 }
 
 function syncAnswerDifficultButton(card) {

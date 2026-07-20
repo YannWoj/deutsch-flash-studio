@@ -1680,6 +1680,13 @@ body.selection-mode-active #toast {
   box-shadow: 0 0 0 3px rgba(232, 185, 75, 0.12);
 }
 
+.written-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
 /* Immersive review mode */
 body.review-session-active .sidebar,
 body.review-session-active #page-revision .page-header {

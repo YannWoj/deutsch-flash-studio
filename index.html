@@ -488,7 +488,10 @@
                 <input id="written-article" type="text" placeholder="Article">
                 <input id="written-word" type="text" placeholder="Mot allemand">
               </div>
-              <button class="btn btn-primary" id="btn-check-written" type="button">Vérifier</button>
+              <div class="written-actions">
+                <button class="btn btn-primary" id="btn-check-written" type="button">Vérifier</button>
+                <button class="btn btn-icon btn-favorite" id="btn-written-favorite" type="button" title="Favori" aria-label="Favori"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg></button>
+              </div>
             </div>
 
             <button class="btn btn-primary btn-large" id="btn-show-answer">Afficher la réponse</button>
@@ -498,6 +501,7 @@
               <div class="review-word review-answer-word">
                 <span id="answer-article"></span><span id="answer-word-text"></span>
                 <button class="btn btn-icon" id="btn-answer-speak-word" title="Écouter le mot" aria-label="Écouter le mot"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-volume"></use></svg></button>
+                <button class="btn btn-icon btn-favorite" id="btn-answer-favorite" type="button" title="Favori" aria-label="Favori"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg></button>
                 <button class="btn btn-icon btn-difficult" id="btn-answer-difficult" type="button" title="Carte difficile" aria-label="Carte difficile"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-flame"></use></svg></button>
                 <span class="chip chip-level hidden" id="answer-level"></span>
               </div>
