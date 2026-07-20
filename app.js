@@ -238,6 +238,11 @@ let longPressFiredAt = 0;             // timestamp du dernier long-press déclen
 let currentCardDetailId = null;
 let cardDetailDirty = false;
 let cardDetailTouchStartY = null;
+let bodyScrollLockCount = 0;
+let bodyScrollLockY = 0;
+let bodyScrollLockPreviousStyles = null;
+let visibleModalCount = 0;
+let modalScrollLockObserver = null;
 
 
 /* =========================================================
@@ -247,6 +252,81 @@ let cardDetailTouchStartY = null;
 // Raccourci pratique : $("mon-id") au lieu de document.getElementById("mon-id")
 function $(id) {
   return document.getElementById(id);
+}
+
+function lockBodyScroll() {
+  if (bodyScrollLockCount === 0) {
+    const body = document.body;
+    bodyScrollLockY = window.scrollY || window.pageYOffset || 0;
+    bodyScrollLockPreviousStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+    };
+    body.classList.add("modal-open");
+    body.style.position = "fixed";
+    body.style.top = "-" + bodyScrollLockY + "px";
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+  }
+  bodyScrollLockCount++;
+}
+
+function unlockBodyScroll() {
+  if (bodyScrollLockCount === 0) return;
+  bodyScrollLockCount--;
+  if (bodyScrollLockCount > 0) return;
+
+  const body = document.body;
+  const previousStyles = bodyScrollLockPreviousStyles || {};
+  body.classList.remove("modal-open");
+  body.style.position = previousStyles.position || "";
+  body.style.top = previousStyles.top || "";
+  body.style.left = previousStyles.left || "";
+  body.style.right = previousStyles.right || "";
+  body.style.width = previousStyles.width || "";
+  const y = bodyScrollLockY;
+  bodyScrollLockPreviousStyles = null;
+  bodyScrollLockY = 0;
+  window.scrollTo(0, y);
+}
+
+function countVisibleModals() {
+  return document.querySelectorAll(".modal-backdrop:not(.hidden)").length;
+}
+
+function syncModalScrollLock() {
+  const nextVisibleCount = countVisibleModals();
+  while (visibleModalCount < nextVisibleCount) {
+    lockBodyScroll();
+    visibleModalCount++;
+  }
+  while (visibleModalCount > nextVisibleCount) {
+    unlockBodyScroll();
+    visibleModalCount--;
+  }
+}
+
+function showModal(id) {
+  $(id).classList.remove("hidden");
+  syncModalScrollLock();
+}
+
+function hideModal(id) {
+  $(id).classList.add("hidden");
+  syncModalScrollLock();
+}
+
+function setupModalScrollLock() {
+  if (modalScrollLockObserver) modalScrollLockObserver.disconnect();
+  modalScrollLockObserver = new MutationObserver(syncModalScrollLock);
+  document.querySelectorAll(".modal-backdrop").forEach((modal) => {
+    modalScrollLockObserver.observe(modal, { attributes: true, attributeFilter: ["class"] });
+  });
+  syncModalScrollLock();
 }
 
 function wasLongPressJustFired() {
@@ -1996,11 +2076,11 @@ function showPage(name) {
 }
 
 function openMoreMenu() {
-  $("more-menu-modal").classList.remove("hidden");
+  showModal("more-menu-modal");
 }
 
 function closeMoreMenu() {
-  $("more-menu-modal").classList.add("hidden");
+  hideModal("more-menu-modal");
 }
 
 function setupNavigation() {
@@ -2865,6 +2945,8 @@ function selectAllVisibleDeckCards() {
 
 function clearDeckSelection() {
   selectedDeckCardIds.clear();
+  deckDetailSelectionMode = false;
+  syncSelectionModeClass();
   renderDeckDetail();
 }
 
@@ -2890,7 +2972,8 @@ function updateDeckBulkBar() {
   $("deck-bulk-count").textContent = count + " carte" + (count > 1 ? "s" : "") + " sélectionnée" + (count > 1 ? "s" : "");
   $("btn-bulk-subcategory").disabled = count === 0;
   $("btn-deck-bulk-add-to-pack").disabled = count === 0;
-  $("btn-bulk-clear").disabled = count === 0;
+  $("btn-bulk-clear").textContent = "Annuler";
+  $("btn-bulk-clear").disabled = false;
   $("btn-bulk-select-all").disabled = visibleDeckDetailCardIds.length === 0;
 }
 
@@ -2948,11 +3031,11 @@ async function prepareSubcategoryModal(deckName, selectedSubcategory = "") {
     : "__none__";
   $("subcategory-new-name").value = "";
   onSubcategorySelectChange();
-  $("subcategory-modal").classList.remove("hidden");
+  showModal("subcategory-modal");
 }
 
 function closeSubcategoryModal() {
-  $("subcategory-modal").classList.add("hidden");
+  hideModal("subcategory-modal");
   pendingSubcategoryCardId = null;
   pendingSubcategoryCardIds = [];
   $("subcategory-new-name").value = "";
@@ -3191,7 +3274,7 @@ async function openStudyModeModal(scope = null, originPage = "") {
     sessionSize: stats.sessionSize,
     totalCards: stats.totalCards,
   });
-  $("study-mode-modal").classList.remove("hidden");
+  showModal("study-mode-modal");
 }
 
 function syncStudySheet(stats) {
@@ -3217,7 +3300,7 @@ function syncStudySheet(stats) {
 }
 
 function closeStudyModeModal() {
-  $("study-mode-modal").classList.add("hidden");
+  hideModal("study-mode-modal");
 }
 
 function handleStudyModeChoice(mode) {
@@ -3254,12 +3337,12 @@ function openDeckModal(mode, deckName = "") {
   $("deck-name-input").disabled = mode !== "create";
   $("deck-color-input").value = deck.color || "gold";
   $("deck-emoji-input").value = deck.emoji || "";
-  $("deck-modal").classList.remove("hidden");
+  showModal("deck-modal");
   $("deck-name-input").focus();
 }
 
 function closeDeckModal() {
-  $("deck-modal").classList.add("hidden");
+  hideModal("deck-modal");
   deckModalOriginalName = "";
 }
 
@@ -3304,12 +3387,12 @@ function openPackModal(mode = "create", packId = null, options = {}) {
   $("pack-modal-title").textContent = mode === "create" ? "Créer un pack" : "Modifier le pack";
   $("pack-name-input").value = mode === "create" ? "" : (pack?.name || "");
   renderPackColorPicker();
-  $("pack-modal").classList.remove("hidden");
+  showModal("pack-modal");
   $("pack-name-input").focus();
 }
 
 function closePackModal() {
-  $("pack-modal").classList.add("hidden");
+  hideModal("pack-modal");
   packModalPackId = null;
   pendingPackCreateAddIds = [];
 }
@@ -3452,11 +3535,11 @@ function openAddToPackModal(cardIds) {
     }).join("")
     : '<p class="muted">Aucun pack pour le moment.</p>';
   $("btn-confirm-add-to-pack").disabled = packs.length === 0;
-  $("add-to-pack-modal").classList.remove("hidden");
+  showModal("add-to-pack-modal");
 }
 
 function closeAddToPackModal() {
-  $("add-to-pack-modal").classList.add("hidden");
+  hideModal("add-to-pack-modal");
   pendingAddToPackCardIds = [];
 }
 
@@ -4301,7 +4384,7 @@ async function openCardDetailModal(cardId) {
     cardDetailDirty = false;
     const imageUrl = await getImageURL(card.imageId);
     $("card-detail-content").innerHTML = cardDetailHTML(card, imageUrl);
-    $("card-detail-modal").classList.remove("hidden");
+    showModal("card-detail-modal");
   } catch (error) {
     console.error("Échec d'ouverture du détail de carte :", error);
     toast("Impossible d'ouvrir le détail de cette carte.");
@@ -4320,7 +4403,7 @@ function refreshAfterCardDetailChange() {
 
 function closeCardDetailModal() {
   const shouldRefresh = cardDetailDirty;
-  $("card-detail-modal").classList.add("hidden");
+  hideModal("card-detail-modal");
   $("card-detail-content").innerHTML = "";
   currentCardDetailId = null;
   cardDetailDirty = false;
@@ -4856,12 +4939,9 @@ function selectAllVisibleLibraryCards() {
 }
 
 function clearLibrarySelection() {
-  if (selectedLibraryCardIds.size > 0) {
-    selectedLibraryCardIds.clear();
-    renderLibrary();
-    return;
-  }
+  selectedLibraryCardIds.clear();
   librarySelectionMode = false;
+  syncSelectionModeClass();
   renderLibrary();
 }
 
@@ -4872,7 +4952,7 @@ function updateLibraryBulkBar() {
   const count = selectedLibraryCardIds.size;
   $("library-bulk-count").textContent = count + " carte" + (count > 1 ? "s" : "") + " sélectionnée" + (count > 1 ? "s" : "");
   $("btn-library-add-to-pack").disabled = count === 0;
-  $("btn-library-clear").textContent = count > 0 ? "Désélectionner" : "Quitter";
+  $("btn-library-clear").textContent = "Annuler";
   $("btn-library-select-all").disabled = visibleLibraryCardIds.length === 0;
 }
 
@@ -5247,7 +5327,7 @@ async function openDifficultModal(cardId) {
     $("difficult-custom-datetime").value = localDateTimeValue(dateFromDelayKey("1h"));
     $("difficult-manage-list").classList.add("hidden");
     $("btn-difficult-remove").classList.toggle("hidden", !active);
-    $("difficult-modal").classList.remove("hidden");
+    showModal("difficult-modal");
   } catch (error) {
     console.error("Échec d'ouverture de la programmation difficile :", error);
     toast("Impossible d'ouvrir cette carte difficile.");
@@ -5255,7 +5335,7 @@ async function openDifficultModal(cardId) {
 }
 
 function closeDifficultModal() {
-  $("difficult-modal").classList.add("hidden");
+  hideModal("difficult-modal");
   pendingDifficultCardId = null;
   difficultManageCards = [];
 }
@@ -5341,7 +5421,7 @@ async function openDifficultManager() {
     $("btn-difficult-remove").classList.add("hidden");
     $("difficult-custom-datetime").value = "";
     $("difficult-manage-list").classList.remove("hidden");
-    $("difficult-modal").classList.remove("hidden");
+    showModal("difficult-modal");
     await renderDifficultManageList();
   } catch (error) {
     console.error("Échec d'ouverture des cartes difficiles :", error);
@@ -7498,7 +7578,7 @@ async function previewPackImportFile(file) {
       throw new Error("PACK_IMPORT_EMPTY_CARDS");
     }
     renderPackImportModal();
-    $("pack-import-modal").classList.remove("hidden");
+    showModal("pack-import-modal");
   } catch (error) {
     console.error("Prévisualisation pack impossible :", error);
     closePackImportModal();
@@ -7550,7 +7630,7 @@ function renderPackImportModal() {
 }
 
 function closePackImportModal() {
-  $("pack-import-modal").classList.add("hidden");
+  hideModal("pack-import-modal");
   pendingPackImportFile = null;
   pendingPackImportData = null;
   pendingPackImportAnalysis = null;
@@ -7852,7 +7932,7 @@ async function previewImportFile(file) {
     pendingImportAnalysis = await analyzeImportData(pendingImportData);
     replaceImportArmed = false;
     renderImportPreviewModal();
-    $("import-preview-modal").classList.remove("hidden");
+    showModal("import-preview-modal");
   } catch (error) {
     console.error("Prévisualisation import impossible :", error);
     closeImportPreviewModal();
@@ -7905,7 +7985,7 @@ function formatImportDate(value) {
 }
 
 function closeImportPreviewModal() {
-  $("import-preview-modal").classList.add("hidden");
+  hideModal("import-preview-modal");
   pendingImportFile = null;
   pendingImportData = null;
   pendingImportAnalysis = null;
@@ -8153,6 +8233,7 @@ async function startApp() {
   }
 
   runSetup("navigation", setupNavigation);
+  runSetup("modalScrollLock", setupModalScrollLock);
   runSetup("learning", setupLearningPage);
   runSetup("review", setupReviewPage);
   runSetup("addForm", setupAddForm);
