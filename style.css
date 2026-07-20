@@ -1601,7 +1601,23 @@ body.selection-mode-active #toast {
 }
 
 .review-answer-word {
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 12px;
+}
+
+.answer-word-main {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.answer-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 18px;
 }
 
 #review-answer {
@@ -4881,6 +4897,10 @@ input[type="file"]::file-selector-button:hover {
     margin-bottom: 8px;
   }
 
+  #page-revision.session-active .answer-actions {
+    margin: 12px 0 14px;
+  }
+
   #page-revision.session-active .answer-line {
     margin-bottom: 8px;
   }
@@ -4971,6 +4991,10 @@ input[type="file"]::file-selector-button:hover {
 
   .review-answer-word {
     margin-bottom: 10px;
+  }
+
+  .answer-actions {
+    margin: 14px 0 16px;
   }
 
   .answer-line {
