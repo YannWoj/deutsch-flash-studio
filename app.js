@@ -8033,6 +8033,7 @@ function refreshAfterDangerAction() {
   renderLearningIfVisible();
   renderDeckDetailIfVisible();
   renderMissingImagesIfVisible();
+  if ($("page-grammaire").classList.contains("active")) renderGrammarPage();
 
   if ($("page-revision").classList.contains("active")) {
     if (isSessionRunning()) startReviewSession();
@@ -8040,14 +8041,86 @@ function refreshAfterDangerAction() {
   }
 }
 
+function dangerCounts(cards = null) {
+  const allCards = cards || [];
+  const deckNames = new Set();
+  getCustomDecks().forEach((deck) => {
+    if (deck.name) deckNames.add(deck.name);
+  });
+  allCards.forEach((card) => {
+    const category = cardDeckName(card);
+    if (isPreferredDeckCategory(category)) deckNames.add(category);
+  });
+  return {
+    cards: allCards.length,
+    packs: getPacks().length,
+    decks: deckNames.size,
+  };
+}
+
+function countLabel(count, singular, plural = singular + "s") {
+  return count + " " + (count > 1 ? plural : singular);
+}
+
+function clearAppLocalStorage() {
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("dfs_"))
+    .forEach((key) => localStorage.removeItem(key));
+}
+
+function resetRuntimeStateAfterDangerAction() {
+  currentReviewMode = "classic";
+  reviewSessionType = "due";
+  pendingSessionType = "due";
+  pendingStudyScope = null;
+  pendingLearningCategory = null;
+  currentLearningScope = null;
+  currentReviewCategory = null;
+  reviewQueue = [];
+  currentCard = null;
+  reviewSessionStats = null;
+  currentDeckDetailCategory = null;
+  currentDeckDetailPackId = null;
+  deckDetailSearch = "";
+  deckDetailSubcategoryFilter = "";
+  deckDetailLevelFilter = "";
+  deckDetailSelectionMode = false;
+  librarySelectionMode = false;
+  deckGridSelectionMode = false;
+  selectedDeckCardIds.clear();
+  selectedLibraryCardIds.clear();
+  selectedDeckNames.clear();
+  currentCardDetailId = null;
+  cardDetailDirty = false;
+  difficultManageCards = [];
+  pendingDifficultCardId = null;
+  libraryOnlyFavorites = false;
+  libraryOnlyNoImage = false;
+  libraryOnlyDue = false;
+  libraryFiltersOpen = false;
+  deckDetailFiltersOpen = false;
+  learningOnlyNew = true;
+  currentLearningIndex = 0;
+  selectedGrammarVerb = null;
+  grammarVerbQuery = "";
+  grammarVerbFilter = "all";
+  grammarVerbSort = "alpha";
+  selectedGrammarLevel = "A1";
+  skippedMissingImageIds.clear();
+  if (editingCard) resetCardForm();
+  clearImageUrlCache();
+  syncSelectionModeClass();
+}
+
 async function deleteAllCardsAndImagesFromBackupPage() {
+  const counts = dangerCounts(await getAllCards());
   const firstConfirm = confirm(
-    "Supprimer toutes les cartes et toutes les images ?\n\nLes packs et les jeux restent visibles, mais ils seront vides. Cette action est irréversible. Pense à exporter avant."
+    "Supprimer " + countLabel(counts.cards, "carte") + " et leurs images ?\n\nLes jeux et packs resteront mais seront vides. L'historique de révision sera aussi supprimé. Cette action est irréversible."
   );
   if (!firstConfirm) return;
 
   const secondConfirm = confirm(
-    "Dernière confirmation : toutes tes cartes, leurs images et ton historique de révision vont être supprimés. Confirmer ?"
+    "Dernière confirmation : " + countLabel(counts.cards, "carte") + ", les images associées et l'historique vont être supprimés. Confirmer ?"
   );
   if (!secondConfirm) return;
 
@@ -8060,7 +8133,7 @@ async function deleteAllCardsAndImagesFromBackupPage() {
     clearImageUrlCache();
     if (editingCard) resetCardForm();
 
-    toast("Toutes les cartes et images ont été supprimées.");
+    toast(countLabel(counts.cards, "carte") + " supprimée" + (counts.cards > 1 ? "s" : "") + ". Jeux et packs conservés.");
     refreshAfterDangerAction();
   } catch (error) {
     console.error("Échec de suppression des cartes et images :", error);
@@ -8069,32 +8142,30 @@ async function deleteAllCardsAndImagesFromBackupPage() {
 }
 
 async function deleteAllPacks() {
-  const firstConfirm = confirm(
-    "Supprimer tous les packs ?\n\nLes cartes resteront intactes. Seules les listes de packs seront supprimées. Cette action est irréversible. Pense à exporter avant."
+  const counts = dangerCounts(await getAllCards());
+  const confirmed = confirm(
+    "Tes " + countLabel(counts.packs, "pack") + " seront supprimés. Les cartes qu'ils contiennent ne sont pas touchées."
   );
-  if (!firstConfirm) return;
-
-  const secondConfirm = confirm(
-    "Dernière confirmation : tous les packs vont être supprimés, mais aucune carte ne sera supprimée. Confirmer ?"
-  );
-  if (!secondConfirm) return;
+  if (!confirmed) return;
 
   localStorage.removeItem(LS_PACKS);
   currentDeckDetailPackId = null;
   if (isPackScope(currentReviewCategory)) currentReviewCategory = null;
 
-  toast("Tous les packs ont été supprimés.");
+  toast(countLabel(counts.packs, "pack") + " supprimé" + (counts.packs > 1 ? "s" : "") + ".");
   refreshAfterDangerAction();
 }
 
 async function deleteAllDecks() {
+  const cards = await getAllCards();
+  const counts = dangerCounts(cards);
   const firstConfirm = confirm(
-    "Supprimer tous les jeux ?\n\nTu peux garder les cartes : elles seront placées dans Général. Tu peux aussi supprimer les cartes avec les jeux. Cette action est irréversible. Pense à exporter avant."
+    "Supprimer " + countLabel(counts.decks, "jeu", "jeux") + " et leurs sous-catégories personnalisées ?\n\nTu peux garder " + countLabel(counts.cards, "carte") + " : elles seront placées dans Général. Tu peux aussi supprimer les cartes avec les jeux."
   );
   if (!firstConfirm) return;
 
   const choice = prompt(
-    "Dernière confirmation.\n\nTape GARDER pour supprimer les jeux et placer les cartes dans Général.\nTape SUPPRIMER pour supprimer les jeux, les cartes et les images."
+    "Dernière confirmation.\n\nTape GARDER pour supprimer " + countLabel(counts.decks, "jeu", "jeux") + " et placer " + countLabel(counts.cards, "carte") + " dans Général.\nTape SUPPRIMER pour supprimer les jeux, " + countLabel(counts.cards, "carte") + ", les images et l'historique."
   );
   if (choice === null) return;
 
@@ -8110,7 +8181,8 @@ async function deleteAllDecks() {
     selectedDeckNames.clear();
     deckGridSelectionMode = false;
     syncSelectionModeClass();
-    currentDeckDetailName = null;
+    currentDeckDetailCategory = null;
+    currentDeckDetailPackId = null;
 
     if (normalizedChoice === "SUPPRIMER") {
       await clearStore("cards");
@@ -8119,16 +8191,15 @@ async function deleteAllDecks() {
       purgePackCardIds([]);
       clearImageUrlCache();
       if (editingCard) resetCardForm();
-      toast("Tous les jeux, cartes et images ont été supprimés.");
+      toast(countLabel(counts.decks, "jeu", "jeux") + " et " + countLabel(counts.cards, "carte") + " supprimés.");
     } else {
-      const cards = await getAllCards();
       for (const card of cards) {
         card.category = "Général";
         card.subcategory = "";
         card.updatedAt = todayISO();
         await saveCard(normalizeCard(card));
       }
-      toast("Tous les jeux ont été supprimés. Les cartes sont maintenant dans Général.");
+      toast(countLabel(counts.decks, "jeu", "jeux") + " supprimés. Les cartes sont maintenant dans Général.");
     }
 
     refreshAfterDangerAction();
@@ -8138,12 +8209,45 @@ async function deleteAllDecks() {
   }
 }
 
+async function resetAppFromBackupPage() {
+  const counts = dangerCounts(await getAllCards());
+  const firstConfirm = confirm(
+    "Tout remettre à zéro ?\n\nCela supprimera " +
+    countLabel(counts.cards, "carte") + ", " +
+    countLabel(counts.packs, "pack") + ", " +
+    countLabel(counts.decks, "jeu", "jeux") +
+    ", les images, l'historique et les réglages locaux de l'app."
+  );
+  if (!firstConfirm) return;
+
+  const typed = prompt("Confirmation renforcée : tape SUPPRIMER pour remettre l'application à zéro.");
+  if (typed === null) return;
+  if (typed.trim().toUpperCase() !== "SUPPRIMER") {
+    toast("Remise à zéro annulée : confirmation incorrecte.");
+    return;
+  }
+
+  try {
+    await clearStore("cards");
+    await clearStore("images");
+    await clearStore("reviews");
+    clearAppLocalStorage();
+    resetRuntimeStateAfterDangerAction();
+    toast("Application remise à zéro.");
+    refreshAfterDangerAction();
+  } catch (error) {
+    console.error("Échec de remise à zéro :", error);
+    toast("Impossible de remettre l'application à zéro.");
+  }
+}
+
 function setupBackupPage() {
   $("btn-export").addEventListener("click", exportData);
   $("btn-force-update").addEventListener("click", forceUpdateAppCache);
   $("btn-delete-all-data").addEventListener("click", deleteAllCardsAndImagesFromBackupPage);
   $("btn-delete-all-packs").addEventListener("click", deleteAllPacks);
   $("btn-delete-all-decks").addEventListener("click", deleteAllDecks);
+  $("btn-reset-app").addEventListener("click", resetAppFromBackupPage);
   $("btn-toggle-danger-zone").addEventListener("click", () => {
     const hidden = $("danger-zone-content").classList.toggle("hidden");
     $("btn-toggle-danger-zone").textContent = hidden ? "Afficher les actions" : "Masquer les actions";
