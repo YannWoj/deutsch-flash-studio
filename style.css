@@ -4352,6 +4352,7 @@ input[type="file"]::file-selector-button:hover {
   /* Mobile app shell */
   .sidebar {
     position: fixed;
+    top: auto;
     left: 0;
     right: 0;
     bottom: 0;
