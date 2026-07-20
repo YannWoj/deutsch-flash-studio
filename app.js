@@ -38,12 +38,91 @@ const LS_LIBRARY_VIEW = "dfs_library_view";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
-const LS_MAX_NEW_CARDS = "dfs_max_new_cards";
+const LS_PACK_CATEGORY_MIGRATION_V1 = "dfs_separate_packs_categories_v1";
+const LS_VERB_SUBCATEGORY_MIGRATION_V1 = "dfs_verb_subcategories_v1";
+const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards"];
 const FAVORITES_SCOPE = "__favorites__";
 const PACK_SCOPE_PREFIX = "pack:";
 const PACK_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f472b6", "#fbbf24", "#fb923c"];
-const DEFAULT_MAX_NEW_CARDS = 20;
-const MAX_NEW_CARDS_OPTIONS = [5, 10, 20, 50, Infinity];
+const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const VERB_CATEGORY_NAME = "Verbes";
+const STANDARD_VERB_SUBCATEGORIES = ["Verbes modaux", "Verbes irréguliers", "Verbes à particule", "Verbes réguliers"];
+const MODAL_VERBS = new Set(["können", "müssen", "wollen", "sollen", "dürfen", "mögen", "möchten"]);
+const SEPARABLE_PREFIXES = ["zurück", "weiter", "statt", "fern", "teil", "nach", "weg", "her", "hin", "los", "auf", "aus", "ein", "mit", "vor", "ab", "an", "zu", "um"];
+const COMMON_BASE_VERBS = new Set([
+  "arbeiten", "bauen", "bleiben", "bringen", "denken", "fahren", "fallen", "fangen", "finden", "führen",
+  "geben", "gehen", "halten", "heben", "helfen", "holen", "hören", "kaufen", "kennen", "kleben",
+  "kommen", "laden", "lassen", "laufen", "legen", "lesen", "machen", "nehmen", "passen", "räumen",
+  "rufen", "sagen", "schauen", "schlafen", "schreiben", "sehen", "sein", "setzen", "sitzen", "sprechen",
+  "steigen", "stellen", "suchen", "tragen", "treten", "trinken", "ziehen"
+]);
+const INVALID_IMPORTED_CATEGORY_RE = /^vocabulaire\s+\d+$/i;
+const REAL_CATEGORIES = ["Maison", "Animaux", "Aliments", "Informatique", "Cuisine", "Transport", "Objets", "Nature", "Vêtements", "Expressions", "Abstrait"];
+const VOCABULARY_CATEGORY_BY_WORD = new Map([
+  ...["Haus", "Zimmer", "Tür", "Fenster", "Tisch", "Stuhl", "Bett", "Küche", "Badezimmer", "Kühlschrank", "Schrank", "Spiegel", "Lampe", "Treppe", "Boden", "Decke", "Wand", "Garten", "Balkon", "Ventilator", "Waschmaschine"].map((word) => [word.toLowerCase().normalize("NFC"), "Maison"]),
+  ...["Auto", "Straße", "Bahnhof", "Aufzug"].map((word) => [word.toLowerCase().normalize("NFC"), "Transport"]),
+  ...["Schlüssel", "Buch", "Uhr", "Tasche", "Handy", "Geld", "Feuerzeug", "Brille", "Flasche", "Koffer", "Rucksack", "Regenschirm", "Zeitung", "Brief", "Stift"].map((word) => [word.toLowerCase().normalize("NFC"), "Objets"]),
+  ...["Wasser", "Brot", "Fleisch", "Käse", "Kaffee"].map((word) => [word.toLowerCase().normalize("NFC"), "Aliments"]),
+  ...["Baum", "Blume"].map((word) => [word.toLowerCase().normalize("NFC"), "Nature"]),
+  ...["Hund", "Katze", "Vogel", "Fisch"].map((word) => [word.toLowerCase().normalize("NFC"), "Animaux"]),
+  ...["Computer", "Maus", "Tastatur", "Bildschirm"].map((word) => [word.toLowerCase().normalize("NFC"), "Informatique"]),
+  ...["Glas", "Teller", "Löffel", "Gabel", "Messer", "Ofen"].map((word) => [word.toLowerCase().normalize("NFC"), "Cuisine"]),
+  ["jacke", "Vêtements"],
+  ["endlich", "Expressions"],
+  ["traum", "Abstrait"],
+]);
+
+const COMMON_REGULAR_VERBS = [
+  { inf: "machen", fr: "faire" },
+  { inf: "lernen", fr: "apprendre" },
+  { inf: "wohnen", fr: "habiter" },
+  { inf: "arbeiten", fr: "travailler" },
+  { inf: "spielen", fr: "jouer" },
+  { inf: "kaufen", fr: "acheter" },
+  { inf: "fragen", fr: "demander" },
+  { inf: "sagen", fr: "dire" },
+  { inf: "hören", fr: "entendre, écouter" },
+  { inf: "brauchen", fr: "avoir besoin de" },
+  { inf: "suchen", fr: "chercher" },
+  { inf: "zeigen", fr: "montrer" },
+  { inf: "leben", fr: "vivre" },
+  { inf: "lieben", fr: "aimer" },
+  { inf: "kochen", fr: "cuisiner" },
+  { inf: "tanzen", fr: "danser" },
+  { inf: "reisen", fr: "voyager" },
+  { inf: "warten", fr: "attendre" },
+  { inf: "öffnen", fr: "ouvrir" },
+  { inf: "glauben", fr: "croire" },
+  { inf: "kosten", fr: "coûter" },
+  { inf: "zahlen", fr: "payer" },
+  { inf: "bezahlen", fr: "payer" },
+  { inf: "besuchen", fr: "rendre visite, visiter" },
+  { inf: "antworten", fr: "répondre" },
+  { inf: "studieren", fr: "étudier" },
+  { inf: "telefonieren", fr: "téléphoner" },
+  { inf: "fotografieren", fr: "photographier" },
+  { inf: "reservieren", fr: "réserver" },
+  { inf: "buchstabieren", fr: "épeler" },
+  { inf: "erklären", fr: "expliquer" },
+  { inf: "erzählen", fr: "raconter" },
+  { inf: "wiederholen", fr: "répéter" },
+  { inf: "üben", fr: "s'exercer" },
+  { inf: "putzen", fr: "nettoyer" },
+  { inf: "holen", fr: "aller chercher" },
+  { inf: "legen", fr: "poser, mettre à plat" },
+  { inf: "stellen", fr: "poser, mettre debout" },
+  { inf: "mieten", fr: "louer" },
+  { inf: "feiern", fr: "fêter" },
+  { inf: "dauern", fr: "durer" },
+  { inf: "rechnen", fr: "calculer" },
+  { inf: "zeichnen", fr: "dessiner" },
+  { inf: "aufräumen", fr: "ranger" },
+  { inf: "einkaufen", fr: "faire les courses" },
+  { inf: "mitmachen", fr: "participer" },
+  { inf: "zumachen", fr: "fermer" },
+  { inf: "aufmachen", fr: "ouvrir" },
+  { inf: "weiterlernen", fr: "continuer à apprendre" },
+];
 
 // Image par défaut (un petit SVG intégré : aucune dépendance externe)
 const DEFAULT_IMAGE = "data:image/svg+xml," + encodeURIComponent(
@@ -75,7 +154,6 @@ let db = null;                       // connexion IndexedDB
 const imageUrlCache = new Map();     // imageId -> URL d'affichage (évite de recréer les URLs)
 let reviewQueue = [];                // cartes restantes dans la séance de révision
 let currentCard = null;              // carte affichée en ce moment
-let failedOnceInSession = new Set(); // cartes ratées déjà remises une fois dans la séance
 let previewUrl = null;               // URL de l'aperçu d'image dans le formulaire
 let reviewSessionStats = null;
 let toastTimer = null;               // pour la notification
@@ -88,7 +166,8 @@ let pendingLearningCategory = null;   // null = tout, string = un deck, array = 
 let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewMode = localStorage.getItem(LS_REVIEW_MODE) || "classic";
-let reviewSessionType = "due";        // "due" = SRS du jour, "free" = entraînement sans SRS
+let difficultReviewFallbackAllOnce = false;
+let reviewSessionType = "due";        // "due" = cartes difficiles, "free" = entraînement libre
 let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let pendingSessionType = "due";
 let reviewReturnPage = "dashboard";
@@ -98,6 +177,7 @@ let currentDeckDetailCategory = null;
 let currentDeckDetailPackId = null;
 let deckDetailSearch = "";
 let deckDetailSubcategoryFilter = "";
+let deckDetailLevelFilter = "";
 let deckDetailRenderVersion = 0;
 let deckDetailSelectionMode = false;
 let selectedDeckCardIds = new Set();
@@ -115,8 +195,11 @@ let pendingPackImportData = null;
 let pendingPackImportAnalysis = null;
 let pendingFormCategory = null;
 let pendingFormSubcategory = null;
+let verbSubcategoryAutofillValue = "";
 let pendingSubcategoryCardId = null;
 let pendingSubcategoryCardIds = [];
+let pendingDifficultCardId = null;
+let difficultManageCards = [];
 let deckGridSelectionMode = false;    // mode sélection multiple sur le dashboard
 let selectedDeckNames = new Set();    // noms des jeux sélectionnés sur le dashboard
 let visibleDeckNames = [];            // jeux actuellement affichés sur le dashboard
@@ -131,6 +214,11 @@ let libraryOnlyFavorites = false;
 let libraryOnlyNoImage = false;
 let libraryOnlyDue = false;
 let selectedGrammarVerb = null;
+let grammarVerbQuery = "";
+let grammarVerbFilter = "all";
+let grammarVerbSort = "alpha";
+let grammarVerbSearchTimer = null;
+let selectedGrammarLevel = "A1";
 let pendingImportFile = null;
 let pendingImportData = null;
 let pendingImportAnalysis = null;
@@ -230,17 +318,6 @@ function isNewCard(card) {
   return srs.correctCount === 0 && srs.wrongCount === 0;
 }
 
-function getMaxNewCardsPerDay() {
-  const raw = localStorage.getItem(LS_MAX_NEW_CARDS);
-  if (raw === "unlimited") return Infinity;
-  const value = Number(raw);
-  return MAX_NEW_CARDS_OPTIONS.includes(value) ? value : DEFAULT_MAX_NEW_CARDS;
-}
-
-function setMaxNewCardsPerDay(value) {
-  localStorage.setItem(LS_MAX_NEW_CARDS, value === Infinity ? "unlimited" : String(value));
-}
-
 function cardDeckName(card) {
   return card.category || "Général";
 }
@@ -334,6 +411,7 @@ function matchesCardQuery(card, query) {
     (card.plural || "").toLowerCase().includes(query) ||
     (card.exampleDe || "").toLowerCase().includes(query) ||
     (card.exampleFr || "").toLowerCase().includes(query) ||
+    cardLevel(card).toLowerCase().includes(query) ||
     (card.subcategory || "").toLowerCase().includes(query) ||
     (card.imageQuery || "").toLowerCase().includes(query)
   );
@@ -392,6 +470,25 @@ function subcategoryChipHTML(card, compact = false) {
     ? '<span class="chip chip-subcategory' + (compact ? " chip-subcategory-compact" : "") + '">' +
       escapeHTML(compact ? card.subcategory : "Sous-catégorie : " + card.subcategory) + "</span>"
     : "";
+}
+
+function cardLevel(card) {
+  const level = String(card?.level || "").trim().toUpperCase();
+  return CEFR_LEVELS.includes(level) ? level : "";
+}
+
+function levelBadgeHTML(card) {
+  const level = cardLevel(card);
+  return level ? '<span class="chip chip-level">' + escapeHTML(level) + "</span>" : "";
+}
+
+function normalizedGermanWord(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFC")
+    .replace(/^sich\s+/, "")
+    .replace(/\s+/g, "");
 }
 
 async function requestPersistentStorage() {
@@ -506,15 +603,6 @@ function debounce(fn, delay = 150) {
   };
 }
 
-function srsIntervalDays(box) {
-  if (box <= 1) return 1;
-  if (box === 2) return 3;
-  if (box === 3) return 7;
-  if (box === 4) return 14;
-  if (box === 5) return 30;
-  return 60;
-}
-
 function normalizeSrs(srs) {
   const nextReview = /^\d{4}-\d{2}-\d{2}$/.test(srs?.nextReview || "")
     ? srs.nextReview
@@ -528,6 +616,37 @@ function normalizeSrs(srs) {
   };
 }
 
+function isValidDateTime(value) {
+  return Boolean(value) && !Number.isNaN(new Date(value).getTime());
+}
+
+function normalizeDifficult(difficult) {
+  const dueAt = isValidDateTime(difficult?.dueAt) ? new Date(difficult.dueAt).toISOString() : null;
+  const markedAt = isValidDateTime(difficult?.markedAt) ? new Date(difficult.markedAt).toISOString() : null;
+  return {
+    active: Boolean(difficult?.active && dueAt),
+    dueAt: dueAt,
+    markedAt: markedAt,
+  };
+}
+
+function nowISODateTime() {
+  return new Date().toISOString();
+}
+
+function cardDifficult(card) {
+  return normalizeDifficult(card?.difficult);
+}
+
+function isDifficultActive(card) {
+  return cardDifficult(card).active;
+}
+
+function isDifficultDue(card, now = new Date()) {
+  const difficult = cardDifficult(card);
+  return difficult.active && difficult.dueAt && new Date(difficult.dueAt) <= now;
+}
+
 function normalizeCard(card) {
   const createdAt = card.createdAt || todayISO();
   return {
@@ -538,9 +657,10 @@ function normalizeCard(card) {
     fr: String(card.fr || "").trim(),
     exampleDe: String(card.exampleDe || "").trim(),
     exampleFr: String(card.exampleFr || "").trim(),
-    level: String(card.level || "").trim(),
+    level: cardLevel(card),
     category: String(card.category || "Général").trim() || "Général",
     subcategory: String(card.subcategory || "").trim(),
+    difficult: normalizeDifficult(card.difficult),
     favorite: Boolean(card.favorite),
     imageId: card.imageId || null,
     imageQuery: String(card.imageQuery || "").trim(),
@@ -554,6 +674,46 @@ function cardMatchKey(card) {
   return (String(card.article || "").trim() + "|" + String(card.de || "").trim())
     .toLowerCase()
     .normalize("NFC");
+}
+
+function wordCategoryKey(cardOrWord) {
+  const word = typeof cardOrWord === "string" ? cardOrWord : cardOrWord?.de;
+  return String(word || "").trim().toLowerCase().normalize("NFC");
+}
+
+function isInvalidPackCategory(category, packName = "") {
+  const clean = String(category || "").trim();
+  if (!clean) return true;
+  if (INVALID_IMPORTED_CATEGORY_RE.test(clean)) return true;
+  return Boolean(packName) && clean.toLowerCase() === String(packName).trim().toLowerCase();
+}
+
+function isCategoryNamedLikeExistingPack(category) {
+  const key = String(category || "").trim().toLowerCase();
+  return Boolean(key) && getPacks().some((pack) => pack.name.toLowerCase() === key);
+}
+
+function isPreferredDeckCategory(category) {
+  return !isInvalidPackCategory(category) && !isCategoryNamedLikeExistingPack(category);
+}
+
+function inferredRealCategory(card) {
+  return VOCABULARY_CATEGORY_BY_WORD.get(wordCategoryKey(card)) || "";
+}
+
+function resolveImportedCardCategory(card, packName) {
+  const current = String(card.category || "").trim();
+  if (!isInvalidPackCategory(current, packName)) return current;
+  return inferredRealCategory(card);
+}
+
+function getAllKnownCategories(cards = []) {
+  const names = new Set(REAL_CATEGORIES);
+  cards.forEach((card) => {
+    const category = cardDeckName(card);
+    if (isPreferredDeckCategory(category)) names.add(category);
+  });
+  return [...names].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 function normalizeDeck(deck) {
@@ -809,6 +969,154 @@ function mergePacks(importedPacks, replace = false) {
   savePacks(packs);
 }
 
+function srsProgressScore(card) {
+  const srs = normalizeSrs(card.srs);
+  return (srs.box * 1000000) + (srs.correctCount * 1000) - srs.wrongCount;
+}
+
+function betterSrs(a, b) {
+  return srsProgressScore({ srs: a }) >= srsProgressScore({ srs: b }) ? normalizeSrs(a) : normalizeSrs(b);
+}
+
+function duplicatePrimaryScore(card) {
+  return (
+    (isPreferredDeckCategory(card.category) ? 100000000 : 0) +
+    srsProgressScore(card) +
+    (card.imageId ? 10000 : 0) +
+    (card.favorite ? 5000 : 0) +
+    ["fr", "plural", "exampleDe", "exampleFr", "subcategory", "imageQuery"].reduce((score, field) => score + (card[field] ? 100 : 0), 0)
+  );
+}
+
+function mergeDuplicateCardData(primary, duplicate) {
+  const merged = { ...primary };
+  ["fr", "plural", "exampleDe", "exampleFr", "level", "subcategory", "imageQuery"].forEach((field) => {
+    if (!merged[field] && duplicate[field]) merged[field] = duplicate[field];
+  });
+  if (!isPreferredDeckCategory(merged.category) && isPreferredDeckCategory(duplicate.category)) {
+    merged.category = duplicate.category;
+  }
+  if (!merged.imageId && duplicate.imageId) merged.imageId = duplicate.imageId;
+  merged.favorite = Boolean(merged.favorite || duplicate.favorite);
+  const primaryDifficult = cardDifficult(merged);
+  const duplicateDifficult = cardDifficult(duplicate);
+  if (
+    duplicateDifficult.active &&
+    (!primaryDifficult.active || String(duplicateDifficult.dueAt || "").localeCompare(String(primaryDifficult.dueAt || "")) < 0)
+  ) {
+    merged.difficult = duplicateDifficult;
+  }
+  merged.srs = betterSrs(merged.srs, duplicate.srs);
+  merged.createdAt = [merged.createdAt, duplicate.createdAt].filter(Boolean).sort()[0] || todayISO();
+  merged.updatedAt = todayISO();
+  return normalizeCard(merged);
+}
+
+function replacePackCardReferences(replacementMap) {
+  if (!replacementMap.size) return;
+  const packs = getPacks();
+  let changed = false;
+  packs.forEach((pack) => {
+    const next = [];
+    pack.cardIds.forEach((id) => {
+      const replacement = replacementMap.get(String(id)) || String(id);
+      if (!next.includes(replacement)) next.push(replacement);
+      if (replacement !== String(id)) changed = true;
+    });
+    if (next.length !== pack.cardIds.length) changed = true;
+    pack.cardIds = next;
+    if (changed) pack.updatedAt = todayISO();
+  });
+  if (changed) savePacks(packs);
+}
+
+async function replaceReviewCardReferences(replacementMap, cardById) {
+  if (!replacementMap.size && !cardById.size) return;
+  const reviews = await getAllReviews();
+  for (const review of reviews) {
+    const nextCardId = replacementMap.get(String(review.cardId)) || String(review.cardId);
+    const card = cardById.get(nextCardId);
+    if (nextCardId !== review.cardId || (card && review.category !== cardDeckName(card))) {
+      await saveReview({
+        ...review,
+        cardId: nextCardId,
+        category: card ? cardDeckName(card) : review.category,
+        subcategory: card ? cardSubcategoryName(card) : review.subcategory,
+      });
+    }
+  }
+}
+
+async function mergeDuplicateCardsByMatchKey(cards = null) {
+  const allCards = cards || await getAllCards();
+  const groups = new Map();
+  allCards.forEach((card) => {
+    const key = cardMatchKey(card);
+    if (!key || key === "|") return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(card);
+  });
+
+  const replacementMap = new Map();
+  const mergedCardsById = new Map();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const sorted = [...group].sort((a, b) => duplicatePrimaryScore(b) - duplicatePrimaryScore(a));
+    let primary = sorted[0];
+    for (const duplicate of sorted.slice(1)) {
+      primary = mergeDuplicateCardData(primary, duplicate);
+      replacementMap.set(String(duplicate.id), String(primary.id));
+    }
+    await saveCard(primary);
+    mergedCardsById.set(String(primary.id), primary);
+  }
+
+  if (!replacementMap.size) return { merged: 0, removed: 0 };
+  replacePackCardReferences(replacementMap);
+  await replaceReviewCardReferences(replacementMap, mergedCardsById);
+  for (const oldId of replacementMap.keys()) {
+    await deleteCard(oldId);
+  }
+  purgePackCardIds(await getAllCards());
+  return { merged: new Set(replacementMap.values()).size, removed: replacementMap.size };
+}
+
+async function repairPackCategorySeparationData() {
+  const cards = await getAllCards();
+  let changed = false;
+  const migratedById = new Map();
+
+  for (const card of cards) {
+    if (isPreferredDeckCategory(card.category)) continue;
+    const category = inferredRealCategory(card);
+    if (!category) continue;
+    card.category = category;
+    card.updatedAt = todayISO();
+    await saveCard(card);
+    migratedById.set(String(card.id), card);
+    changed = true;
+  }
+
+  const dedupeResult = await mergeDuplicateCardsByMatchKey(await getAllCards());
+  if (migratedById.size) {
+    await replaceReviewCardReferences(new Map(), migratedById);
+  }
+  const customDecks = getCustomDecks();
+  const cleanedDecks = customDecks.filter((deck) => isPreferredDeckCategory(deck.name));
+  if (cleanedDecks.length !== customDecks.length) saveCustomDecks(cleanedDecks);
+  purgePackCardIds(await getAllCards());
+  if (changed || dedupeResult.removed > 0) {
+    console.info("Réparation catégories/packs terminée :", { categoriesFixed: migratedById.size, duplicatesRemoved: dedupeResult.removed });
+  }
+  return { categoriesFixed: migratedById.size, duplicatesRemoved: dedupeResult.removed };
+}
+
+async function runPackCategorySeparationMigration() {
+  if (localStorage.getItem(LS_PACK_CATEGORY_MIGRATION_V1) === "done") return;
+  await repairPackCategorySeparationData();
+  localStorage.setItem(LS_PACK_CATEGORY_MIGRATION_V1, "done");
+}
+
 function normalizeCustomSubcategory(item) {
   const category = String(item?.category || "").trim();
   const name = String(item?.name || "").trim();
@@ -891,6 +1199,74 @@ function renameCustomSubcategoriesCategory(oldName, newName) {
   saveCustomSubcategories(items);
 }
 
+function irregularVerbSet() {
+  return new Set((Array.isArray(IRREGULAR_VERBS) ? IRREGULAR_VERBS : [])
+    .map((verb) => normalizedGermanWord(verb.inf))
+    .filter(Boolean));
+}
+
+function splitSeparableVerb(infinitive) {
+  const inf = normalizedGermanWord(infinitive);
+  if (!inf) return null;
+  const knownBases = new Set([...COMMON_BASE_VERBS, ...irregularVerbSet()]);
+
+  for (const prefix of SEPARABLE_PREFIXES) {
+    if (!inf.startsWith(prefix)) continue;
+    const base = inf.slice(prefix.length);
+    if (base.length < 4) continue;
+    if (!/(en|n)$/.test(base)) continue;
+    if (knownBases.has(base)) return { prefix: prefix, base: base };
+  }
+
+  return null;
+}
+
+function classifyVerb(infinitive) {
+  const inf = normalizedGermanWord(infinitive);
+  if (!inf) return "";
+  if (MODAL_VERBS.has(inf)) return "Verbes modaux";
+  if (splitSeparableVerb(inf)) return "Verbes à particule";
+  if (irregularVerbSet().has(inf)) return "Verbes irréguliers";
+  return "Verbes réguliers";
+}
+
+async function runVerbSubcategoryMigration() {
+  if (localStorage.getItem(LS_VERB_SUBCATEGORY_MIGRATION_V1) === "done") return;
+
+  const cards = await getAllCards();
+  let changed = false;
+
+  for (const card of cards) {
+    if (cardDeckName(card) !== VERB_CATEGORY_NAME) continue;
+    const subcategory = classifyVerb(card.de);
+    if (!subcategory) continue;
+    if (card.subcategory !== subcategory) {
+      card.subcategory = subcategory;
+      card.updatedAt = todayISO();
+      await saveCard(card);
+      changed = true;
+    }
+  }
+
+  STANDARD_VERB_SUBCATEGORIES.forEach((name) => upsertCustomSubcategory(VERB_CATEGORY_NAME, name));
+
+  const remainingCards = await getAllCards();
+  const usedVerbSubcategories = new Set(
+    remainingCards
+      .filter((card) => cardDeckName(card) === VERB_CATEGORY_NAME)
+      .map((card) => card.subcategory)
+      .filter(Boolean)
+  );
+  const customSubcategories = getCustomSubcategories().filter((item) => {
+    if (item.category.toLowerCase() !== VERB_CATEGORY_NAME.toLowerCase()) return true;
+    return STANDARD_VERB_SUBCATEGORIES.includes(item.name) || usedVerbSubcategories.has(item.name);
+  });
+  saveCustomSubcategories(customSubcategories);
+
+  localStorage.setItem(LS_VERB_SUBCATEGORY_MIGRATION_V1, "done");
+  if (changed) console.info("Migration sous-catégories Verbes terminée.");
+}
+
 function validateCardForm(data) {
   const tips = [];
 
@@ -929,16 +1305,17 @@ function createNewCard(data) {
     fr: data.fr,
     exampleDe: data.exampleDe || "",
     exampleFr: data.exampleFr || "",
-    level: data.level || "",
+    level: cardLevel(data),
     category: data.category || "Général",
     subcategory: data.subcategory || "",
+    difficult: normalizeDifficult(data.difficult),
     imageId: data.imageId || null,
     imageQuery: data.imageQuery || "",
     createdAt: todayISO(),
     updatedAt: todayISO(),
     srs: {
-      box: 1,                  // boîte SRS de départ
-      nextReview: todayISO(),  // une nouvelle carte est à réviser tout de suite
+      box: 1,
+      nextReview: todayISO(),
       correctCount: 0,
       wrongCount: 0,
     },
@@ -1067,59 +1444,83 @@ function getAllReviews() {
     .then((reviews) => reviews.map(normalizeReview));
 }
 
-function getReviewsByDate(dateISOValue) {
-  return dbAction("reviews", "readonly", (store) => store.index("reviewedDate").getAll(dateISOValue))
-    .then((reviews) => reviews.map(normalizeReview));
-}
-
-function getTodayReviews() {
-  return getReviewsByDate(todayISO());
-}
-
-async function getTodayStats() {
-  const reviews = await getTodayReviews();
-  const correctCount = reviews.filter((review) => review.correct).length;
-  const wrongCount = reviews.length - correctCount;
-  return {
-    reviewsCount: reviews.length,
-    correctCount: correctCount,
-    wrongCount: wrongCount,
-    successRate: reviews.length ? Math.round((correctCount / reviews.length) * 100) : 0,
-  };
-}
-
-async function getReviewStreak() {
-  const reviews = await getAllReviews();
-  const dates = new Set(reviews.map((review) => review.reviewedDate).filter(Boolean));
-  let cursor = todayISO();
-  if (!dates.has(cursor)) {
-    const yesterday = addDays(cursor, -1);
-    if (!dates.has(yesterday)) {
-      return { streak: 0, lastReviewDate: reviews.sort((a, b) => b.reviewedDate.localeCompare(a.reviewedDate))[0]?.reviewedDate || "" };
-    }
-    cursor = yesterday;
-  }
-
-  let streak = 0;
-  while (dates.has(cursor)) {
-    streak++;
-    cursor = addDays(cursor, -1);
-  }
-  return { streak: streak, lastReviewDate: addDays(cursor, 1) };
-}
-
-async function getHardCards(limit = 10) {
-  const cards = await getAllCards();
+function difficultCards(cards, options = {}) {
+  const now = options.now || new Date();
+  const onlyDue = Boolean(options.onlyDue);
   return cards
-    .filter((card) => normalizeSrs(card.srs).wrongCount >= 3)
-    .sort((a, b) => normalizeSrs(b.srs).wrongCount - normalizeSrs(a.srs).wrongCount)
-    .slice(0, limit)
-    .map((card) => ({
-      card: card,
-      wrongCount: normalizeSrs(card.srs).wrongCount,
-      correctCount: normalizeSrs(card.srs).correctCount,
-      isLeech: normalizeSrs(card.srs).wrongCount >= 5,
-    }));
+    .filter((card) => isDifficultActive(card))
+    .filter((card) => !onlyDue || isDifficultDue(card, now))
+    .sort((a, b) => {
+      const dueDiff = String(cardDifficult(a).dueAt || "").localeCompare(String(cardDifficult(b).dueAt || ""));
+      if (dueDiff) return dueDiff;
+      return fullWord(a).localeCompare(fullWord(b), "de");
+    });
+}
+
+function difficultStats(cards) {
+  const active = difficultCards(cards);
+  const due = difficultCards(cards, { onlyDue: true });
+  return { active: active, due: due, activeCount: active.length, dueCount: due.length };
+}
+
+function localDateTimeValue(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return date.getFullYear() + "-" +
+    pad(date.getMonth() + 1) + "-" +
+    pad(date.getDate()) + "T" +
+    pad(date.getHours()) + ":" +
+    pad(date.getMinutes());
+}
+
+function dateFromDelayKey(key) {
+  const date = new Date();
+  if (key === "10m") date.setMinutes(date.getMinutes() + 10);
+  else if (key === "1h") date.setHours(date.getHours() + 1);
+  else if (key === "3h") date.setHours(date.getHours() + 3);
+  else if (key === "evening") {
+    date.setHours(20, 0, 0, 0);
+    if (date <= new Date()) date.setDate(date.getDate() + 1);
+  } else if (key === "tomorrow") {
+    date.setDate(date.getDate() + 1);
+    date.setHours(9, 0, 0, 0);
+  } else if (key === "3d") date.setDate(date.getDate() + 3);
+  else if (key === "1w") date.setDate(date.getDate() + 7);
+  else return null;
+  return date;
+}
+
+function formatDifficultDue(dueAt) {
+  if (!dueAt) return "non programmée";
+  const due = new Date(dueAt);
+  if (Number.isNaN(due.getTime())) return "date invalide";
+  const now = new Date();
+  const diffMs = due - now;
+  const minutes = Math.round(Math.abs(diffMs) / 60000);
+  const time = due.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  if (diffMs <= -60000) return "en retard";
+  if (diffMs <= 60000) return "maintenant";
+  if (minutes < 60) return "dans " + minutes + " min";
+  if (minutes < 24 * 60) return "dans " + Math.round(minutes / 60) + " h";
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  if (due.toDateString() === tomorrow.toDateString()) return "demain " + time;
+  return due.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) + " " + time;
+}
+
+function setCardDifficult(card, dueAt) {
+  card.difficult = {
+    active: true,
+    dueAt: new Date(dueAt).toISOString(),
+    markedAt: cardDifficult(card).markedAt || nowISODateTime(),
+  };
+  card.updatedAt = todayISO();
+}
+
+function clearCardDifficult(card) {
+  card.difficult = { active: false, dueAt: null, markedAt: null };
+  card.updatedAt = todayISO();
 }
 
 // --- Images ---
@@ -1610,8 +2011,10 @@ function setupNavigation() {
   $("btn-deck-grid-clear").addEventListener("click", clearDeckGridSelection);
   $("btn-deck-grid-study").addEventListener("click", studySelectedDecks);
   $("btn-deck-grid-delete").addEventListener("click", deleteSelectedDecks);
+  $("btn-review-hard-cards").addEventListener("click", startDifficultDashboardReview);
+  $("btn-manage-hard-cards").addEventListener("click", openDifficultManager);
   $("btn-study-all").addEventListener("click", () => {
-    openStudyModeModal(null, "dashboard");
+    showPage("revision");
   });
   $("btn-create-pack").addEventListener("click", () => openPackModal("create"));
   $("btn-import-pack").addEventListener("click", () => {
@@ -1626,6 +2029,8 @@ function setupNavigation() {
   $("pack-import-modal").addEventListener("click", (event) => {
     if (event.target === $("pack-import-modal")) closePackImportModal();
   });
+  $("pack-import-category-select").addEventListener("change", syncPackImportConfirmState);
+  $("pack-import-category-new").addEventListener("input", syncPackImportConfirmState);
   $("btn-review-favorites-page").addEventListener("click", () => {
     openStudyModeModal(FAVORITES_SCOPE, "favoris");
   });
@@ -1642,6 +2047,22 @@ function setupNavigation() {
   $("study-mode-modal").addEventListener("click", (event) => {
     if (event.target === $("study-mode-modal")) closeStudyModeModal();
   });
+  $("difficult-modal").addEventListener("click", (event) => {
+    if (event.target === $("difficult-modal")) closeDifficultModal();
+    const delayBtn = event.target.closest("[data-difficult-delay]");
+    if (delayBtn && pendingDifficultCardId) handleDifficultDelay(pendingDifficultCardId, delayBtn.dataset.difficultDelay);
+    const rescheduleBtn = event.target.closest("[data-difficult-manage-reschedule]");
+    if (rescheduleBtn) openDifficultModal(rescheduleBtn.dataset.difficultManageReschedule);
+    const removeBtn = event.target.closest("[data-difficult-manage-remove]");
+    if (removeBtn) removeDifficult(removeBtn.dataset.difficultManageRemove);
+  });
+  $("btn-difficult-custom-save").addEventListener("click", saveDifficultCustomDate);
+  $("btn-difficult-remove").addEventListener("click", async () => {
+    if (!pendingDifficultCardId) return;
+    await removeDifficult(pendingDifficultCardId);
+    closeDifficultModal();
+  });
+  $("btn-close-difficult-modal").addEventListener("click", closeDifficultModal);
   $("study-scope-toggle").addEventListener("click", (event) => {
     const btn = event.target.closest("[data-session-type]");
     if (!btn || btn.disabled) return;
@@ -1686,6 +2107,7 @@ function setupNavigation() {
       closeSubcategoryModal();
       closeImportPreviewModal();
       closeMoreMenu();
+      closeDifficultModal();
       closePackModal();
       closeAddToPackModal();
       closePackImportModal();
@@ -1712,6 +2134,13 @@ function setupNavigation() {
     }
     const gotoBtn = event.target.closest("[data-goto]");
     if (gotoBtn) showPage(gotoBtn.dataset.goto);
+
+    const difficultBtn = event.target.closest("[data-difficult]");
+    if (difficultBtn) {
+      event.stopPropagation();
+      openDifficultModal(difficultBtn.dataset.difficult);
+      return;
+    }
 
     const studyFavoritesBtn = event.target.closest("#btn-study-favorites");
     if (studyFavoritesBtn) {
@@ -1761,8 +2190,10 @@ function setupNavigation() {
       currentDeckDetailPackId = null;
       deckDetailSearch = "";
       deckDetailSubcategoryFilter = "";
+      deckDetailLevelFilter = "";
       $("deck-detail-search").value = "";
       $("deck-detail-subcategory-filter").value = "";
+      $("deck-detail-level-filter").value = "";
       showPage("deck-detail");
     }
 
@@ -1840,6 +2271,10 @@ function setupDeckDetailPage() {
     deckDetailSubcategoryFilter = $("deck-detail-subcategory-filter").value;
     renderDeckDetail();
   });
+  $("deck-detail-level-filter").addEventListener("change", () => {
+    deckDetailLevelFilter = $("deck-detail-level-filter").value;
+    renderDeckDetail();
+  });
 }
 
 
@@ -1849,8 +2284,7 @@ function setupDeckDetailPage() {
 
 async function refreshDashboard() {
   const cards = await getAllCards();
-  const today = todayISO();
-  const dueToday = cards.filter((c) => c.srs.nextReview <= today).length;
+  const dueToday = difficultStats(cards).dueCount;
 
   // Les 3 grands chiffres
   $("stat-total").textContent = cards.length;
@@ -1863,53 +2297,32 @@ async function refreshDashboard() {
   $("stat-mastered").textContent = cards.filter(isMastered).length;
 
   try {
-    await renderDashboardStats();
+    await renderDashboardHardCards();
   } catch (error) {
-    console.warn("Stats dashboard non rendues :", error);
+    console.warn("Cartes difficiles dashboard non rendues :", error);
   }
 
   renderDecks(cards);
 }
 
-async function renderDashboardStats() {
-  const todayStats = await getTodayStats();
-  const streak = await getReviewStreak();
-  const allHardCards = await getHardCards(10000);
-  const hardCards = allHardCards.slice(0, 5);
-
-  $("today-streak").textContent = streak.streak + " jour" + (streak.streak > 1 ? "s" : "");
-  $("today-reviews-count").textContent = todayStats.reviewsCount;
-  $("today-success-rate").textContent = todayStats.successRate + "%";
-  $("today-hard-count").textContent = allHardCards.length;
-  $("today-stats-message").textContent = todayStats.reviewsCount
-    ? (streak.streak > 0 ? "Continue comme ça." : "Révisions enregistrées aujourd'hui.")
-    : "Pas encore de révision aujourd'hui.";
-
-  $("hard-cards-list").innerHTML = hardCards.length
-    ? hardCards.map((item) => hardCardRowHTML(item)).join("")
-    : '<p class="muted">Aucune carte difficile pour le moment.</p>';
+async function renderDashboardHardCards() {
+  const stats = difficultStats(await getAllCards());
+  $("dashboard-hard-due-count").textContent = stats.dueCount;
+  $("dashboard-hard-total-count").textContent = stats.activeCount;
+  $("btn-review-hard-cards").disabled = stats.activeCount === 0;
+  $("btn-review-hard-cards").textContent = stats.dueCount > 0
+    ? "Réviser les difficiles"
+    : "Revoir les difficiles";
 }
 
-function hardCardRowHTML(item) {
-  return (
-    '<div class="hard-card-row">' +
-      '<div>' +
-        '<strong>' + escapeHTML(item.card.fr || fullWord(item.card)) + "</strong>" +
-        '<span>' + wordHTML(item.card) + " · " + escapeHTML(cardDeckName(item.card)) + "</span>" +
-      "</div>" +
-      '<div class="hard-card-score">' +
-        '<span>' + item.wrongCount + " erreurs</span>" +
-        (item.isLeech ? '<span class="badge-leech">Leech</span>' : "") +
-      "</div>" +
-    "</div>"
-  );
+async function renderDashboardStats() {
+  return renderDashboardHardCards();
 }
 
 function favoritesDeckCardHTML(cards) {
   const favorites = cards.filter((card) => card.favorite === true);
   if (favorites.length === 0) return "";
-  const today = todayISO();
-  const due = favorites.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  const due = difficultStats(favorites).dueCount;
   const mastered = favorites.filter(isMastered).length;
   const percent = Math.round((mastered / favorites.length) * 100);
   return (
@@ -1929,7 +2342,6 @@ function favoritesDeckCardHTML(cards) {
 function renderDecks(cards) {
   const container = $("deck-grid");
   const empty = $("deck-empty");
-  const today = todayISO();
   const groups = {};
   const customDecks = getCustomDecks();
   const accents = ["gold", "blue", "green", "orange", "red", "purple"];
@@ -1937,16 +2349,18 @@ function renderDecks(cards) {
   deckCardCounts = new Map();
   cards.forEach((card) => {
     const category = cardDeckName(card);
+    if (!isPreferredDeckCategory(category)) return;
     deckCardCounts.set(category, (deckCardCounts.get(category) || 0) + 1);
     if (!groups[category]) {
       groups[category] = { name: category, total: 0, mastered: 0, due: 0, color: "", emoji: "", custom: false };
     }
     groups[category].total++;
     if (isMastered(card)) groups[category].mastered++;
-    if (card.srs.nextReview <= today) groups[category].due++;
+    if (isDifficultDue(card)) groups[category].due++;
   });
 
   customDecks.forEach((deck) => {
+    if (!isPreferredDeckCategory(deck.name)) return;
     if (!groups[deck.name]) {
       groups[deck.name] = { name: deck.name, total: 0, mastered: 0, due: 0, color: deck.color, emoji: deck.emoji, custom: true };
     } else {
@@ -1963,7 +2377,7 @@ function renderDecks(cards) {
       name: category,
       total: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category).length,
       mastered: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && isMastered(card)).length,
-      due: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && card.srs.nextReview <= today).length,
+      due: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && isDifficultDue(card)).length,
       color: "",
       emoji: "",
       custom: false,
@@ -2042,12 +2456,11 @@ async function renderPacksPage() {
   const empty = $("pack-empty");
   if (!container) return;
   const packs = getPacks();
-  const today = todayISO();
 
   const packHTML = packs.map((pack) => {
     const cardsInPack = packCards(pack, cards);
     const total = cardsInPack.length;
-    const due = cardsInPack.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+    const due = difficultStats(cardsInPack).dueCount;
     const mastered = cardsInPack.filter(isMastered).length;
     const percent = total === 0 ? 0 : Math.round((mastered / total) * 100);
     const countText = total === 0
@@ -2099,10 +2512,12 @@ function openPackDetail(packId) {
   currentDeckDetailCategory = null;
   deckDetailSearch = "";
   deckDetailSubcategoryFilter = "";
+  deckDetailLevelFilter = "";
   deckDetailSelectionMode = false;
   selectedDeckCardIds.clear();
   $("deck-detail-search").value = "";
   $("deck-detail-subcategory-filter").value = "";
+  $("deck-detail-level-filter").value = "";
   syncSelectionModeClass();
   showPage("deck-detail");
 }
@@ -2233,10 +2648,9 @@ async function renderDeckDetail() {
   const isPackDetail = Boolean(pack);
   const deck = findCustomDeckByName(deckName);
   const displayName = isPackDetail ? pack.name : (deck?.emoji ? deck.emoji + " " : "") + deckName;
-  const today = todayISO();
   const deckCards = isPackDetail ? packCards(pack, allCards) : allCards.filter((card) => cardDeckName(card) === deckName);
   const mastered = deckCards.filter(isMastered).length;
-  const due = deckCards.filter((card) => card.srs.nextReview <= today).length;
+  const due = difficultStats(deckCards).dueCount;
   $("btn-deck-detail-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-empty-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-appearance").textContent = isPackDetail ? "Modifier le pack" : "Modifier apparence";
@@ -2252,6 +2666,7 @@ async function renderDeckDetail() {
     updateDeckDetailSubcategoryFilter(deckCards);
     renderDeckDetailSubcategorySummary(deckCards);
   }
+  fillLevelSelect($("deck-detail-level-filter"), deckDetailLevelFilter);
 
   $("deck-detail-title").textContent = displayName;
   $("deck-detail-subtitle").textContent =
@@ -2265,7 +2680,8 @@ async function renderDeckDetail() {
         isPackDetail ||
         !deckDetailSubcategoryFilter ||
         (deckDetailSubcategoryFilter === "__none__" ? !cardSubcategoryName(card) : cardSubcategoryName(card) === deckDetailSubcategoryFilter);
-      return matchesSubcategory && matchesCardQuery(card, query);
+      const matchesLevel = matchesLevelFilter(card, deckDetailLevelFilter);
+      return matchesSubcategory && matchesLevel && matchesCardQuery(card, query);
     })
     .sort((a, b) => fullWord(a).localeCompare(fullWord(b), "de"));
   visibleDeckDetailCardIds = visibleCards.map((card) => card.id);
@@ -2491,45 +2907,50 @@ function onSubcategorySelectChange() {
 }
 
 async function saveSubcategoryChoice() {
-  const targetIds = pendingSubcategoryCardIds.length ? pendingSubcategoryCardIds : (pendingSubcategoryCardId ? [pendingSubcategoryCardId] : []);
-  if (targetIds.length === 0) return;
-  const cards = (await Promise.all(targetIds.map((id) => getCard(id)))).filter(Boolean);
-  if (cards.length === 0) {
-    closeSubcategoryModal();
-    return;
-  }
-  const deckName = pendingSubcategoryCardIds.length ? currentDeckDetailCategory : cardDeckName(cards[0]);
-
-  const choice = $("subcategory-select").value;
-  let nextSubcategory = "";
-
-  if (choice === "__new__") {
-    nextSubcategory = $("subcategory-new-name").value.trim();
-    if (!nextSubcategory) {
-      toast("Indique le nom de la nouvelle sous-catégorie.");
+  try {
+    const targetIds = pendingSubcategoryCardIds.length ? pendingSubcategoryCardIds : (pendingSubcategoryCardId ? [pendingSubcategoryCardId] : []);
+    if (targetIds.length === 0) return;
+    const cards = (await Promise.all(targetIds.map((id) => getCard(id)))).filter(Boolean);
+    if (cards.length === 0) {
+      closeSubcategoryModal();
       return;
     }
-    upsertCustomSubcategory(deckName, nextSubcategory);
-  } else if (choice !== "__none__") {
-    nextSubcategory = choice;
-  }
+    const deckName = pendingSubcategoryCardIds.length ? currentDeckDetailCategory : cardDeckName(cards[0]);
 
-  for (const card of cards) {
-    card.subcategory = nextSubcategory;
-    card.updatedAt = todayISO();
-    await saveCard(card);
-  }
-  if (nextSubcategory) upsertCustomSubcategory(deckName, nextSubcategory);
+    const choice = $("subcategory-select").value;
+    let nextSubcategory = "";
 
-  refreshSubcategorySuggestions();
-  selectedDeckCardIds.clear();
-  if (pendingSubcategoryCardIds.length) deckDetailSelectionMode = false;
-  syncSelectionModeClass();
-  renderDeckDetailIfVisible();
-  renderLibraryIfVisible();
-  renderLearningIfVisible();
-  closeSubcategoryModal();
-  toast(cards.length + " carte" + (cards.length > 1 ? "s" : "") + " mise" + (cards.length > 1 ? "s" : "") + " à jour.");
+    if (choice === "__new__") {
+      nextSubcategory = $("subcategory-new-name").value.trim();
+      if (!nextSubcategory) {
+        toast("Indique le nom de la nouvelle sous-catégorie.");
+        return;
+      }
+      upsertCustomSubcategory(deckName, nextSubcategory);
+    } else if (choice !== "__none__") {
+      nextSubcategory = choice;
+    }
+
+    for (const card of cards) {
+      card.subcategory = nextSubcategory;
+      card.updatedAt = todayISO();
+      await saveCard(card);
+    }
+    if (nextSubcategory) upsertCustomSubcategory(deckName, nextSubcategory);
+
+    refreshSubcategorySuggestions();
+    selectedDeckCardIds.clear();
+    if (pendingSubcategoryCardIds.length) deckDetailSelectionMode = false;
+    syncSelectionModeClass();
+    renderDeckDetailIfVisible();
+    renderLibraryIfVisible();
+    renderLearningIfVisible();
+    closeSubcategoryModal();
+    toast(cards.length + " carte" + (cards.length > 1 ? "s" : "") + " mise" + (cards.length > 1 ? "s" : "") + " à jour.");
+  } catch (error) {
+    console.error("Échec de modification de sous-catégorie :", error);
+    toast("Impossible de modifier la sous-catégorie.");
+  }
 }
 
 function changeCardSubcategory(cardId) {
@@ -2622,6 +3043,7 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
         '<div class="deck-detail-card-top">' +
           '<div class="deck-detail-chips">' +
             '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
+            levelBadgeHTML(card) +
           "</div>" +
           '<span class="deck-detail-status">' + escapeHTML(cardStatusLabel(card)) + "</span>" +
         "</div>" +
@@ -2638,11 +3060,12 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
 }
 
 function cardStatusLabel(card) {
-  const today = todayISO();
-  if (isNewCard(card)) return "Nouvelle";
-  if (card.srs.nextReview <= today) return "À réviser aujourd'hui";
+  const difficult = cardDifficult(card);
+  if (difficult.active) {
+    return isDifficultDue(card) ? "Difficile · à revoir" : "Difficile · " + formatDifficultDue(difficult.dueAt);
+  }
   if (isMastered(card)) return "Acquise";
-  return "Prochaine révision : " + formatDateFr(card.srs.nextReview);
+  return "Libre";
 }
 
 async function deckHasCards(name) {
@@ -2652,25 +3075,18 @@ async function deckHasCards(name) {
 
 async function getReviewHubStats(scope = null) {
   const cards = await getAllCards();
-  const today = todayISO();
   const scoped = cards.filter((card) => cardInScope(card, scope));
-  const due = scoped.filter((card) => normalizeSrs(card.srs).nextReview <= today);
-  const newDue = due.filter(isNewCard);
-  const reviewDue = due.filter((card) => !isNewCard(card));
-  const hard = scoped.filter((card) => normalizeSrs(card.srs).wrongCount >= 3);
+  const due = difficultCards(scoped, { onlyDue: true });
+  const hard = difficultCards(scoped);
   const queue = buildReviewQueue(scoped);
 
   return {
     scoped,
     totalCards: scoped.length,
     dueCards: due.length,
-    newCards: newDue.length,
-    reviewCards: reviewDue.length,
+    reviewCards: due.length,
     hardCards: hard.length,
     sessionSize: queue.length,
-    sessionNewCards: queue.filter(isNewCard).length,
-    sessionReviewCards: queue.filter((card) => !isNewCard(card)).length,
-    cappedNewCards: Math.max(0, newDue.length - getMaxNewCardsPerDay()),
     distinctGermanWords: new Set(
       scoped
         .map((card) => String(card.de || "").trim().toLowerCase())
@@ -2713,7 +3129,7 @@ function syncStudySheet(stats) {
   });
 
   $("study-session-hint").textContent = pendingSessionType === "due"
-    ? "Les cartes dues aujourd'hui. Ta progression avance."
+    ? "Les cartes difficiles dues maintenant."
     : "Toutes les cartes du périmètre, mélangées. Ta progression n'est pas modifiée.";
 
   document.querySelectorAll("#study-mode-modal [data-study-mode]").forEach((btn) => {
@@ -3060,35 +3476,40 @@ async function handleDeckAction(action, deckName) {
 }
 
 async function renameDeck(oldName) {
-  const newName = prompt("Nouveau nom du jeu :", oldName);
-  if (!newName) return;
-  const cleanName = newName.trim();
-  if (!cleanName || cleanName === oldName) return;
+  try {
+    const newName = prompt("Nouveau nom du jeu :", oldName);
+    if (!newName) return;
+    const cleanName = newName.trim();
+    if (!cleanName || cleanName === oldName) return;
 
-  const cards = await getAllCards();
-  const affectedCards = cards.filter((card) => cardDeckName(card) === oldName);
-  if (affectedCards.length > 0) {
-    const confirmed = confirm("Renommer ce jeu déplacera " + affectedCards.length + " carte(s) vers « " + cleanName + " ». Continuer ?");
-    if (!confirmed) return;
+    const cards = await getAllCards();
+    const affectedCards = cards.filter((card) => cardDeckName(card) === oldName);
+    if (affectedCards.length > 0) {
+      const confirmed = confirm("Renommer ce jeu déplacera " + affectedCards.length + " carte(s) vers « " + cleanName + " ». Continuer ?");
+      if (!confirmed) return;
+    }
+
+    const existingDeck = findCustomDeckByName(oldName) || { color: "gold", emoji: "" };
+    upsertCustomDeck({ ...existingDeck, name: cleanName }, oldName);
+    renameCustomSubcategoriesCategory(oldName, cleanName);
+
+    for (const card of affectedCards) {
+      card.category = cleanName;
+      card.updatedAt = todayISO();
+      await saveCard(card);
+    }
+
+    currentReviewCategory = renameDeckInScope(currentReviewCategory, oldName, cleanName);
+    pendingLearningCategory = renameDeckInScope(pendingLearningCategory, oldName, cleanName);
+    currentLearningScope = renameDeckInScope(currentLearningScope, oldName, cleanName);
+    pendingStudyScope = renameDeckInScope(pendingStudyScope, oldName, cleanName);
+    if (currentDeckDetailCategory === oldName) currentDeckDetailCategory = cleanName;
+    refreshAfterDeckChange();
+    toast("Jeu renommé.");
+  } catch (error) {
+    console.error("Échec de renommage du jeu :", error);
+    toast("Impossible de renommer ce jeu.");
   }
-
-  const existingDeck = findCustomDeckByName(oldName) || { color: "gold", emoji: "" };
-  upsertCustomDeck({ ...existingDeck, name: cleanName }, oldName);
-  renameCustomSubcategoriesCategory(oldName, cleanName);
-
-  for (const card of affectedCards) {
-    card.category = cleanName;
-    card.updatedAt = todayISO();
-    await saveCard(card);
-  }
-
-  currentReviewCategory = renameDeckInScope(currentReviewCategory, oldName, cleanName);
-  pendingLearningCategory = renameDeckInScope(pendingLearningCategory, oldName, cleanName);
-  currentLearningScope = renameDeckInScope(currentLearningScope, oldName, cleanName);
-  pendingStudyScope = renameDeckInScope(pendingStudyScope, oldName, cleanName);
-  if (currentDeckDetailCategory === oldName) currentDeckDetailCategory = cleanName;
-  refreshAfterDeckChange();
-  toast("Jeu renommé.");
 }
 
 // Supprime un jeu et tout ce qui va avec (cartes, images orphelines,
@@ -3123,21 +3544,26 @@ async function removeDeckData(deckName, allCards) {
 }
 
 async function deleteDeck(deckName) {
-  const cards = await getAllCards();
-  const deckCards = cards.filter((card) => cardDeckName(card) === deckName);
+  try {
+    const cards = await getAllCards();
+    const deckCards = cards.filter((card) => cardDeckName(card) === deckName);
 
-  // Message adapté : un jeu vide est sans risque, un jeu plein demande un vrai avertissement
-  const message = deckCards.length > 0
-    ? "Supprimer le jeu « " + deckName + " » et ses " + deckCards.length + " carte(s) ?\n\nLes cartes et leurs images seront définitivement supprimées. Pense à exporter avant si tu as un doute."
-    : "Supprimer le jeu vide « " + deckName + " » de la liste ?";
-  const confirmed = confirm(message);
-  if (!confirmed) return;
+    // Message adapté : un jeu vide est sans risque, un jeu plein demande un vrai avertissement
+    const message = deckCards.length > 0
+      ? "Supprimer le jeu « " + deckName + " » et ses " + deckCards.length + " carte(s) ?\n\nLes cartes et leurs images seront définitivement supprimées. Pense à exporter avant si tu as un doute."
+      : "Supprimer le jeu vide « " + deckName + " » de la liste ?";
+    const confirmed = confirm(message);
+    if (!confirmed) return;
 
-  await removeDeckData(deckName, cards);
+    await removeDeckData(deckName, cards);
 
-  refreshAfterDeckChange();
-  refreshSubcategorySuggestions();
-  toast(deckCards.length > 0 ? "Jeu, cartes et images supprimés." : "Jeu supprimé.");
+    refreshAfterDeckChange();
+    refreshSubcategorySuggestions();
+    toast(deckCards.length > 0 ? "Jeu, cartes et images supprimés." : "Jeu supprimé.");
+  } catch (error) {
+    console.error("Échec de suppression du jeu :", error);
+    toast("Impossible de supprimer ce jeu.");
+  }
 }
 
 function refreshAfterDeckChange() {
@@ -3153,13 +3579,7 @@ function refreshAfterDeckChange() {
 }
 
 /* =========================================================
-   7. RÉVISION — RÉPÉTITION ESPACÉE (SRS)
-
-   Règles simples :
-   - Raté      -> box 1, revient aujourd'hui
-   - Difficile -> box - 1 minimum 1, revient demain
-   - Bien      -> box + 1, revient selon la nouvelle box
-   - Facile    -> box + 2, revient selon la nouvelle box
+   7. RÉVISION MANUELLE
    ========================================================= */
 
 function isSessionRunning() {
@@ -3184,7 +3604,7 @@ async function renderReviewHub() {
     renderReviewHub();
     return;
   }
-  if (!["classic", "multiple", "written", "learning"].includes(currentReviewMode)) {
+  if (!["classic", "multiple", "written"].includes(currentReviewMode)) {
     currentReviewMode = "classic";
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
@@ -3196,31 +3616,9 @@ async function renderReviewHub() {
   }
   await renderHubScopeChips();
 
-  $("hub-stat-new").textContent = stats.newCards;
-  $("hub-stat-review").textContent = stats.reviewCards;
-  $("hub-stat-hard").textContent = stats.hardCards;
-
+  await renderReviewDifficultPanel();
   $("hub-subtitle").textContent =
     "Périmètre : " + scopeLabel(currentReviewCategory) + " · " + stats.totalCards + " carte(s)";
-
-  const maxNew = getMaxNewCardsPerDay();
-  $("hub-max-new").value = maxNew === Infinity ? "unlimited" : String(maxNew);
-  const paceLabel = maxNew === Infinity ? "illimité" : maxNew + " par jour";
-  const sessionParts = [];
-  if (stats.sessionNewCards > 0) {
-    sessionParts.push(stats.sessionNewCards + " nouvelle" + (stats.sessionNewCards > 1 ? "s" : ""));
-  }
-  if (stats.sessionReviewCards > 0) {
-    sessionParts.push(stats.sessionReviewCards + " à revoir");
-  }
-  $("hub-cap-note").classList.remove("hidden");
-  $("hub-cap-note").innerHTML = stats.sessionSize > 0
-    ? '<strong>Session du jour : ' + stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : "") + "</strong>" +
-      (sessionParts.length ? " · " + sessionParts.join(" + ") : "") +
-      (stats.cappedNewCards > 0
-        ? '<span class="hub-cap-detail">Ton rythme est réglé sur ' + paceLabel + " : les " + stats.cappedNewCards + " autres nouvelles cartes arriveront les jours suivants. Passe à « Illimité » pour tout voir aujourd'hui.</span>"
-        : "")
-    : "<strong>Rien à réviser aujourd'hui dans ce périmètre.</strong>";
 
   const multipleOk = stats.distinctGermanWords >= 4;
   $("hub-mode-multiple").disabled = !multipleOk;
@@ -3234,35 +3632,34 @@ async function renderReviewHub() {
     btn.classList.toggle("active", btn.dataset.hubMode === currentReviewMode);
   });
 
-  const learningMode = currentReviewMode === "learning";
-  const nothingDue = stats.sessionSize === 0;
-  $("btn-hub-start").disabled = learningMode ? stats.totalCards === 0 : nothingDue;
-  $("btn-hub-start").textContent = learningMode
-    ? (stats.totalCards === 0
-        ? "Aucune carte à découvrir"
-        : "Découvrir · " + stats.totalCards + " carte" + (stats.totalCards > 1 ? "s" : ""))
-    : (nothingDue
-        ? "Rien à réviser aujourd'hui"
-        : "Commencer · " + stats.sessionSize + " carte" + (stats.sessionSize > 1 ? "s" : ""));
-  $("btn-hub-free").classList.toggle("hidden", stats.totalCards === 0);
-  $("hub-cta-note").textContent = learningMode
-    ? "Découverte ne modifie pas ta progression."
-    : nothingDue
-    ? (stats.totalCards === 0
-        ? "Aucune carte dans ce périmètre. Ajoute des cartes pour commencer."
-        : "Tout est à jour ici. Tu peux quand même t'entraîner librement.")
-    : "L'entraînement libre ne modifie pas ta progression.";
+  $("btn-hub-free").disabled = stats.totalCards === 0;
+  $("btn-hub-free").textContent = stats.totalCards === 0
+    ? "Aucune carte à étudier"
+    : "Étudier · " + stats.totalCards + " carte" + (stats.totalCards > 1 ? "s" : "");
+  $("hub-cta-note").textContent = stats.totalCards === 0
+    ? "Aucune carte dans ce périmètre."
+    : "Toutes les cartes du périmètre seront mélangées.";
 }
 
 function renderReviewHubIfVisible() {
   if ($("page-revision").classList.contains("active") && !isSessionRunning()) renderReviewHub();
 }
 
+async function renderReviewDifficultPanel() {
+  const stats = difficultStats(await getAllCards());
+  $("review-hard-due-count").textContent = stats.dueCount;
+  $("review-hard-total-count").textContent = stats.activeCount;
+  $("btn-review-page-hard").disabled = stats.activeCount === 0;
+  $("btn-review-page-hard").textContent = stats.dueCount > 0
+    ? "Réviser les difficiles"
+    : "Revoir les difficiles";
+  $("review-difficult-list").innerHTML = difficultManageRowsHTML(stats.active);
+}
+
 async function renderHubScopeChips() {
   const cards = await getAllCards();
-  const today = todayISO();
   const favoriteCards = cards.filter((card) => card.favorite === true);
-  const favoriteDue = favoriteCards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  const favoriteDue = difficultStats(favoriteCards).dueCount;
   const decks = [...new Set([
     ...cards.map(cardDeckName),
     ...getCustomDecks().map((deck) => deck.name),
@@ -3281,7 +3678,7 @@ async function renderHubScopeChips() {
   const packChips = packs.length
     ? '<span class="hub-chip-group-label">Packs</span>' + packs.map((pack) => {
       const scope = PACK_SCOPE_PREFIX + pack.id;
-      const due = packCards(pack, cards).filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+      const due = difficultStats(packCards(pack, cards)).dueCount;
       return '<button class="hub-chip hub-chip-pack' + (normalizedScope === scope ? " active" : "") + '" type="button" data-hub-scope="' + escapeHTML(scope) + '">' +
         '<span class="pack-dot" style="--deck-accent:' + escapeHTML(pack.color) + '"></span>' +
         escapeHTML(pack.name) + (due ? '<span class="hub-chip-badge">' + due + "</span>" : "") + "</button>";
@@ -3292,7 +3689,7 @@ async function renderHubScopeChips() {
     '<button class="hub-chip' + (!normalizedScope ? " active" : "") + '" type="button" data-hub-scope="__all__">Tout</button>' +
     favoritesChip +
     decks.map((name) => {
-      const due = cards.filter((card) => cardDeckName(card) === name && normalizeSrs(card.srs).nextReview <= today).length;
+      const due = difficultStats(cards.filter((card) => cardDeckName(card) === name)).dueCount;
       return '<button class="hub-chip' + (selected.includes(name) ? " active" : "") + '" type="button" data-hub-scope="' + escapeHTML(name) + '">' +
         escapeHTML(name) + (due ? '<span class="hub-chip-badge">' + due + "</span>" : "") + "</button>";
     }).join("") +
@@ -3322,17 +3719,21 @@ async function startReviewSession() {
   const cards = await getAllCards();
   currentReviewCategory = normalizeScope(currentReviewCategory);
   const scopedCards = cards.filter((card) => cardInScope(card, currentReviewCategory));
-  failedOnceInSession = new Set();
-  reviewSessionStats = { seen: 0, correct: 0, wrong: 0, failedCardIds: [], failedCards: [] };
+  reviewSessionStats = { seen: 0, markedDifficultIds: [] };
   isGrading = false;
-  setGradeButtonsDisabled(false);
   reviewChoicePool = scopedCards;
+  if (reviewSessionType === "due") {
+    currentReviewMode = "classic";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+  }
   if (currentReviewMode === "multiple" && new Set(scopedCards.map((card) => fullWord(card))).size < 4) {
     currentReviewMode = "classic";
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
+  const fallbackAllActive = difficultReviewFallbackAllOnce;
+  difficultReviewFallbackAllOnce = false;
   reviewQueue = reviewSessionType === "due"
-    ? buildReviewQueue(scopedCards)
+    ? buildReviewQueue(scopedCards, { fallbackAllActive: fallbackAllActive })
     : buildFreePracticeQueue(scopedCards);
 
   if (cards.length === 0) {
@@ -3341,7 +3742,7 @@ async function startReviewSession() {
     showReviewEmpty(reviewEmptyScopeMessage());
   } else if (reviewQueue.length === 0) {
     if (reviewSessionType === "due") {
-      showReviewEmpty("Aucune carte prévue aujourd'hui. Tu peux lancer Entraînement libre pour réviser quand même.", scopedCards.length > 0);
+      showReviewEmpty("Aucune carte difficile à revoir maintenant. Tu peux lancer Entraînement libre pour réviser quand même.", scopedCards.length > 0);
     } else {
       showReviewEmpty(currentReviewCategory
         ? reviewEmptyScopeMessage()
@@ -3373,7 +3774,7 @@ function setReviewSessionActive(active) {
 
 function reviewSessionLabelText() {
   const parts = [
-    reviewSessionType === "free" ? "Entraînement libre" : "Révision du jour",
+    reviewSessionType === "free" ? "Entraînement libre" : "Cartes difficiles",
     scopeLabel(currentReviewCategory),
   ];
   if (currentReviewMode === "multiple") parts.push("Choix multiple");
@@ -3384,10 +3785,8 @@ function reviewSessionLabelText() {
 function exitReviewSession() {
   reviewQueue = [];
   currentCard = null;
-  failedOnceInSession = new Set();
   reviewSessionStats = null;
   isGrading = false;
-  setGradeButtonsDisabled(false);
   setReviewSessionActive(false);
   leaveReviewSession();
 }
@@ -3415,8 +3814,8 @@ function showReviewEmpty(message, canStartFreePractice = false) {
 }
 
 function showSessionSummary() {
-  const stats = reviewSessionStats || { seen: 0, correct: 0, wrong: 0, failedCards: [] };
-  const successRate = stats.seen ? Math.round((stats.correct / stats.seen) * 100) : 0;
+  const stats = reviewSessionStats || { seen: 0, markedDifficultIds: [] };
+  const markedCount = new Set(stats.markedDifficultIds || []).size;
   setReviewSessionActive(false);
   $("review-hub").classList.add("hidden");
   $("review-area").classList.add("hidden");
@@ -3427,50 +3826,16 @@ function showSessionSummary() {
   $("session-summary").innerHTML =
     '<div class="session-summary-grid">' +
       '<div><span>Cartes vues</span><strong>' + stats.seen + "</strong></div>" +
-      '<div><span>Bonnes réponses</span><strong>' + stats.correct + "</strong></div>" +
-      '<div><span>Erreurs</span><strong>' + stats.wrong + "</strong></div>" +
-      '<div><span>Réussite</span><strong>' + successRate + "%</strong></div>" +
+      '<div><span>Marquées difficiles</span><strong>' + markedCount + "</strong></div>" +
     "</div>" +
-    (stats.failedCards.length
-      ? '<div class="session-failed-list"><strong>Cartes ratées</strong><ul>' +
-        stats.failedCards.map((card) => '<li>' + escapeHTML(fullWord(card)) + "</li>").join("") +
-        "</ul></div>"
-      : '<p class="muted">Aucune carte ratée dans cette séance.</p>');
+    '<p class="muted">Aucune progression automatique n’a été modifiée.</p>';
   $("session-summary").insertAdjacentHTML("beforeend", '<button class="btn btn-primary" type="button" data-review-hub-return>Retour</button>');
 }
 
-function buildReviewQueue(cards) {
-  const today = todayISO();
-  const groups = {};
-  const newCards = [];
-
-  cards.forEach((card) => {
-    if (card.srs.nextReview > today) return;
-
-    if (isNewCard(card)) {
-      newCards.push(card);
-      return;
-    }
-
-    const date = card.srs.nextReview;
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(card);
-  });
-
-  shuffleArray(newCards);
-  newCards.slice(0, getMaxNewCardsPerDay()).forEach((card) => {
-      const date = card.srs.nextReview;
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(card);
-  });
-
-  return Object.keys(groups)
-    .sort()
-    .flatMap((date) => {
-      const group = groups[date];
-      shuffleArray(group);
-      return group;
-    });
+function buildReviewQueue(cards, options = {}) {
+  const due = difficultCards(cards, { onlyDue: true });
+  if (due.length > 0 || !options.fallbackAllActive) return due;
+  return difficultCards(cards);
 }
 
 function buildFreePracticeQueue(cards) {
@@ -3479,15 +3844,8 @@ function buildFreePracticeQueue(cards) {
   return queue;
 }
 
-function setGradeButtonsDisabled(disabled) {
-  document.querySelectorAll(".grade-buttons button").forEach((btn) => {
-    btn.disabled = disabled;
-  });
-}
-
 async function showNextReviewCard() {
   if (reviewQueue.length === 0) {
-    setGradeButtonsDisabled(false);
     showSessionSummary();
     return;
   }
@@ -3519,8 +3877,8 @@ async function showNextReviewCard() {
   $("written-article").disabled = false;
   $("written-word").disabled = false;
   $("btn-free-next").classList.add("hidden");
-  document.querySelector(".grade-question").classList.remove("hidden");
-  document.querySelector(".grade-buttons").classList.remove("hidden");
+  $("manual-review-actions").classList.add("hidden");
+  syncAnswerDifficultButton(currentCard);
 
   if (currentReviewMode === "multiple") {
     $("btn-show-answer").classList.add("hidden");
@@ -3533,7 +3891,6 @@ async function showNextReviewCard() {
   } else {
     $("btn-show-answer").classList.remove("hidden");
   }
-  setGradeButtonsDisabled(false);
 }
 
 function renderMultipleChoice() {
@@ -3646,6 +4003,15 @@ function showAnswer() {
   }
 
   // Phrase d'exemple : affichée seulement si elle existe
+  const levelEl = $("answer-level");
+  const level = cardLevel(card);
+  if (level) {
+    levelEl.textContent = level;
+    levelEl.classList.remove("hidden");
+  } else {
+    levelEl.classList.add("hidden");
+  }
+
   const exampleBlock = $("answer-example-block");
   if (card.exampleDe) {
     exampleBlock.classList.remove("hidden");
@@ -3658,37 +4024,10 @@ function showAnswer() {
   $("review-answer").classList.remove("hidden");
   $("btn-show-answer").classList.add("hidden");
   const freeMode = reviewSessionType === "free";
-  document.querySelector(".grade-question").classList.toggle("hidden", freeMode);
-  document.querySelector(".grade-buttons").classList.toggle("hidden", freeMode);
+  const difficultMode = reviewSessionType === "due";
+  $("manual-review-actions").classList.toggle("hidden", !difficultMode);
   $("btn-free-next").classList.toggle("hidden", !freeMode);
-}
-
-// Met à jour les données SRS de la carte selon la réponse de l'utilisateur
-function applyGrade(card, grade) {
-  const today = todayISO();
-  card.srs = normalizeSrs(card.srs);
-
-  if (grade === "fail") {
-    // Raté : retour en box 1, à revoir aujourd'hui.
-    card.srs.wrongCount++;
-    card.srs.box = 1;
-    card.srs.nextReview = today;
-  } else if (grade === "hard") {
-    // Difficile : on baisse d'une box si possible, puis demain.
-    card.srs.wrongCount++;
-    card.srs.box = Math.max(1, card.srs.box - 1);
-    card.srs.nextReview = addDays(today, 1);
-  } else if (grade === "good") {
-    // Bien : on monte d'une box et on applique l'intervalle de cette box.
-    card.srs.correctCount++;
-    card.srs.box++;
-    card.srs.nextReview = addDays(today, srsIntervalDays(card.srs.box));
-  } else if (grade === "easy") {
-    // Facile : on monte de deux box et on applique l'intervalle de cette box.
-    card.srs.correctCount++;
-    card.srs.box += 2;
-    card.srs.nextReview = addDays(today, srsIntervalDays(card.srs.box));
-  }
+  syncAnswerDifficultButton(card);
 }
 
 async function saveReviewLogSafely(card, grade) {
@@ -3702,58 +4041,31 @@ async function saveReviewLogSafely(card, grade) {
   }
 }
 
-function updateSessionStats(card, grade) {
+function updateSessionStats() {
   if (!reviewSessionStats) return;
-  const correct = isPassingGrade(grade);
   reviewSessionStats.seen++;
-  if (correct) {
-    reviewSessionStats.correct++;
-  } else {
-    reviewSessionStats.wrong++;
-    if (!reviewSessionStats.failedCardIds.includes(card.id)) {
-      reviewSessionStats.failedCardIds.push(card.id);
-      reviewSessionStats.failedCards.push(card);
-    }
-  }
 }
 
 async function handleGrade(grade) {
   if (isGrading || !currentCard) return;
+  if (reviewSessionType === "due") return;
 
   isGrading = true;
-  setGradeButtonsDisabled(true);
   const card = currentCard;
-  const originalCard = { ...card, srs: { ...card.srs } };
+  const originalCard = card;
   currentCard = null;
 
   try {
     await saveReviewLogSafely(card, grade);
-    updateSessionStats(card, grade);
-
-    if (reviewSessionType === "free") {
-      await showNextReviewCard();
-      refreshDashboard();
-      return;
-    }
-
-    applyGrade(card, grade);
-    await updateCard(card);
-
-    // Une carte ratée ne revient qu'une seule fois maximum dans la même séance.
-    if (grade === "fail" && !failedOnceInSession.has(card.id)) {
-      failedOnceInSession.add(card.id);
-      reviewQueue.push(card);
-    }
-
+    updateSessionStats();
     await showNextReviewCard();
     refreshDashboard();
   } catch (error) {
-    console.error("Erreur pendant l'enregistrement SRS :", error);
+    console.error("Erreur pendant l'enregistrement de la révision :", error);
     currentCard = originalCard;
     toast("Impossible d'enregistrer la réponse. Réessaie.");
   } finally {
     isGrading = false;
-    setGradeButtonsDisabled(false);
   }
 }
 
@@ -3768,26 +4080,18 @@ function setupReviewPage() {
       renderReviewHub();
     });
   });
-  $("hub-max-new").addEventListener("change", () => {
-    const raw = $("hub-max-new").value;
-    setMaxNewCardsPerDay(raw === "unlimited" ? Infinity : Number(raw));
-    renderReviewHub();
-  });
-  $("btn-hub-start").addEventListener("click", () => {
-    if (currentReviewMode === "learning") {
-      currentLearningScope = normalizeScope(currentReviewCategory);
-      pendingLearningCategory = currentLearningScope;
-      showPage("apprentissage");
-      return;
-    }
-    reviewSessionType = "due";
-    $("review-hub").classList.add("hidden");
-    startReviewSession();
+  $("btn-review-page-hard").addEventListener("click", startDifficultDashboardReview);
+  $("review-difficult-list").addEventListener("click", (event) => {
+    const rescheduleBtn = event.target.closest("[data-difficult-manage-reschedule]");
+    if (rescheduleBtn) openDifficultModal(rescheduleBtn.dataset.difficultManageReschedule);
+    const removeBtn = event.target.closest("[data-difficult-manage-remove]");
+    if (removeBtn) removeDifficult(removeBtn.dataset.difficultManageRemove);
   });
   $("btn-hub-free").addEventListener("click", () => {
-    reviewSessionType = "free";
+    if ($("btn-hub-free").disabled) return;
     currentReviewMode = currentReviewMode === "learning" ? "classic" : currentReviewMode;
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+    reviewSessionType = "free";
     $("review-hub").classList.add("hidden");
     startReviewSession();
   });
@@ -3812,6 +4116,29 @@ function setupReviewPage() {
     startReviewSession();
   });
   $("btn-free-next").addEventListener("click", () => handleGrade("good"));
+  $("manual-review-actions").addEventListener("click", async (event) => {
+    if (!currentCard || isGrading) return;
+    const removeBtn = event.target.closest("[data-difficult-session-remove]");
+    if (removeBtn) {
+      isGrading = true;
+      try {
+        const removed = await removeDifficult(currentCard.id);
+        if (removed) await advanceManualReview();
+      } finally {
+        isGrading = false;
+      }
+      return;
+    }
+    const delayBtn = event.target.closest("[data-difficult-session-delay]");
+    if (delayBtn) {
+      isGrading = true;
+      try {
+        await handleDifficultDelay(currentCard.id, delayBtn.dataset.difficultSessionDelay, { nextCard: true });
+      } finally {
+        isGrading = false;
+      }
+    }
+  });
 
   // Lire le mot avec son article : "der Hund"
   $("btn-answer-speak-word").addEventListener("click", () => {
@@ -3821,11 +4148,6 @@ function setupReviewPage() {
   // Lire la phrase d'exemple : "Der Hund ist klein."
   $("btn-speak-sentence").addEventListener("click", () => {
     if (currentCard && currentCard.exampleDe) speakGerman(currentCard.exampleDe);
-  });
-
-  // Les 4 boutons Raté / Difficile / Bien / Facile
-  document.querySelectorAll("[data-grade]").forEach((btn) => {
-    btn.addEventListener("click", () => handleGrade(btn.dataset.grade));
   });
 
   document.addEventListener("keydown", onReviewShortcut);
@@ -3850,22 +4172,45 @@ function onReviewShortcut(event) {
   }
 
   if (answerHidden) return;
-
-  const grades = {
-    Digit1: "fail",
-    Numpad1: "fail",
-    Digit2: "hard",
-    Numpad2: "hard",
-    Digit3: "good",
-    Numpad3: "good",
-    Digit4: "easy",
-    Numpad4: "easy",
-  };
-
-  const grade = grades[event.code];
-  if (grade) {
+  if (reviewSessionType === "free" && (event.code === "Space" || event.code === "Enter")) {
     event.preventDefault();
-    handleGrade(grade);
+    handleGrade("good");
+    return;
+  }
+  if (reviewSessionType === "free") return;
+  if (reviewSessionType === "due") {
+    const manualActions = {
+      Digit1: "remove",
+      Numpad1: "remove",
+      Digit2: "10m",
+      Numpad2: "10m",
+      Digit3: "1h",
+      Numpad3: "1h",
+      Digit4: "evening",
+      Numpad4: "evening",
+      Digit5: "tomorrow",
+      Numpad5: "tomorrow",
+      Digit6: "3d",
+      Numpad6: "3d",
+      Digit7: "1w",
+      Numpad7: "1w",
+    };
+    const action = manualActions[event.code];
+    if (!action) return;
+    event.preventDefault();
+    isGrading = true;
+    (async () => {
+      try {
+        if (action === "remove") {
+          const removed = await removeDifficult(currentCard.id);
+          if (removed) await advanceManualReview();
+        } else {
+          await handleDifficultDelay(currentCard.id, action, { nextCard: true });
+        }
+      } finally {
+        isGrading = false;
+      }
+    })();
   }
 }
 
@@ -3940,7 +4285,14 @@ function setupAddForm() {
   });
 
   $("btn-cancel-edit").addEventListener("click", resetCardForm);
-  $("f-category").addEventListener("input", debounce(refreshSubcategorySuggestions, 150));
+  $("f-de").addEventListener("input", syncVerbSubcategoryPrefill);
+  $("f-category").addEventListener("input", debounce(() => {
+    refreshSubcategorySuggestions();
+    syncVerbSubcategoryPrefill();
+  }, 150));
+  $("f-subcategory").addEventListener("input", () => {
+    if ($("f-subcategory").value !== verbSubcategoryAutofillValue) verbSubcategoryAutofillValue = "";
+  });
   $("btn-no-normal-plural").addEventListener("click", () => {
     $("f-plural").value = "kein Plural";
     $("f-plural").focus();
@@ -3957,6 +4309,7 @@ function setupAddForm() {
       fr: $("f-fr").value.trim(),
       exampleDe: $("f-example-de").value.trim(),
       exampleFr: $("f-example-fr").value.trim(),
+      level: $("f-level").value,
       category: $("f-category").value.trim() || "Général",
       subcategory: $("f-subcategory").value.trim(),
       imageQuery: $("f-image-query").value.trim(),
@@ -4030,6 +4383,7 @@ function resetCardForm() {
   editingCard = null;
   imageMarkedForRemoval = false;
   pendingImageBlob = null;
+  verbSubcategoryAutofillValue = "";
 
   $("form-title").textContent = "Ajouter une carte";
   $("form-help").innerHTML = "En allemand, on n'apprend jamais un nom seul&nbsp;: toujours <strong>l'article + le mot + le pluriel</strong>.";
@@ -4054,6 +4408,27 @@ function applyPendingFormCategory() {
     $("f-subcategory").value = pendingFormSubcategory;
     pendingFormSubcategory = null;
   }
+  syncVerbSubcategoryPrefill();
+}
+
+function syncVerbSubcategoryPrefill() {
+  if (editingCard) return;
+  const category = $("f-category").value.trim();
+  const subcategoryInput = $("f-subcategory");
+  if (category.toLowerCase() !== VERB_CATEGORY_NAME.toLowerCase()) {
+    if (verbSubcategoryAutofillValue && subcategoryInput.value === verbSubcategoryAutofillValue) {
+      subcategoryInput.value = "";
+    }
+    verbSubcategoryAutofillValue = "";
+    return;
+  }
+
+  const suggestion = classifyVerb($("f-de").value);
+  if (!suggestion) return;
+  if (!subcategoryInput.value || subcategoryInput.value === verbSubcategoryAutofillValue) {
+    subcategoryInput.value = suggestion;
+    verbSubcategoryAutofillValue = suggestion;
+  }
 }
 
 async function startEditCard(cardId) {
@@ -4066,6 +4441,7 @@ async function startEditCard(cardId) {
   editingCard = card;
   pendingFormCategory = null;
   pendingFormSubcategory = null;
+  verbSubcategoryAutofillValue = "";
   imageMarkedForRemoval = false;
   pendingImageBlob = null;
   imageInputVersion++;
@@ -4080,6 +4456,7 @@ async function startEditCard(cardId) {
   $("f-fr").value = card.fr || "";
   $("f-example-de").value = card.exampleDe || "";
   $("f-example-fr").value = card.exampleFr || "";
+  $("f-level").value = cardLevel(card);
   $("f-category").value = card.category || "";
   $("f-subcategory").value = card.subcategory || "";
   $("f-image-query").value = card.imageQuery || "";
@@ -4140,6 +4517,7 @@ async function renderLibrary() {
 
   updateCategoryFilter(allCards);
   updateLibrarySubcategoryFilter(allCards);
+  fillLevelSelect($("filter-level"), $("filter-level").value);
   updateLibraryStats(allCards);
   updateLibraryControls();
 
@@ -4147,20 +4525,21 @@ async function renderLibrary() {
   const query = $("search-input").value.trim().toLowerCase();
   const category = $("filter-category").value;
   const subcategory = $("filter-subcategory").value;
+  const level = $("filter-level").value;
   const sortMode = $("library-sort").value;
-  const today = todayISO();
 
   const visibleCards = allCards
     .filter((card) => {
       const matchesCategory = !category || cardDeckName(card) === category;
       const matchesSubcategory = !subcategory || (subcategory === "__none__" ? !card.subcategory : card.subcategory === subcategory);
-      const srs = normalizeSrs(card.srs);
+      const matchesLevel = matchesLevelFilter(card, level);
       const matchesFavorites = !libraryOnlyFavorites || card.favorite === true;
       const matchesNoImage = !libraryOnlyNoImage || !card.imageId;
-      const matchesDue = !libraryOnlyDue || srs.nextReview <= today;
+      const matchesDue = !libraryOnlyDue || isDifficultDue(card);
       return matchesCardQuery(card, query) &&
         matchesCategory &&
         matchesSubcategory &&
+        matchesLevel &&
         matchesFavorites &&
         matchesNoImage &&
         matchesDue;
@@ -4265,14 +4644,13 @@ async function renderFavoritesPage() {
   const favorites = cards
     .filter((card) => card.favorite === true)
     .sort((a, b) => String(b.updatedAt || b.createdAt || b.id || "").localeCompare(String(a.updatedAt || a.createdAt || a.id || "")));
-  const today = todayISO();
   const hero = document.querySelector("#page-favoris .favorites-hero");
   const empty = $("favorites-empty");
   const container = $("favorites-grid");
   const view = getLibraryView();
 
   $("fav-total").textContent = favorites.length;
-  $("fav-due").textContent = favorites.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  $("fav-due").textContent = difficultStats(favorites).dueCount;
   $("fav-mastered").textContent = favorites.filter(isMastered).length;
   if (hero) hero.classList.toggle("hidden", favorites.length === 0);
   empty.classList.toggle("hidden", favorites.length > 0);
@@ -4364,10 +4742,9 @@ function updateLibraryBulkBar() {
 }
 
 function updateLibraryStats(cards) {
-  const today = todayISO();
   $("library-stat-total").textContent = cards.length;
   $("library-stat-mastered").textContent = cards.filter(isMastered).length;
-  $("library-stat-due").textContent = cards.filter((card) => normalizeSrs(card.srs).nextReview <= today).length;
+  $("library-stat-due").textContent = difficultStats(cards).dueCount;
   $("library-stat-favorites").textContent = cards.filter((card) => card.favorite === true).length;
 }
 
@@ -4385,11 +4762,12 @@ function sortLibraryCards(a, b, sortMode) {
     return fullWord(a).localeCompare(fullWord(b), "de");
   }
   if (sortMode === "hard") {
-    const wrongDiff = normalizeSrs(b.srs).wrongCount - normalizeSrs(a.srs).wrongCount;
-    return wrongDiff || fullWord(a).localeCompare(fullWord(b), "de");
+    const activeDiff = Number(isDifficultActive(b)) - Number(isDifficultActive(a));
+    const dueDiff = String(cardDifficult(a).dueAt || "9999").localeCompare(String(cardDifficult(b).dueAt || "9999"));
+    return activeDiff || dueDiff || fullWord(a).localeCompare(fullWord(b), "de");
   }
   if (sortMode === "due") {
-    const dueDiff = normalizeSrs(a.srs).nextReview.localeCompare(normalizeSrs(b.srs).nextReview);
+    const dueDiff = String(cardDifficult(a).dueAt || "9999").localeCompare(String(cardDifficult(b).dueAt || "9999"));
     return dueDiff || fullWord(a).localeCompare(fullWord(b), "de");
   }
   const aDate = a.createdAt || a.id || "";
@@ -4398,11 +4776,15 @@ function sortLibraryCards(a, b, sortMode) {
 }
 
 function cardStatusMeta(card) {
-  const srs = normalizeSrs(card.srs);
-  if (isNewCard(card)) return { label: "Nouvelle", className: "status-new" };
-  if (srs.nextReview <= todayISO()) return { label: "À réviser", className: "status-due" };
+  const difficult = cardDifficult(card);
+  if (difficult.active) {
+    return {
+      label: isDifficultDue(card) ? "Difficile due" : formatDifficultDue(difficult.dueAt),
+      className: isDifficultDue(card) ? "status-due" : "status-hard",
+    };
+  }
   if (isMastered(card)) return { label: "Acquise", className: "status-mastered" };
-  return { label: "En cours", className: "status-learning" };
+  return { label: "Libre", className: "status-learning" };
 }
 
 function cardStatusHTML(card) {
@@ -4436,6 +4818,11 @@ function iconButtonHTML(iconId, options = {}) {
 function cardActionsHTML(card, options = {}) {
   return '<div class="card-actions">' +
     iconButtonHTML("icon-volume", { label: "Écouter", data: { speak: fullWord(card) } }) +
+    iconButtonHTML("icon-flame", {
+      label: "Carte difficile",
+      className: "btn-difficult " + (isDifficultActive(card) ? "active" : ""),
+      data: { difficult: card.id },
+    }) +
     iconButtonHTML("icon-heart", {
       label: "Favori",
       className: "btn-favorite " + (card.favorite ? "active" : ""),
@@ -4475,6 +4862,7 @@ function libraryMetaHTML(card) {
   return (
     '<div class="library-card-meta">' +
       '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
+      levelBadgeHTML(card) +
       (card.subcategory ? subcategoryChipHTML(card, true) : "") +
       cardStatusHTML(card) +
     "</div>"
@@ -4535,6 +4923,7 @@ function libraryRowHTML(card, imageUrl) {
         '<div class="library-row-fr">' + escapeHTML(card.fr) + "</div>" +
         '<div class="library-row-meta">' +
           '<span>' + escapeHTML(cardDeckName(card)) + "</span>" +
+          levelBadgeHTML(card) +
           (card.subcategory ? '<span>' + escapeHTML(card.subcategory) + "</span>" : "") +
           pluralLine +
         "</div>" +
@@ -4638,41 +5027,249 @@ function openCurrentMissingImageSearch() {
 }
 
 async function toggleFavorite(cardId) {
-  const card = await getCard(cardId);
-  if (!card) return;
+  try {
+    const card = await getCard(cardId);
+    if (!card) return;
 
-  card.favorite = !card.favorite;
-  card.updatedAt = todayISO();
-  await saveCard(card);
+    card.favorite = !card.favorite;
+    card.updatedAt = todayISO();
+    await saveCard(card);
+    renderLibraryIfVisible();
+    renderFavoritesPageIfVisible();
+    renderLearningIfVisible();
+    renderDeckDetailIfVisible();
+    renderMissingImagesIfVisible();
+    refreshDashboard();
+    if ($("page-revision").classList.contains("active") && !isSessionRunning()) renderReviewHub();
+  } catch (error) {
+    console.error("Échec de modification du favori :", error);
+    toast("Impossible de modifier le favori.");
+  }
+}
+
+function syncAnswerDifficultButton(card) {
+  const btn = $("btn-answer-difficult");
+  if (!btn || !card) return;
+  btn.classList.toggle("active", isDifficultActive(card));
+  btn.dataset.difficult = card.id;
+}
+
+async function refreshAfterDifficultChange() {
+  refreshDashboard();
   renderLibraryIfVisible();
   renderFavoritesPageIfVisible();
-  renderLearningIfVisible();
   renderDeckDetailIfVisible();
   renderMissingImagesIfVisible();
-  refreshDashboard();
-  if ($("page-revision").classList.contains("active") && !isSessionRunning()) renderReviewHub();
+  renderLearningIfVisible();
+  renderReviewHubIfVisible();
+  if (currentCard) syncAnswerDifficultButton(currentCard);
+  if (!$("difficult-modal").classList.contains("hidden") && difficultManageCards.length) {
+    await renderDifficultManageList();
+  }
+}
+
+async function openDifficultModal(cardId) {
+  try {
+    const card = await getCard(cardId);
+    if (!card) return;
+    pendingDifficultCardId = card.id;
+    difficultManageCards = [];
+    const active = isDifficultActive(card);
+    $("difficult-modal-title").textContent = active ? "Reprogrammer cette carte" : "Revoir cette carte dans :";
+    $("difficult-modal-card").textContent = fullWord(card) + " · " + (card.fr || cardDeckName(card));
+    $("difficult-schedule-grid").classList.remove("hidden");
+    $("difficult-custom-row").classList.remove("hidden");
+    $("difficult-custom-datetime").value = localDateTimeValue(dateFromDelayKey("1h"));
+    $("difficult-manage-list").classList.add("hidden");
+    $("btn-difficult-remove").classList.toggle("hidden", !active);
+    $("difficult-modal").classList.remove("hidden");
+  } catch (error) {
+    console.error("Échec d'ouverture de la programmation difficile :", error);
+    toast("Impossible d'ouvrir cette carte difficile.");
+  }
+}
+
+function closeDifficultModal() {
+  $("difficult-modal").classList.add("hidden");
+  pendingDifficultCardId = null;
+  difficultManageCards = [];
+}
+
+async function saveDifficultSchedule(cardId, dueAt) {
+  try {
+    const card = await getCard(cardId);
+    if (!card || !isValidDateTime(dueAt)) return;
+    const wasActive = isDifficultActive(card);
+    setCardDifficult(card, dueAt);
+    await updateCard(card);
+    if (!wasActive && reviewSessionStats && !reviewSessionStats.markedDifficultIds.includes(card.id)) {
+      reviewSessionStats.markedDifficultIds.push(card.id);
+    }
+    if (currentCard && currentCard.id === card.id) currentCard = card;
+    toast("Carte difficile programmée : " + formatDifficultDue(card.difficult.dueAt) + ".");
+    await refreshAfterDifficultChange();
+    return true;
+  } catch (error) {
+    console.error("Échec de programmation difficile :", error);
+    toast("Impossible de programmer cette carte.");
+    return false;
+  }
+}
+
+async function removeDifficult(cardId) {
+  try {
+    const card = await getCard(cardId);
+    if (!card) return;
+    clearCardDifficult(card);
+    await updateCard(card);
+    if (currentCard && currentCard.id === card.id) currentCard = card;
+    toast("Carte retirée des difficiles.");
+    await refreshAfterDifficultChange();
+    return true;
+  } catch (error) {
+    console.error("Échec de retrait difficile :", error);
+    toast("Impossible de retirer cette carte des difficiles.");
+    return false;
+  }
+}
+
+async function handleDifficultDelay(cardId, delayKey, options = {}) {
+  const due = dateFromDelayKey(delayKey);
+  if (!due) return;
+  const saved = await saveDifficultSchedule(cardId, due.toISOString());
+  if (!saved) return;
+  if (options.nextCard) {
+    await advanceManualReview();
+  } else if (!difficultManageCards.length) {
+    closeDifficultModal();
+  }
+}
+
+async function saveDifficultCustomDate() {
+  if (!pendingDifficultCardId) return;
+  const raw = $("difficult-custom-datetime").value;
+  if (!raw) {
+    toast("Choisis une date et une heure.");
+    return;
+  }
+  const due = new Date(raw);
+  if (Number.isNaN(due.getTime())) {
+    toast("Date invalide.");
+    return;
+  }
+  const saved = await saveDifficultSchedule(pendingDifficultCardId, due.toISOString());
+  if (!saved) return;
+  closeDifficultModal();
+}
+
+async function openDifficultManager() {
+  try {
+    const cards = await getAllCards();
+    difficultManageCards = difficultCards(cards);
+    pendingDifficultCardId = null;
+    $("difficult-modal-title").textContent = "Cartes difficiles";
+    $("difficult-modal-card").textContent = difficultManageCards.length
+      ? difficultManageCards.length + " carte" + (difficultManageCards.length > 1 ? "s" : "") + " active" + (difficultManageCards.length > 1 ? "s" : "")
+      : "Aucune carte difficile active.";
+    $("difficult-schedule-grid").classList.add("hidden");
+    $("difficult-custom-row").classList.add("hidden");
+    $("btn-difficult-remove").classList.add("hidden");
+    $("difficult-custom-datetime").value = "";
+    $("difficult-manage-list").classList.remove("hidden");
+    $("difficult-modal").classList.remove("hidden");
+    await renderDifficultManageList();
+  } catch (error) {
+    console.error("Échec d'ouverture des cartes difficiles :", error);
+    toast("Impossible d'ouvrir les cartes difficiles.");
+  }
+}
+
+async function renderDifficultManageList() {
+  try {
+    const cards = difficultCards(await getAllCards());
+    difficultManageCards = cards;
+    $("difficult-manage-list").innerHTML = difficultManageRowsHTML(cards);
+  } catch (error) {
+    console.error("Échec d'affichage des cartes difficiles :", error);
+    $("difficult-manage-list").innerHTML = '<p class="muted">Impossible de charger les cartes difficiles.</p>';
+    toast("Impossible de charger les cartes difficiles.");
+  }
+}
+
+function difficultManageRowsHTML(cards) {
+  return cards.length
+    ? cards.map((card) => {
+      const difficult = cardDifficult(card);
+      return '<div class="difficult-manage-row">' +
+        '<div><strong>' + escapeHTML(fullWord(card)) + '</strong><span>' + escapeHTML(card.fr || cardDeckName(card)) + ' · ' + escapeHTML(formatDifficultDue(difficult.dueAt)) + '</span></div>' +
+        '<div class="difficult-manage-actions">' +
+          '<button class="btn btn-ghost btn-small" type="button" data-difficult-manage-reschedule="' + escapeHTML(card.id) + '">Reprogrammer</button>' +
+          '<button class="btn btn-danger-action btn-small" type="button" data-difficult-manage-remove="' + escapeHTML(card.id) + '">Retirer</button>' +
+        '</div>' +
+      '</div>';
+    }).join("")
+    : '<p class="muted">Aucune carte difficile active.</p>';
+}
+
+async function startDifficultDashboardReview() {
+  try {
+    const cards = await getAllCards();
+    const stats = difficultStats(cards);
+    if (stats.activeCount === 0) {
+      toast("Aucune carte difficile active.");
+      return;
+    }
+    currentReviewCategory = null;
+    reviewSessionType = "due";
+    currentReviewMode = "classic";
+    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+    difficultReviewFallbackAllOnce = stats.dueCount === 0;
+    skipHubOnce = true;
+    reviewReturnPage = "dashboard";
+    showPage("revision");
+  } catch (error) {
+    console.error("Échec de lancement des difficiles :", error);
+    toast("Impossible de lancer la révision des difficiles.");
+  }
+}
+
+async function advanceManualReview(card = currentCard) {
+  try {
+    if (reviewSessionStats && card) reviewSessionStats.seen++;
+    currentCard = null;
+    await showNextReviewCard();
+    await refreshAfterDifficultChange();
+  } catch (error) {
+    console.error("Échec d'avancement de la révision :", error);
+    toast("Impossible de charger la carte suivante.");
+  }
 }
 
 async function handleDelete(cardId) {
-  const card = await getCard(cardId);
-  if (!card) return;
+  try {
+    const card = await getCard(cardId);
+    if (!card) return;
 
-  const confirmed = confirm('Supprimer la carte « ' + fullWord(card) + ' » ?');
-  if (!confirmed) return;
+    const confirmed = confirm('Supprimer la carte « ' + fullWord(card) + ' » ?');
+    if (!confirmed) return;
 
-  await deleteCard(card.id);
+    await deleteCard(card.id);
 
-  await deleteImageIfUnused(card.imageId);
+    await deleteImageIfUnused(card.imageId);
 
-  toast("Carte supprimée.");
-  renderLibrary();
-  renderFavoritesPageIfVisible();
-  refreshDashboard();
-  refreshCategorySuggestions();
-  refreshSubcategorySuggestions();
-  renderLearningIfVisible();
-  renderDeckDetailIfVisible();
-  renderMissingImagesIfVisible();
+    toast("Carte supprimée.");
+    renderLibrary();
+    renderFavoritesPageIfVisible();
+    refreshDashboard();
+    refreshCategorySuggestions();
+    refreshSubcategorySuggestions();
+    renderLearningIfVisible();
+    renderDeckDetailIfVisible();
+    renderMissingImagesIfVisible();
+  } catch (error) {
+    console.error("Échec de suppression de carte :", error);
+    toast("Impossible de supprimer cette carte.");
+  }
 }
 
 // Remplit le filtre des catégories sans perdre la sélection en cours
@@ -4718,11 +5315,26 @@ function fillSubcategorySelect(select, cards, currentValue, category = "") {
   select.value = subcategories.includes(currentValue) || (currentValue === "__none__" && hasEmpty) ? currentValue : "";
 }
 
+function fillLevelSelect(select, currentValue) {
+  select.innerHTML =
+    '<option value="">Tous les niveaux</option>' +
+    '<option value="__none__">Sans niveau</option>' +
+    CEFR_LEVELS.map((level) => '<option value="' + level + '">' + level + "</option>").join("");
+  select.value = currentValue === "__none__" || CEFR_LEVELS.includes(currentValue) ? currentValue : "";
+}
+
+function matchesLevelFilter(card, level) {
+  if (!level) return true;
+  const currentLevel = cardLevel(card);
+  return level === "__none__" ? !currentLevel : currentLevel === level;
+}
+
 function setupLibraryPage() {
   const debouncedRenderLibrary = debounce(renderLibrary, 150);
   $("search-input").addEventListener("input", debouncedRenderLibrary);
   $("filter-category").addEventListener("change", renderLibrary);
   $("filter-subcategory").addEventListener("change", renderLibrary);
+  $("filter-level").addEventListener("change", renderLibrary);
   $("library-sort").addEventListener("change", renderLibrary);
   $("library-filter-favorites").addEventListener("click", () => {
     libraryOnlyFavorites = !libraryOnlyFavorites;
@@ -4916,11 +5528,1072 @@ function setupLearningPage() {
    11. GRAMMAIRE
    ========================================================= */
 
-const GRAMMAR_TABS = ["cases", "my-verbs", "irregular"];
+function grammarHTMLCell(html) {
+  return { html: html };
+}
+
+const GRAMMAR_CASES_CONTENT = [
+  {
+    id: "overview",
+    title: "Les 4 cas : à quoi ils servent",
+    intro: [
+      "Les cas indiquent le rôle d'un groupe nominal dans la phrase : sujet, complément direct, complément indirect ou possession.",
+    ],
+    tables: [
+      {
+        headers: ["Cas", "Fonction principale", "Question"],
+        rows: [
+          ["Nominatif", "sujet de la phrase", "qui fait l'action ?"],
+          ["Accusatif", "complément direct, COD", "qui ? quoi ?"],
+          ["Datif", "complément indirect, COI", "à qui ?"],
+          ["Génitif", "possession", "de qui ?"],
+        ],
+      },
+    ],
+    examples: [
+      {
+        de: "Der Mann gibt dem Kind den Schlüssel des Hauses.",
+        fr: "",
+        notes: [
+          "der Mann : nominatif, sujet",
+          "dem Kind : datif, à l'enfant",
+          "den Schlüssel : accusatif, la clé",
+          "des Hauses : génitif, de la maison",
+        ],
+      },
+    ],
+  },
+  {
+    id: "defined-articles",
+    title: "Les articles définis",
+    intro: [
+      "Voici le tableau complet de der, die, das et du pluriel aux quatre cas.",
+    ],
+    tables: [
+      {
+        headers: ["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"],
+        articleCells: true,
+        rows: [
+          ["Nominatif", "der", "die", "das", "die"],
+          ["Accusatif", "den", "die", "das", "die"],
+          ["Datif", "dem", "der", "dem", "den"],
+          ["Génitif", "des", "der", "des", "der"],
+        ],
+      },
+      {
+        headers: ["Genre", "Nominatif", "Accusatif", "Datif", "Génitif"],
+        rows: [
+          ["Masculin", "der Mann", grammarHTMLCell("<strong>den</strong> Mann"), grammarHTMLCell("<strong>dem</strong> Mann"), grammarHTMLCell("<strong>des</strong> Mann<strong>es</strong>")],
+          ["Féminin", "die Frau", "die Frau", grammarHTMLCell("<strong>der</strong> Frau"), grammarHTMLCell("<strong>der</strong> Frau")],
+          ["Neutre", "das Kind", "das Kind", grammarHTMLCell("<strong>dem</strong> Kind"), grammarHTMLCell("<strong>des</strong> Kind<strong>es</strong>")],
+          ["Pluriel", "die Kinder", "die Kinder", grammarHTMLCell("<strong>den</strong> Kinder<strong>n</strong>"), grammarHTMLCell("<strong>der</strong> Kinder")],
+        ],
+      },
+    ],
+    notes: [
+      "Le masculin est celui qui change le plus : der Mann, den Mann, dem Mann, des Mannes.",
+      "Le féminin garde die à l'accusatif, puis der au datif et au génitif.",
+      "Le neutre garde das au nominatif et à l'accusatif, puis prend dem et des.",
+      "Le pluriel prend den au datif et der au génitif.",
+    ],
+  },
+  {
+    id: "nominative",
+    title: "Le nominatif",
+    intro: [
+      "Le nominatif désigne généralement le sujet.",
+    ],
+    examples: [
+      { de: "Der große Hund ist schwarz.", fr: "Le grand chien est noir." },
+      { de: "Die alte Frau ist nett.", fr: "La vieille femme est gentille." },
+      { de: "Das neue Handy ist teuer.", fr: "Le nouveau téléphone est cher." },
+      { de: "Die großen Häuser sind modern.", fr: "Les grandes maisons sont modernes." },
+    ],
+    tables: [
+      {
+        title: "Adjectif après un article défini",
+        headers: ["Genre", "Forme"],
+        rows: [
+          ["Masculin", grammarHTMLCell("der groß<strong>e</strong> Hund")],
+          ["Féminin", grammarHTMLCell("die alt<strong>e</strong> Frau")],
+          ["Neutre", grammarHTMLCell("das neu<strong>e</strong> Handy")],
+          ["Pluriel", grammarHTMLCell("die groß<strong>en</strong> Häuser")],
+        ],
+      },
+      {
+        title: "Avec ein et les possessifs",
+        headers: ["Genre", "Exemple"],
+        rows: [
+          ["Masculin", grammarHTMLCell("ein groß<strong>er</strong> Hund / mein neu<strong>er</strong> Computer")],
+          ["Féminin", grammarHTMLCell("eine schön<strong>e</strong> Lampe / meine klein<strong>e</strong> Schwester")],
+          ["Neutre", grammarHTMLCell("ein klein<strong>es</strong> Haus / mein neu<strong>es</strong> Handy")],
+          ["Pluriel possessif", grammarHTMLCell("meine alt<strong>en</strong> Bücher / deine neu<strong>en</strong> Computer / ihre groß<strong>en</strong> Häuser")],
+        ],
+      },
+      {
+        title: "Sans article",
+        headers: ["Genre", "Terminaison"],
+        rows: [
+          ["Masculin", grammarHTMLCell("-<strong>er</strong>")],
+          ["Féminin", grammarHTMLCell("-<strong>e</strong>")],
+          ["Neutre", grammarHTMLCell("-<strong>es</strong>")],
+          ["Pluriel", grammarHTMLCell("-<strong>e</strong>")],
+        ],
+      },
+    ],
+    notes: [
+      "Au nominatif singulier après der/die/das, l'adjectif prend souvent -e.",
+      "Au pluriel après die, l'adjectif prend -en.",
+      "Les possessifs suivent le modèle de ein : mein, dein, sein, ihr, unser, euer, Ihr.",
+      "Comme ein ou mein ne montrent pas clairement le masculin, l'adjectif prend -er : ein großer Hund, mein neuer Computer.",
+      "Sans article, l'adjectif doit montrer le genre.",
+      "Tu connais déjà des formes comme guter Käse, frisches Brot, kaltes Wasser, rote Äpfel.",
+    ],
+    extraExamples: [
+      { de: "frischer Kaffee", fr: "du café frais" },
+      { de: "frische Milch", fr: "du lait frais" },
+      { de: "frisches Brot", fr: "du pain frais" },
+      { de: "rote Äpfel", fr: "des pommes rouges" },
+    ],
+  },
+  {
+    id: "accusative",
+    title: "L'accusatif",
+    intro: [
+      "L'accusatif désigne principalement le COD : la personne ou la chose directement concernée par l'action.",
+    ],
+    examples: [
+      { de: "Ich sehe den Hund.", fr: "Je vois le chien." },
+      { de: "Ich kaufe das Handy.", fr: "J'achète le téléphone." },
+      { de: "Ich suche die Lampe.", fr: "Je cherche la lampe." },
+      { de: "Ich sehe die Häuser.", fr: "Je vois les maisons." },
+    ],
+    tables: [
+      {
+        title: "Articles à l'accusatif",
+        headers: ["Genre", "Forme"],
+        rows: [
+          ["Masculin", grammarHTMLCell("der Hund → <strong>den</strong> Hund")],
+          ["Féminin", "die Frau → die Frau"],
+          ["Neutre", "das Haus → das Haus"],
+          ["Pluriel", "die Häuser → die Häuser"],
+        ],
+      },
+      {
+        title: "Adjectif avec article défini",
+        headers: ["Genre", "Exemple"],
+        rows: [
+          ["Masculin", grammarHTMLCell("den groß<strong>en</strong> Hund")],
+          ["Féminin", grammarHTMLCell("die alt<strong>e</strong> Frau")],
+          ["Neutre", grammarHTMLCell("das neu<strong>e</strong> Handy")],
+          ["Pluriel", grammarHTMLCell("die alt<strong>en</strong> Bücher")],
+        ],
+      },
+      {
+        title: "Avec ein et les possessifs",
+        headers: ["Genre", "Exemples"],
+        rows: [
+          ["Masculin", grammarHTMLCell("ein<strong>en</strong> groß<strong>en</strong> Hund / mein<strong>en</strong> neu<strong>en</strong> Computer / dein<strong>en</strong> klein<strong>en</strong> Koffer")],
+          ["Féminin", grammarHTMLCell("eine schön<strong>e</strong> Lampe / meine klein<strong>e</strong> Tasche")],
+          ["Neutre", grammarHTMLCell("ein alt<strong>es</strong> Buch / mein neu<strong>es</strong> Handy")],
+          ["Pluriel possessif", grammarHTMLCell("meine neu<strong>en</strong> Bücher / ihre alt<strong>en</strong> Computer")],
+        ],
+      },
+      {
+        title: "Sans article",
+        headers: ["Genre", "Terminaison"],
+        rows: [
+          ["Masculin", grammarHTMLCell("-<strong>en</strong>")],
+          ["Féminin", grammarHTMLCell("-<strong>e</strong>")],
+          ["Neutre", grammarHTMLCell("-<strong>es</strong>")],
+          ["Pluriel", grammarHTMLCell("-<strong>e</strong>")],
+        ],
+      },
+      {
+        title: "Pronoms personnels à l'accusatif",
+        headers: ["Français", "Nominatif", "Accusatif"],
+        rows: [
+          ["je / me", "ich", "mich"],
+          ["tu / te", "du", "dich"],
+          ["il / le", "er", "ihn"],
+          ["elle / la", "sie", "sie"],
+          ["neutre / le", "es", "es"],
+          ["nous", "wir", "uns"],
+          ["vous", "ihr", "euch"],
+          ["ils / elles", "sie", "sie"],
+          ["vous, politesse", "Sie", "Sie"],
+        ],
+      },
+    ],
+    notes: [
+      "Au niveau des articles définis, seul le masculin change vraiment.",
+      "Le masculin accusatif est très reconnaissable : den großen Hund. Les deux prennent -en : den, großen.",
+      "Le masculin accusatif avec ein et les possessifs prend einen, meinen, deinen, seinen, ihren, unseren, euren.",
+      "Käse est masculin et COD dans guten Käse : gut devient guten.",
+      "Dans warten auf, auf demande l'accusatif : Warten Sie auf mich.",
+    ],
+    extraExamples: [
+      { de: "Ich sehe den großen Hund.", fr: "" },
+      { de: "Du suchst die alte Frau.", fr: "" },
+      { de: "Er kauft das neue Handy.", fr: "" },
+      { de: "Wir sehen die alten Computer.", fr: "" },
+      { de: "Ich sehe einen jungen Mann.", fr: "" },
+      { de: "Ich suche meinen neuen Computer.", fr: "" },
+      { de: "Du nimmst deinen kleinen Koffer.", fr: "" },
+      { de: "Ich kaufe guten Käse.", fr: "J'achète du bon fromage." },
+      { de: "Ich kaufe frisches Brot.", fr: "J'achète du pain frais." },
+      { de: "Ich trinke kaltes Wasser.", fr: "Je bois de l'eau froide." },
+      { de: "Ich kaufe rote Äpfel.", fr: "J'achète des pommes rouges." },
+      { de: "Er sieht mich.", fr: "Il me voit." },
+      { de: "Ich verstehe dich.", fr: "Je te comprends." },
+      { de: "Ich sehe ihn.", fr: "Je le vois." },
+      { de: "Ich sehe sie.", fr: "Je la vois." },
+      { de: "Ich habe es.", fr: "Je l'ai." },
+      { de: "Er sieht uns.", fr: "Il nous voit." },
+      { de: "Ich sehe euch.", fr: "Je vous vois." },
+      { de: "Ich verstehe Sie.", fr: "Je vous comprends." },
+      { de: "Warten Sie auf mich.", fr: "Attendez-moi." },
+    ],
+  },
+  {
+    id: "dative",
+    title: "Le datif",
+    intro: [
+      "Le datif sert notamment à dire à quelqu'un. Il marque souvent le destinataire ou le bénéficiaire.",
+    ],
+    examples: [
+      { de: "Ich gebe dem Mann das Buch.", fr: "Je donne le livre à l'homme." },
+      { de: "Ich zeige der Frau das Handy.", fr: "Je montre le téléphone à la femme." },
+      { de: "Er gibt dem Kind die Flasche.", fr: "Il donne la bouteille à l'enfant." },
+      { de: "Wir schreiben den Freunden.", fr: "Nous écrivons aux amis." },
+    ],
+    tables: [
+      {
+        title: "Articles au datif",
+        headers: ["Genre", "Datif"],
+        articleCells: true,
+        rows: [
+          ["Masculin", "dem"],
+          ["Féminin", "der"],
+          ["Neutre", "dem"],
+          ["Pluriel", "den"],
+        ],
+      },
+      {
+        title: "Adjectif avec article défini",
+        headers: ["Genre", "Exemple"],
+        rows: [
+          ["Masculin", grammarHTMLCell("dem alt<strong>en</strong> Mann")],
+          ["Féminin", grammarHTMLCell("der jung<strong>en</strong> Frau")],
+          ["Neutre", grammarHTMLCell("dem klein<strong>en</strong> Kind")],
+          ["Pluriel", grammarHTMLCell("den neu<strong>en</strong> Studenten")],
+        ],
+      },
+      {
+        title: "Possessifs au datif",
+        headers: ["Genre", "mein", "dein"],
+        rows: [
+          ["Masculin", "meinem", "deinem"],
+          ["Féminin", "meiner", "deiner"],
+          ["Neutre", "meinem", "deinem"],
+          ["Pluriel", "meinen", "deinen"],
+        ],
+      },
+      {
+        title: "Pronoms personnels au datif",
+        headers: ["Français", "Nominatif", "Datif"],
+        rows: [
+          ["à moi", "ich", "mir"],
+          ["à toi", "du", "dir"],
+          ["à lui", "er", "ihm"],
+          ["à elle", "sie", "ihr"],
+          ["à lui, neutre", "es", "ihm"],
+          ["à nous", "wir", "uns"],
+          ["à vous", "ihr", "euch"],
+          ["à eux / elles", "sie", "ihnen"],
+          ["à vous, politesse", "Sie", "Ihnen"],
+        ],
+      },
+      {
+        title: "Le -n du datif pluriel",
+        headers: ["Pluriel", "Datif pluriel"],
+        rows: [
+          ["die Kinder", grammarHTMLCell("den Kinder<strong>n</strong>")],
+          ["die Freunde", grammarHTMLCell("den Freunde<strong>n</strong>")],
+          ["die Bücher", grammarHTMLCell("den Bücher<strong>n</strong>")],
+          ["die Häuser", grammarHTMLCell("den Häuser<strong>n</strong>")],
+          ["die Frauen", "den Frauen"],
+          ["die Studenten", "den Studenten"],
+          ["die Autos", "den Autos"],
+        ],
+      },
+    ],
+    notes: [
+      "Au datif avec un déterminant, adjectif = presque toujours -en.",
+      "Même modèle possessif : seinem / seiner, ihrem / ihrer, unserem / unserer, eurem / eurer, Ihrem / Ihrer.",
+      "Avec adjectif : meinem großen Hund, meiner neuen Lampe, meinem kleinen Kind, meinen alten Freunden.",
+      "Tu sais distinguer mich = me COD, mir = à moi, dich = te COD, dir = à toi, ihn = le, ihm = à lui, sie = la, ihr = à elle.",
+      "Quand il y a deux pronoms, l'accusatif est souvent placé avant le datif : Ich gebe es dir.",
+      "Avec deux noms, le datif passe généralement avant l'accusatif : Ich gebe dem Mann das Buch.",
+      "Au datif pluriel, l'article devient den et le nom prend souvent un -n supplémentaire.",
+      "Pas de nouveau -n si le pluriel se termine déjà par -n ou -s.",
+      "Cette règle concerne tous les genres, car au pluriel il n'y a plus de distinction masculin/féminin/neutre.",
+    ],
+    extraExamples: [
+      { de: "Ich gebe dem alten Professor das Buch.", fr: "" },
+      { de: "Du zeigst der jungen Frau das Handy.", fr: "" },
+      { de: "Er gibt dem kleinen Kind die Flasche.", fr: "" },
+      { de: "Wir schreiben den neuen Studenten.", fr: "" },
+      { de: "Ich zeige meinem Bruder das Haus.", fr: "" },
+      { de: "Sie schreibt ihrem Freund.", fr: "" },
+      { de: "Ich spreche mit meiner kleinen Schwester.", fr: "" },
+      { de: "Ihr gebt euren alten Freunden die Schlüssel.", fr: "" },
+      { de: "Sie sprechen mit ihren guten Freunden.", fr: "" },
+      { de: "Er gibt mir das Buch.", fr: "Il me donne le livre." },
+      { de: "Ich zeige dir mein Handy.", fr: "Je te montre mon téléphone." },
+      { de: "Ich gebe ihm den Schlüssel.", fr: "Je lui donne la clé." },
+      { de: "Ich schreibe ihr.", fr: "Je lui écris." },
+      { de: "Er hilft uns.", fr: "Il nous aide." },
+      { de: "Ich gebe euch das Buch.", fr: "Je vous donne le livre." },
+      { de: "Ich schreibe ihnen.", fr: "Je leur écris." },
+      { de: "Ich gebe es Ihnen.", fr: "Je vous le donne.", notes: ["es : accusatif, la chose donnée", "Ihnen : datif, à vous"] },
+      { de: "Können Sie es mir bringen?", fr: "Pouvez-vous me l'apporter ?", notes: ["es = l'", "mir = à moi"] },
+      { de: "Ich spreche mit den Kindern.", fr: "" },
+      { de: "Ich bin in den Häusern.", fr: "" },
+    ],
+  },
+  {
+    id: "genitive",
+    title: "Le génitif",
+    intro: [
+      "Le génitif exprime la possession ou le lien entre deux noms.",
+    ],
+    examples: [
+      { de: "das Auto des Mannes", fr: "la voiture de l'homme" },
+      { de: "der Hund der Frau", fr: "le chien de la femme" },
+      { de: "die Tür des Hauses", fr: "la porte de la maison" },
+      { de: "die Bücher der Studenten", fr: "les livres des étudiants" },
+    ],
+    tables: [
+      {
+        title: "Articles au génitif",
+        headers: ["Genre", "Génitif"],
+        articleCells: true,
+        rows: [
+          ["Masculin", "des"],
+          ["Féminin", "der"],
+          ["Neutre", "des"],
+          ["Pluriel", "der"],
+        ],
+      },
+      {
+        title: "Le -s ou -es au génitif",
+        headers: ["Nominatif", "Génitif"],
+        rows: [
+          ["der Mann", grammarHTMLCell("des Mann<strong>es</strong>")],
+          ["das Haus", grammarHTMLCell("des Haus<strong>es</strong>")],
+          ["das Kind", grammarHTMLCell("des Kind<strong>es</strong>")],
+          ["der Bruder", grammarHTMLCell("des Bruder<strong>s</strong>")],
+          ["der Vater", grammarHTMLCell("des Vater<strong>s</strong>")],
+          ["der Freund", grammarHTMLCell("des Freund<strong>es</strong> ou des Freund<strong>s</strong> selon le nom et l'usage")],
+          ["die Frau", "der Frau"],
+          ["die Mutter", "der Mutter"],
+          ["die Studenten", "der Studenten"],
+          ["die Freunde", "der Freunde"],
+        ],
+      },
+      {
+        title: "Possessifs au génitif",
+        headers: ["Genre", "Formes"],
+        rows: [
+          ["Masculin et neutre", "meines, deines, seines, ihres, unseres, eures, Ihres"],
+          ["Féminin et pluriel", "meiner, deiner, seiner, ihrer, unserer, eurer, Ihrer"],
+        ],
+      },
+      {
+        title: "Adjectif au génitif",
+        headers: ["Genre", "Exemple"],
+        rows: [
+          ["Masculin", grammarHTMLCell("des alt<strong>en</strong> Mann<strong>es</strong>")],
+          ["Féminin", grammarHTMLCell("der jung<strong>en</strong> Frau")],
+          ["Neutre", grammarHTMLCell("des klein<strong>en</strong> Kind<strong>es</strong>")],
+          ["Pluriel", grammarHTMLCell("der neu<strong>en</strong> Studenten")],
+        ],
+      },
+    ],
+    notes: [
+      "Au génitif singulier, les noms masculins et neutres prennent généralement -s ou -es.",
+      "Le féminin et le pluriel ne prennent normalement pas ce -s/-es.",
+      "Après un déterminant au génitif, l'adjectif prend presque toujours -en.",
+    ],
+    extraExamples: [
+      { de: "Das Auto des Mannes.", fr: "" },
+      { de: "Die Tür des Hauses.", fr: "" },
+      { de: "Der Name des Kindes.", fr: "" },
+      { de: "das Handy meines Bruders", fr: "le téléphone de mon frère" },
+      { de: "der Garten meines Vaters", fr: "le jardin de mon père" },
+      { de: "das Auto meiner Mutter", fr: "la voiture de ma mère" },
+      { de: "die Tür unseres Hauses", fr: "la porte de notre maison" },
+      { de: "das Haus ihrer Eltern", fr: "la maison de ses/leurs parents" },
+      { de: "der Hund der alten Frau", fr: "" },
+      { de: "das Auto des alten Mannes", fr: "" },
+      { de: "die Tür des kleinen Hauses", fr: "" },
+      { de: "die Bücher der neuen Studenten", fr: "" },
+    ],
+  },
+  {
+    id: "prepositions",
+    title: "Les prépositions et les cas",
+    intro: [
+      "Certaines prépositions imposent toujours un cas. D'autres peuvent prendre l'accusatif ou le datif selon le sens.",
+    ],
+    tables: [
+      {
+        title: "In + accusatif : destination / changement de position",
+        headers: ["Genre", "Mouvement"],
+        rows: [
+          ["Masculin", grammarHTMLCell("in <strong>den</strong>")],
+          ["Féminin", "in die"],
+          ["Neutre", grammarHTMLCell("in das → <strong>ins</strong>")],
+          ["Pluriel", "in die"],
+        ],
+      },
+      {
+        title: "In + datif : position fixe / lieu où cela se passe",
+        headers: ["Genre", "Position"],
+        rows: [
+          ["Masculin", grammarHTMLCell("in dem → <strong>im</strong>")],
+          ["Féminin", "in der"],
+          ["Neutre", grammarHTMLCell("in dem → <strong>im</strong>")],
+          ["Pluriel", "in den + nom souvent en -n"],
+        ],
+      },
+      {
+        title: "Prépositions que tu sais associer à un cas",
+        headers: ["Cas", "Prépositions / constructions", "Principe"],
+        rows: [
+          ["Toujours datif", "mit, zu, aus", "avec, vers/chez, depuis/de"],
+          ["Toujours accusatif", "für, warten auf", "pour, attendre quelqu'un/quelque chose"],
+          ["Accusatif ou datif", "in", "accusatif = destination ; datif = position"],
+        ],
+      },
+    ],
+    notes: [
+      "ins = in das ; im = in dem.",
+      "Le vrai principe n'est pas seulement « mouvement ou pas mouvement » : destination / changement de position → accusatif ; lieu où quelque chose se trouve ou se passe → datif.",
+      "Tu as aussi commencé à rencontrer auf et an, mais tu ne les maîtrises pas encore autant que in.",
+    ],
+    examples: [
+      { de: "Ich gehe in den Garten.", fr: "Je vais dans le jardin." },
+      { de: "Ich gehe ins Geschäft.", fr: "Je vais dans le magasin." },
+      { de: "Ich gehe in die Küche.", fr: "Je vais dans la cuisine." },
+      { de: "Ich gehe in die Häuser.", fr: "Je vais dans les maisons." },
+      { de: "Ich bin im Garten.", fr: "Je suis dans le jardin." },
+      { de: "Ich bin im Haus.", fr: "Je suis dans la maison." },
+      { de: "Ich bin in der Küche.", fr: "Je suis dans la cuisine." },
+      { de: "Ich bin in den Häusern.", fr: "Je suis dans les maisons." },
+      { de: "mit mir", fr: "avec moi" },
+      { de: "mit dem Mann", fr: "avec l'homme" },
+      { de: "mit meiner Schwester", fr: "avec ma sœur" },
+      { de: "Ich gehe zum Bahnhof.", fr: "" },
+      { de: "Ich gehe zur Frau.", fr: "" },
+      { de: "aus dem Haus", fr: "de la maison" },
+      { de: "aus Frankreich", fr: "de France" },
+      { de: "für mich", fr: "pour moi" },
+      { de: "für dich", fr: "pour toi" },
+      { de: "für meine Schwester", fr: "pour ma sœur" },
+      { de: "Ich warte auf dich.", fr: "" },
+      { de: "Warten Sie auf mich.", fr: "" },
+    ],
+  },
+  {
+    id: "summary-tables",
+    title: "Tableaux récapitulatifs",
+    intro: [
+      "Ces tableaux résument les terminaisons d'adjectifs les plus utiles avec article défini, avec ein/possessifs, et sans article.",
+    ],
+    tables: [
+      {
+        title: "Avec article défini",
+        headers: ["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"],
+        rows: [
+          ["Nominatif", grammarHTMLCell("der groß<strong>e</strong>"), grammarHTMLCell("die groß<strong>e</strong>"), grammarHTMLCell("das groß<strong>e</strong>"), grammarHTMLCell("die groß<strong>en</strong>")],
+          ["Accusatif", grammarHTMLCell("den groß<strong>en</strong>"), grammarHTMLCell("die groß<strong>e</strong>"), grammarHTMLCell("das groß<strong>e</strong>"), grammarHTMLCell("die groß<strong>en</strong>")],
+          ["Datif", grammarHTMLCell("dem groß<strong>en</strong>"), grammarHTMLCell("der groß<strong>en</strong>"), grammarHTMLCell("dem groß<strong>en</strong>"), grammarHTMLCell("den groß<strong>en</strong>")],
+          ["Génitif", grammarHTMLCell("des groß<strong>en</strong>"), grammarHTMLCell("der groß<strong>en</strong>"), grammarHTMLCell("des groß<strong>en</strong>"), grammarHTMLCell("der groß<strong>en</strong>")],
+        ],
+      },
+      {
+        title: "Avec ein, mein, dein, etc.",
+        headers: ["Cas", "Masculin", "Féminin", "Neutre", "Pluriel possessif"],
+        rows: [
+          ["Nominatif", grammarHTMLCell("ein groß<strong>er</strong>"), grammarHTMLCell("eine groß<strong>e</strong>"), grammarHTMLCell("ein groß<strong>es</strong>"), grammarHTMLCell("meine groß<strong>en</strong>")],
+          ["Accusatif", grammarHTMLCell("einen groß<strong>en</strong>"), grammarHTMLCell("eine groß<strong>e</strong>"), grammarHTMLCell("ein groß<strong>es</strong>"), grammarHTMLCell("meine groß<strong>en</strong>")],
+          ["Datif", grammarHTMLCell("einem groß<strong>en</strong>"), grammarHTMLCell("einer groß<strong>en</strong>"), grammarHTMLCell("einem groß<strong>en</strong>"), grammarHTMLCell("meinen groß<strong>en</strong>")],
+          ["Génitif", grammarHTMLCell("eines groß<strong>en</strong>"), grammarHTMLCell("einer groß<strong>en</strong>"), grammarHTMLCell("eines groß<strong>en</strong>"), grammarHTMLCell("meiner groß<strong>en</strong>")],
+        ],
+      },
+      {
+        title: "Sans article",
+        headers: ["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"],
+        rows: [
+          ["Nominatif", grammarHTMLCell("groß<strong>er</strong>"), grammarHTMLCell("groß<strong>e</strong>"), grammarHTMLCell("groß<strong>es</strong>"), grammarHTMLCell("groß<strong>e</strong>")],
+          ["Accusatif", grammarHTMLCell("groß<strong>en</strong>"), grammarHTMLCell("groß<strong>e</strong>"), grammarHTMLCell("groß<strong>es</strong>"), grammarHTMLCell("groß<strong>e</strong>")],
+        ],
+      },
+    ],
+    notes: [
+      "Avec article défini : nominatif singulier souvent -e ; accusatif masculin -en ; pluriel -en ; datif -en ; génitif -en.",
+      "Même modèle avec mein, dein, sein, ihr, unser, euer, Ihr.",
+      "Exemple avec mein : mein großer Hund, meinen großen Hund, meinem großen Hund, meines großen Hundes.",
+      "Sans article, tu as surtout travaillé le nominatif et l'accusatif : guter Käse, guten Käse kaufen, frisches Brot, rote Äpfel.",
+      "Tu as moins pratiqué le datif et le génitif sans article ; ce serait prématuré de dire que tu les maîtrises parfaitement.",
+    ],
+  },
+];
+
+const GRAMMAR_LEVELS_CONTENT = [
+  {
+    level: "A1",
+    points: [
+      {
+        id: "word-order-main",
+        title: "Ordre des mots : verbe en 2e position",
+        explanation: "Dans une phrase déclarative simple, le verbe conjugué est en deuxième position. Le premier élément peut être le sujet, un lieu, un temps ou un autre complément : le verbe reste deuxième.",
+        examples: [
+          { de: "Ich lerne Deutsch.", fr: "J'apprends l'allemand." },
+          { de: "Heute lerne ich Deutsch.", fr: "Aujourd'hui, j'apprends l'allemand." },
+          { de: "In Berlin wohnt meine Schwester.", fr: "Ma sœur habite à Berlin." },
+        ],
+        pitfalls: ["Piège francophone : ne garde pas toujours sujet + verbe au début. Si Heute est en position 1, le sujet vient après le verbe."],
+      },
+      {
+        id: "yes-no-questions",
+        title: "Questions oui/non : verbe en 1re position",
+        explanation: "Pour une question à laquelle on répond par oui ou non, le verbe conjugué passe en première position.",
+        examples: [
+          { de: "Kommst du aus Frankreich?", fr: "Viens-tu de France ?" },
+          { de: "Hast du Zeit?", fr: "As-tu le temps ?" },
+          { de: "Möchten Sie Kaffee?", fr: "Voulez-vous du café ?" },
+        ],
+        pitfalls: ["En allemand, on n'ajoute pas est-ce que : la position du verbe suffit."],
+      },
+      {
+        id: "w-fragen",
+        title: "Les W-Fragen",
+        explanation: "Les mots interrogatifs commencent souvent par w. Le mot interrogatif est en première position, puis le verbe conjugué vient juste après.",
+        table: {
+          headers: ["Mot", "Sens"],
+          rows: [
+            ["wer", "qui"],
+            ["was", "quoi"],
+            ["wo", "où, position"],
+            ["wann", "quand"],
+            ["wie", "comment"],
+            ["warum", "pourquoi"],
+            ["woher", "d'où"],
+            ["wohin", "vers où"],
+          ],
+        },
+        examples: [
+          { de: "Wo wohnst du?", fr: "Où habites-tu ?" },
+          { de: "Wann kommst du?", fr: "Quand viens-tu ?" },
+          { de: "Woher kommen Sie?", fr: "D'où venez-vous ?" },
+          { de: "Wohin gehst du?", fr: "Où vas-tu ?" },
+        ],
+        pitfalls: ["wenn ne sert pas à poser la question quand : pour interroger, c'est wann."],
+      },
+      {
+        id: "nicht-kein",
+        title: "Négation : nicht vs kein",
+        explanation: "kein nie un nom avec article indéfini ou sans article. nicht nie un verbe, un adjectif, une expression précise ou toute une phrase.",
+        table: {
+          headers: ["Utilise", "Pour nier"],
+          rows: [
+            ["kein", "un nom : pas de, aucun"],
+            ["nicht", "un verbe, un adjectif, une information précise"],
+          ],
+        },
+        examples: [
+          { de: "Ich habe kein Auto.", fr: "Je n'ai pas de voiture." },
+          { de: "Das ist keine Lampe.", fr: "Ce n'est pas une lampe." },
+          { de: "Ich komme heute nicht.", fr: "Je ne viens pas aujourd'hui." },
+          { de: "Das ist nicht teuer.", fr: "Ce n'est pas cher." },
+        ],
+        pitfalls: ["Piège francophone : kein se décline comme un déterminant. Voir l'onglet Les cas pour les terminaisons."],
+        caseLink: true,
+      },
+      {
+        id: "modal-verbs-present",
+        title: "Verbes modaux au présent",
+        explanation: "Les modaux expriment une possibilité, une obligation, une permission ou un souhait. Le modal est conjugué en deuxième position ; l'autre verbe reste à l'infinitif en fin de phrase.",
+        table: {
+          headers: ["Modal", "Idée"],
+          rows: [
+            ["können", "pouvoir, savoir faire"],
+            ["müssen", "devoir, être obligé"],
+            ["wollen", "vouloir"],
+            ["sollen", "devoir selon une consigne"],
+            ["dürfen", "avoir le droit"],
+            ["möchten", "voudrais"],
+          ],
+        },
+        examples: [
+          { de: "Ich kann Deutsch sprechen.", fr: "Je peux parler allemand." },
+          { de: "Du musst heute arbeiten.", fr: "Tu dois travailler aujourd'hui." },
+          { de: "Wir möchten Kaffee trinken.", fr: "Nous voudrions boire un café." },
+          { de: "Darf ich hier sitzen?", fr: "Ai-je le droit de m'asseoir ici ?" },
+        ],
+        pitfalls: ["Piège classique : ne conjugue pas le verbe final. On dit ich kann kommen, pas ich kann komme."],
+      },
+      {
+        id: "present-tense",
+        title: "Le présent",
+        explanation: "Le présent allemand sert pour maintenant, les habitudes et parfois le futur proche si un marqueur de temps est clair. Les verbes réguliers prennent des terminaisons prévisibles ; certains verbes changent de voyelle avec du et er/sie/es.",
+        table: {
+          headers: ["Sujet", "machen", "sein", "haben"],
+          rows: [
+            ["ich", "mache", "bin", "habe"],
+            ["du", "machst", "bist", "hast"],
+            ["er/sie/es", "macht", "ist", "hat"],
+            ["wir", "machen", "sind", "haben"],
+            ["ihr", "macht", "seid", "habt"],
+            ["sie/Sie", "machen", "sind", "haben"],
+          ],
+        },
+        examples: [
+          { de: "Ich mache eine Pause.", fr: "Je fais une pause." },
+          { de: "Du fährst nach Berlin.", fr: "Tu vas à Berlin." },
+          { de: "Er liest ein Buch.", fr: "Il lit un livre." },
+          { de: "Morgen besuche ich meine Freundin.", fr: "Demain, je rends visite à mon amie." },
+        ],
+        pitfalls: ["Les changements de voyelle apparaissent surtout à du et er/sie/es : fahren → du fährst, er fährt ; lesen → du liest, er liest."],
+      },
+      {
+        id: "imperative",
+        title: "L'impératif",
+        explanation: "L'impératif sert à donner une consigne, une invitation ou une instruction. Les formes principales sont du, ihr et Sie.",
+        table: {
+          headers: ["Forme", "Exemple"],
+          rows: [
+            ["du", "Komm!"],
+            ["ihr", "Kommt!"],
+            ["Sie", "Kommen Sie!"],
+          ],
+        },
+        examples: [
+          { de: "Komm bitte!", fr: "Viens s'il te plaît !" },
+          { de: "Wartet hier!", fr: "Attendez ici !" },
+          { de: "Öffnen Sie das Fenster!", fr: "Ouvrez la fenêtre !" },
+        ],
+        pitfalls: ["Avec Sie, le pronom reste visible après le verbe : Kommen Sie, Öffnen Sie."],
+      },
+      {
+        id: "possessives",
+        title: "Les possessifs",
+        explanation: "Les possessifs indiquent à qui appartient quelque chose : mein, dein, sein, ihr, unser, euer, Ihr. Ils se placent devant le nom.",
+        table: {
+          headers: ["Possessif", "Sens"],
+          rows: [
+            ["mein", "mon, ma, mes"],
+            ["dein", "ton, ta, tes"],
+            ["sein", "son, sa, ses à lui"],
+            ["ihr", "son, sa, ses à elle / leur(s)"],
+            ["unser", "notre, nos"],
+            ["euer", "votre, vos"],
+            ["Ihr", "votre, vos, politesse"],
+          ],
+        },
+        examples: [
+          { de: "Das ist mein Bruder.", fr: "C'est mon frère." },
+          { de: "Wo ist deine Tasche?", fr: "Où est ton sac ?" },
+          { de: "Unsere Wohnung ist klein.", fr: "Notre appartement est petit." },
+        ],
+        pitfalls: ["Les terminaisons dépendent du genre, du nombre et du cas. Voir l'onglet Les cas pour les formes détaillées."],
+        caseLink: true,
+      },
+      {
+        id: "es-gibt",
+        title: "es gibt + accusatif",
+        explanation: "es gibt signifie il y a. Le groupe nominal qui suit est à l'accusatif.",
+        examples: [
+          { de: "Es gibt einen Supermarkt.", fr: "Il y a un supermarché." },
+          { de: "Es gibt hier keine Bank.", fr: "Il n'y a pas de banque ici." },
+          { de: "Gibt es ein Problem?", fr: "Y a-t-il un problème ?" },
+        ],
+        pitfalls: ["La forme de l'article après es gibt relève de l'accusatif. Voir l'onglet Les cas."],
+        caseLink: true,
+      },
+      {
+        id: "numbers-time-date",
+        title: "Nombres, heure et date : règles clés",
+        explanation: "À A1, il faut surtout savoir comprendre et donner les nombres, l'heure simple et une date. Pour l'heure officielle, on lit souvent heure + Uhr + minutes.",
+        table: {
+          headers: ["Forme", "Usage"],
+          rows: [
+            ["um acht Uhr", "à huit heures"],
+            ["am Montag", "lundi"],
+            ["am ersten Mai", "le premier mai"],
+          ],
+        },
+        examples: [
+          { de: "Der Kurs beginnt um neun Uhr.", fr: "Le cours commence à neuf heures." },
+          { de: "Heute ist der dritte April.", fr: "Aujourd'hui, nous sommes le 3 avril." },
+          { de: "Ich komme am Freitag.", fr: "Je viens vendredi." },
+        ],
+        pitfalls: ["Piège : um répond à à quelle heure ; am sert souvent pour les jours et les dates."],
+      },
+      {
+        id: "gern-lieber",
+        title: "gern, lieber, am liebsten",
+        explanation: "gern exprime ce qu'on aime faire. lieber compare deux préférences. am liebsten indique la préférence la plus forte.",
+        examples: [
+          { de: "Ich trinke gern Tee.", fr: "J'aime boire du thé." },
+          { de: "Ich trinke lieber Kaffee.", fr: "Je préfère boire du café." },
+          { de: "Am liebsten trinke ich Wasser.", fr: "Ce que je préfère boire, c'est l'eau." },
+        ],
+        pitfalls: ["On ne traduit pas toujours par aimer : gern porte sur l'action, pas sur un objet seul."],
+      },
+      {
+        id: "coordinating-conjunctions",
+        title: "und, oder, aber, denn : ordre normal",
+        explanation: "Ces conjonctions relient deux éléments ou deux phrases. Après und, oder, aber et denn, l'ordre reste normal : sujet puis verbe conjugué.",
+        table: {
+          headers: ["Conjonction", "Sens"],
+          rows: [
+            ["und", "et"],
+            ["oder", "ou"],
+            ["aber", "mais"],
+            ["denn", "car"],
+          ],
+        },
+        examples: [
+          { de: "Ich komme aus Frankreich und ich wohne in Berlin.", fr: "Je viens de France et j'habite à Berlin." },
+          { de: "Möchtest du Tee oder trinkst du Kaffee?", fr: "Tu veux du thé ou tu bois du café ?" },
+          { de: "Ich lerne Deutsch, aber ich spreche noch langsam.", fr: "J'apprends l'allemand, mais je parle encore lentement." },
+          { de: "Ich bleibe zu Hause, denn ich bin krank.", fr: "Je reste à la maison car je suis malade." },
+        ],
+        pitfalls: ["denn ne pousse pas le verbe à la fin. C'est différent de weil."],
+      },
+    ],
+  },
+  {
+    level: "A2",
+    points: [
+      {
+        id: "perfekt",
+        title: "Le Perfekt",
+        explanation: "Le Perfekt est le passé le plus courant à l'oral. Il se forme avec haben ou sein au présent + participe passé en fin de phrase.",
+        table: {
+          headers: ["Type", "Forme fréquente"],
+          rows: [
+            ["Régulier", "ge- + radical + -t"],
+            ["Irrégulier", "souvent ge- + radical + -en"],
+            ["Verbe à particule", "particule + ge + radical"],
+            ["Verbe en -ieren", "pas de ge-"],
+          ],
+        },
+        examples: [
+          { de: "Ich habe Deutsch gelernt.", fr: "J'ai appris l'allemand." },
+          { de: "Wir sind nach Hamburg gefahren.", fr: "Nous sommes allés à Hambourg." },
+          { de: "Ich habe mein Zimmer aufgeräumt.", fr: "J'ai rangé ma chambre." },
+          { de: "Sie hat telefoniert.", fr: "Elle a téléphoné." },
+        ],
+        pitfalls: ["sein s'emploie surtout avec un changement de lieu ou d'état : gehen, fahren, kommen, aufstehen."],
+      },
+      {
+        id: "praeteritum-core",
+        title: "Präteritum de sein, haben et des modaux",
+        explanation: "À A2, le Präteritum est surtout indispensable pour sein, haben et les verbes modaux. Ces formes sont très fréquentes à l'écrit et à l'oral.",
+        table: {
+          headers: ["Infinitif", "ich/er", "wir/sie"],
+          rows: [
+            ["sein", "war", "waren"],
+            ["haben", "hatte", "hatten"],
+            ["können", "konnte", "konnten"],
+            ["müssen", "musste", "mussten"],
+            ["wollen", "wollte", "wollten"],
+          ],
+        },
+        examples: [
+          { de: "Ich war gestern krank.", fr: "J'étais malade hier." },
+          { de: "Wir hatten keine Zeit.", fr: "Nous n'avions pas le temps." },
+          { de: "Er konnte nicht kommen.", fr: "Il ne pouvait pas venir." },
+          { de: "Sie musste arbeiten.", fr: "Elle devait travailler." },
+        ],
+        pitfalls: ["Avec un modal au Präteritum, l'autre verbe reste infinitif à la fin : ich musste arbeiten."],
+      },
+      {
+        id: "subordinate-clauses",
+        title: "Subordonnées avec weil, dass, wenn",
+        explanation: "Avec weil, dass et wenn, le verbe conjugué va à la fin de la proposition subordonnée.",
+        table: {
+          headers: ["Mot", "Sens courant"],
+          rows: [
+            ["weil", "parce que"],
+            ["dass", "que"],
+            ["wenn", "si / quand habituel"],
+          ],
+        },
+        examples: [
+          { de: "Ich bleibe zu Hause, weil ich krank bin.", fr: "Je reste à la maison parce que je suis malade." },
+          { de: "Ich denke, dass Deutsch logisch ist.", fr: "Je pense que l'allemand est logique." },
+          { de: "Wenn ich Zeit habe, koche ich.", fr: "Si j'ai le temps, je cuisine." },
+        ],
+        pitfalls: ["wenn n'est pas le quand interrogatif : pour poser une question, on utilise wann."],
+      },
+      {
+        id: "comparison",
+        title: "Comparatif et superlatif",
+        explanation: "Le comparatif sert à comparer deux éléments. Le superlatif exprime le plus haut degré. Souvent : adjectif + -er, puis am + adjectif + -sten.",
+        table: {
+          headers: ["Adjectif", "Comparatif", "Superlatif"],
+          rows: [
+            ["schnell", "schneller", "am schnellsten"],
+            ["klein", "kleiner", "am kleinsten"],
+            ["gut", "besser", "am besten"],
+            ["viel", "mehr", "am meisten"],
+          ],
+        },
+        examples: [
+          { de: "Berlin ist größer als Bonn.", fr: "Berlin est plus grand que Bonn." },
+          { de: "Dieses Zimmer ist kleiner.", fr: "Cette chambre est plus petite." },
+          { de: "Deutsch ist für mich interessanter.", fr: "L'allemand est plus intéressant pour moi." },
+          { de: "Am besten lerne ich morgens.", fr: "J'apprends le mieux le matin." },
+        ],
+        pitfalls: ["Pour dire plus ... que, l'allemand utilise als : größer als, schneller als."],
+      },
+      {
+        id: "reflexive-verbs",
+        title: "Verbes réfléchis",
+        explanation: "Un verbe réfléchi se construit avec un pronom qui renvoie au sujet : mich, dich, sich, uns, euch, sich.",
+        table: {
+          headers: ["Sujet", "Pronom réfléchi courant"],
+          rows: [
+            ["ich", "mich"],
+            ["du", "dich"],
+            ["er/sie/es", "sich"],
+            ["wir", "uns"],
+            ["ihr", "euch"],
+            ["sie/Sie", "sich"],
+          ],
+        },
+        examples: [
+          { de: "Ich freue mich.", fr: "Je me réjouis." },
+          { de: "Freust du dich?", fr: "Tu te réjouis ?" },
+          { de: "Wir treffen uns um acht.", fr: "Nous nous retrouvons à huit heures." },
+          { de: "Sie interessiert sich für Musik.", fr: "Elle s'intéresse à la musique." },
+        ],
+        pitfalls: ["Tous les verbes réfléchis français ne le sont pas en allemand, et inversement."],
+      },
+      {
+        id: "um-zu",
+        title: "um ... zu + infinitif vs weil",
+        explanation: "um ... zu exprime un but quand le sujet est le même dans les deux parties. weil exprime une cause ou une explication.",
+        examples: [
+          { de: "Ich lerne Deutsch, um in Deutschland zu arbeiten.", fr: "J'apprends l'allemand pour travailler en Allemagne." },
+          { de: "Sie geht in den Supermarkt, um Brot zu kaufen.", fr: "Elle va au supermarché pour acheter du pain." },
+          { de: "Ich bleibe zu Hause, weil ich krank bin.", fr: "Je reste à la maison parce que je suis malade." },
+        ],
+        pitfalls: ["Si le sujet change, um ... zu ne convient pas. Utilise plutôt damit à B1."],
+      },
+      {
+        id: "fixed-prepositions",
+        title: "Verbes avec prépositions fixes",
+        explanation: "Certains verbes appellent une préposition précise. Il faut apprendre le verbe avec sa préposition comme une unité.",
+        table: {
+          headers: ["Expression", "Sens"],
+          rows: [
+            ["warten auf", "attendre"],
+            ["denken an", "penser à"],
+            ["sich freuen auf", "se réjouir à l'avance de"],
+            ["sich freuen über", "être content de quelque chose déjà présent/passé"],
+          ],
+        },
+        examples: [
+          { de: "Ich warte auf den Bus.", fr: "J'attends le bus." },
+          { de: "Denkst du an mich?", fr: "Penses-tu à moi ?" },
+          { de: "Ich freue mich auf den Urlaub.", fr: "Je me réjouis des vacances à venir." },
+          { de: "Ich freue mich über dein Geschenk.", fr: "Je suis content de ton cadeau." },
+        ],
+        pitfalls: ["Les prépositions peuvent demander un cas. Voir l'onglet Les cas pour le détail."],
+        caseLink: true,
+      },
+      {
+        id: "tekamolo-basic",
+        title: "Ordre temps - manière - lieu",
+        explanation: "Dans beaucoup de phrases, les compléments suivent l'ordre temps, manière, lieu. C'est une règle pratique, pas une formule absolue.",
+        examples: [
+          { de: "Ich fahre morgen mit dem Zug nach Berlin.", fr: "Je vais demain en train à Berlin." },
+          { de: "Wir lernen heute zusammen in der Bibliothek.", fr: "Nous étudions aujourd'hui ensemble à la bibliothèque." },
+          { de: "Sie geht am Abend schnell nach Hause.", fr: "Elle rentre vite à la maison le soir." },
+        ],
+        pitfalls: ["Ne déplace pas le verbe conjugué : il reste en deuxième position dans la phrase principale."],
+      },
+      {
+        id: "future-werden-present",
+        title: "Futur avec werden vs présent + morgen",
+        explanation: "Le futur peut se former avec werden + infinitif, mais le présent avec un marqueur de temps est très courant pour parler d'un futur proche ou prévu.",
+        examples: [
+          { de: "Morgen gehe ich zum Arzt.", fr: "Demain, je vais chez le médecin." },
+          { de: "Ich werde morgen lernen.", fr: "J'étudierai demain." },
+          { de: "Wir besuchen nächste Woche unsere Freunde.", fr: "Nous rendons visite à nos amis la semaine prochaine." },
+        ],
+        pitfalls: ["werden donne souvent un ton plus formel, une prédiction ou une intention formulée comme futur."],
+      },
+      {
+        id: "sequence-connectors",
+        title: "zuerst, dann, danach, zum Schluss",
+        explanation: "Ces connecteurs organisent un récit ou une procédure. Quand ils sont en première position, le verbe conjugué arrive juste après.",
+        examples: [
+          { de: "Zuerst frühstücke ich.", fr: "D'abord, je prends le petit-déjeuner." },
+          { de: "Dann fahre ich zur Arbeit.", fr: "Ensuite, je vais au travail." },
+          { de: "Danach mache ich eine Pause.", fr: "Après cela, je fais une pause." },
+          { de: "Zum Schluss räume ich die Küche auf.", fr: "Pour finir, je range la cuisine." },
+        ],
+        pitfalls: ["Après dann ou danach en position 1, on inverse : Dann fahre ich, pas Dann ich fahre."],
+      },
+    ],
+  },
+  {
+    level: "B1",
+    points: [
+      {
+        id: "praeteritum-general",
+        title: "Le Präteritum général",
+        explanation: "Au B1, on rencontre davantage le Präteritum des verbes courants, surtout à l'écrit : récits, articles, biographies. À l'oral, le Perfekt reste fréquent.",
+        examples: [
+          { de: "Er ging nach Hause.", fr: "Il rentra / est rentré à la maison." },
+          { de: "Sie kam spät an.", fr: "Elle arriva tard." },
+          { de: "Wir machten eine Pause.", fr: "Nous avons fait une pause." },
+          { de: "Der Film begann um acht Uhr.", fr: "Le film commença à huit heures." },
+        ],
+        pitfalls: ["Ne remplace pas tout le Perfekt oral par le Präteritum : le registre change selon le verbe et le contexte."],
+      },
+      {
+        id: "relative-clauses",
+        title: "Les relatives",
+        explanation: "Une relative donne une information sur un nom. Le pronom relatif ressemble à der/die/das, mais son cas dépend de son rôle dans la relative.",
+        examples: [
+          { de: "Das ist der Mann, der hier wohnt.", fr: "C'est l'homme qui habite ici." },
+          { de: "Das ist die Frau, die ich kenne.", fr: "C'est la femme que je connais." },
+          { de: "Das ist das Kind, dem ich helfe.", fr: "C'est l'enfant que j'aide / à qui j'aide." },
+          { de: "Das ist der Freund, dessen Auto kaputt ist.", fr: "C'est l'ami dont la voiture est en panne." },
+        ],
+        pitfalls: ["Le pronom relatif dépend de sa fonction dans la subordonnée. Voir l'onglet Les cas."],
+        caseLink: true,
+      },
+      {
+        id: "passive",
+        title: "Le passif présent et passé",
+        explanation: "Le passif met l'action au centre plutôt que la personne qui agit. Il se forme avec werden + participe passé. Au passé composé : ist/sein + participe + worden.",
+        examples: [
+          { de: "Das Auto wird repariert.", fr: "La voiture est réparée / en cours de réparation." },
+          { de: "Die Tür wird geöffnet.", fr: "La porte est ouverte." },
+          { de: "Das Haus ist 1990 gebaut worden.", fr: "La maison a été construite en 1990." },
+          { de: "Die E-Mail wurde gestern geschrieben.", fr: "L'e-mail a été écrit hier." },
+        ],
+        pitfalls: ["Ne confonds pas werden futur et werden passif : le participe passé signale le passif."],
+      },
+      {
+        id: "connectors-b1",
+        title: "deshalb, trotzdem, obwohl",
+        explanation: "Ces connecteurs expriment conséquence ou opposition. deshalb et trotzdem occupent une position dans la phrase principale : le verbe vient juste après. obwohl introduit une subordonnée : verbe à la fin.",
+        table: {
+          headers: ["Connecteur", "Sens", "Position du verbe"],
+          rows: [
+            ["deshalb", "donc, c'est pourquoi", "verbe juste après"],
+            ["trotzdem", "malgré cela", "verbe juste après"],
+            ["obwohl", "bien que", "verbe à la fin"],
+          ],
+        },
+        examples: [
+          { de: "Ich bin krank, deshalb bleibe ich zu Hause.", fr: "Je suis malade, donc je reste à la maison." },
+          { de: "Es regnet, trotzdem gehen wir spazieren.", fr: "Il pleut, malgré cela nous allons nous promener." },
+          { de: "Obwohl ich müde bin, lerne ich Deutsch.", fr: "Bien que je sois fatigué, j'apprends l'allemand." },
+        ],
+        pitfalls: ["obwohl fonctionne comme weil pour la position du verbe : le verbe conjugué va à la fin de la subordonnée."],
+      },
+      {
+        id: "konjunktiv-ii",
+        title: "Konjunktiv II poli et hypothétique",
+        explanation: "Le Konjunktiv II sert à être poli, à exprimer un souhait ou une hypothèse. Les formes fréquentes sont würde + infinitif, hätte, wäre, könnte.",
+        examples: [
+          { de: "Ich hätte gern einen Kaffee.", fr: "Je voudrais un café." },
+          { de: "Könnten Sie mir helfen?", fr: "Pourriez-vous m'aider ?" },
+          { de: "Wenn ich Zeit hätte, würde ich mehr lesen.", fr: "Si j'avais le temps, je lirais davantage." },
+          { de: "Das wäre schön.", fr: "Ce serait bien." },
+        ],
+        pitfalls: ["würde + infinitif est pratique, mais avec sein, haben et les modaux, les formes wäre, hätte, könnte sont très fréquentes."],
+      },
+      {
+        id: "n-declension",
+        title: "Déclinaison en -n des noms faibles",
+        explanation: "Certains noms masculins prennent -n ou -en à toutes les formes sauf le nominatif singulier. Beaucoup désignent des personnes ou des êtres vivants.",
+        table: {
+          headers: ["Nominatif", "Autres formes fréquentes"],
+          rows: [
+            ["der Nachbar", "den/dem/des Nachbarn"],
+            ["der Student", "den/dem/des Studenten"],
+            ["der Kunde", "den/dem/des Kunden"],
+          ],
+        },
+        examples: [
+          { de: "Ich sehe den Nachbarn.", fr: "Je vois le voisin." },
+          { de: "Ich helfe dem Studenten.", fr: "J'aide l'étudiant." },
+          { de: "Die Nummer des Kunden fehlt.", fr: "Le numéro du client manque." },
+        ],
+        pitfalls: ["C'est un point lié aux cas : vois l'onglet Les cas pour nominatif, accusatif, datif et génitif."],
+        caseLink: true,
+      },
+      {
+        id: "lassen-infinitive",
+        title: "lassen + infinitif",
+        explanation: "lassen + infinitif peut signifier laisser faire, faire faire, ou permettre qu'une action se produise. L'infinitif reste à la fin.",
+        examples: [
+          { de: "Ich lasse mein Auto reparieren.", fr: "Je fais réparer ma voiture." },
+          { de: "Lass mich schlafen!", fr: "Laisse-moi dormir !" },
+          { de: "Wir lassen die Kinder spielen.", fr: "Nous laissons les enfants jouer." },
+          { de: "Sie lässt sich die Haare schneiden.", fr: "Elle se fait couper les cheveux." },
+        ],
+        pitfalls: ["Ne traduis pas toujours par laisser : Ich lasse mein Auto reparieren = je fais réparer ma voiture."],
+      },
+      {
+        id: "seit-vor-time",
+        title: "seit / vor + datif pour le temps",
+        explanation: "seit indique une durée qui continue jusqu'à maintenant. vor indique un moment dans le passé. Ces prépositions prennent le datif.",
+        examples: [
+          { de: "Ich lerne seit zwei Jahren Deutsch.", fr: "J'apprends l'allemand depuis deux ans." },
+          { de: "Seit Montag bin ich krank.", fr: "Je suis malade depuis lundi." },
+          { de: "Ich habe vor zwei Jahren angefangen.", fr: "J'ai commencé il y a deux ans." },
+          { de: "Vor einer Woche war ich in Berlin.", fr: "Il y a une semaine, j'étais à Berlin." },
+        ],
+        pitfalls: ["seit = depuis et continue encore ; vor = il y a. Pour les formes du datif, voir l'onglet Les cas."],
+        caseLink: true,
+      },
+      {
+        id: "damit-um-zu",
+        title: "damit vs um ... zu",
+        explanation: "Les deux peuvent exprimer un but. um ... zu s'utilise si le sujet est le même. damit s'utilise notamment quand le sujet change.",
+        examples: [
+          { de: "Ich lerne Deutsch, um in Deutschland zu arbeiten.", fr: "J'apprends l'allemand pour travailler en Allemagne." },
+          { de: "Ich spreche langsam, damit du mich verstehst.", fr: "Je parle lentement pour que tu me comprennes." },
+          { de: "Sie spart Geld, um ein Auto zu kaufen.", fr: "Elle économise pour acheter une voiture." },
+          { de: "Ich öffne das Fenster, damit frische Luft hereinkommt.", fr: "J'ouvre la fenêtre pour que l'air frais entre." },
+        ],
+        pitfalls: ["Avec damit, le verbe conjugué va à la fin : damit du mich verstehst."],
+      },
+    ],
+  },
+];
+
+const GRAMMAR_TABS = ["cases", "verbs", "levels"];
 const VERB_PERSONS = ["ich", "du", "er/sie/es", "wir", "ihr", "sie/Sie"];
 
 function getGrammarTab() {
-  const tab = localStorage.getItem(LS_GRAMMAR_TAB);
+  const stored = localStorage.getItem(LS_GRAMMAR_TAB);
+  const tab = stored === "my-verbs" || stored === "irregular" ? "verbs" : stored;
+  if (tab !== stored) localStorage.setItem(LS_GRAMMAR_TAB, tab);
   return GRAMMAR_TABS.includes(tab) ? tab : "cases";
 }
 
@@ -4931,8 +6604,8 @@ function setGrammarTab(tabName) {
     btn.classList.toggle("active", btn.dataset.grammarTab === tab);
   });
   $("grammar-panel-cases").classList.toggle("hidden", tab !== "cases");
-  $("grammar-panel-my-verbs").classList.toggle("hidden", tab !== "my-verbs");
-  $("grammar-panel-irregular").classList.toggle("hidden", tab !== "irregular");
+  $("grammar-panel-verbs").classList.toggle("hidden", tab !== "verbs");
+  $("grammar-panel-levels").classList.toggle("hidden", tab !== "levels");
   renderGrammarPage();
 }
 
@@ -4948,12 +6621,12 @@ function renderGrammarPage() {
     btn.classList.toggle("active", btn.dataset.grammarTab === tab);
   });
   $("grammar-panel-cases").classList.toggle("hidden", tab !== "cases");
-  $("grammar-panel-my-verbs").classList.toggle("hidden", tab !== "my-verbs");
-  $("grammar-panel-irregular").classList.toggle("hidden", tab !== "irregular");
+  $("grammar-panel-verbs").classList.toggle("hidden", tab !== "verbs");
+  $("grammar-panel-levels").classList.toggle("hidden", tab !== "levels");
 
   if (tab === "cases") renderGrammarCases();
-  if (tab === "my-verbs") renderMyVerbs();
-  if (tab === "irregular") renderIrregularVerbs();
+  if (tab === "verbs") renderGrammarVerbs();
+  if (tab === "levels") renderGrammarLevels();
 }
 
 function speakButtonHTML(text, label = "Écouter") {
@@ -4974,71 +6647,79 @@ function articleHTML(value) {
   return escapeHTML(clean);
 }
 
+function grammarCellContentHTML(item, articleCell = false) {
+  if (item && typeof item === "object" && Object.prototype.hasOwnProperty.call(item, "html")) {
+    return item.html;
+  }
+  return articleCell ? articleHTML(item) : escapeHTML(item);
+}
+
 function grammarTableHTML(headers, rows, articleCells = false) {
   return (
     '<div class="grammar-table-wrap"><table class="grammar-table"><thead><tr>' +
       headers.map((item) => '<th>' + escapeHTML(item) + "</th>").join("") +
     "</tr></thead><tbody>" +
       rows.map((row) =>
-        "<tr>" + row.map((item, index) => '<td>' + (articleCells && index > 0 ? articleHTML(item) : escapeHTML(item)) + "</td>").join("") + "</tr>"
+        "<tr>" + row.map((item, index) => '<td>' + grammarCellContentHTML(item, articleCells && index > 0) + "</td>").join("") + "</tr>"
       ).join("") +
     "</tbody></table></div>"
   );
 }
 
+function grammarExampleHTML(example) {
+  return (
+    '<article class="case-card grammar-example-card">' +
+      '<p class="example-de">' + escapeHTML(example.de) + " " + speakButtonHTML(example.de) + "</p>" +
+      (example.fr ? '<p class="example-fr">' + escapeHTML(example.fr) + "</p>" : "") +
+      (Array.isArray(example.notes) && example.notes.length
+        ? '<ul class="grammar-note-list">' + example.notes.map((note) => '<li>' + escapeHTML(note) + "</li>").join("") + "</ul>"
+        : "") +
+    "</article>"
+  );
+}
+
+function grammarTablesHTML(tables = []) {
+  return tables.map((table) =>
+    '<div class="grammar-subblock">' +
+      (table.title ? '<h3>' + escapeHTML(table.title) + "</h3>" : "") +
+      grammarTableHTML(table.headers, table.rows, Boolean(table.articleCells)) +
+    "</div>"
+  ).join("");
+}
+
+function grammarNotesHTML(notes = []) {
+  return notes.length
+    ? '<ul class="grammar-note-list">' + notes.map((note) => '<li>' + escapeHTML(note) + "</li>").join("") + "</ul>"
+    : "";
+}
+
 function renderGrammarCases() {
-  const cases = GRAMMAR_CASES;
   $("grammar-panel-cases").innerHTML =
-    '<section class="panel grammar-section">' +
-      "<h2>Les cas essentiels</h2>" +
-      "<p>" + escapeHTML(cases.intro) + "</p>" +
-      '<p class="muted">' + escapeHTML(cases.genitiveNote) + "</p>" +
+    '<section class="panel grammar-section grammar-cases-home">' +
+      "<h2>Les cas allemands</h2>" +
+      '<p class="muted">Référence structurée : articles, adjectifs, pronoms, prépositions et exemples.</p>' +
+      '<nav class="grammar-case-toc" aria-label="Sommaire des cas">' +
+        GRAMMAR_CASES_CONTENT.map((section, index) =>
+          '<a href="#grammar-case-' + escapeHTML(section.id) + '">' + (index + 1) + ". " + escapeHTML(section.title) + "</a>"
+        ).join("") +
+      "</nav>" +
     "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Articles définis</h2>" +
-      grammarTableHTML(["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"], cases.definedArticles, true) +
-      '<p class="grammar-note">' + escapeHTML(cases.accusativeNote) + "</p>" +
-    "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Articles indéfinis</h2>" +
-      grammarTableHTML(["Cas", "Masculin", "Féminin", "Neutre"], cases.indefiniteArticles, true) +
-    "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Quand utiliser quel cas ?</h2>" +
-      '<div class="case-cards">' + cases.caseCards.map((item) =>
-        '<article class="case-card">' +
-          '<h3>' + escapeHTML(item.title) + "</h3>" +
-          '<p class="example-de">' + escapeHTML(item.example) + " " + speakButtonHTML(item.example) + "</p>" +
-          '<p class="example-fr">' + escapeHTML(item.fr) + "</p>" +
-        "</article>"
-      ).join("") + "</div>" +
-    "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Prépositions par cas</h2>" +
-      '<div class="prep-grid">' + cases.prepositions.map((group) =>
-        '<article class="case-card">' +
-          '<h3>' + escapeHTML(group.title) + "</h3>" +
-          '<div class="grammar-chip-row">' + group.items.map((item) => '<span class="chip">' + escapeHTML(item) + "</span>").join("") + "</div>" +
-        "</article>"
-      ).join("") + "</div>" +
-      '<p class="grammar-note">' + escapeHTML(cases.mixedRule) + "</p>" +
-      '<div class="case-cards">' + cases.mixedExamples.map((item) =>
-        '<article class="case-card">' +
-          '<p class="example-de">' + escapeHTML(item.de) + " " + speakButtonHTML(item.de) + "</p>" +
-          '<p class="example-fr">' + escapeHTML(item.fr) + "</p>" +
-        "</article>"
-      ).join("") + "</div>" +
-    "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Verbes qui exigent le datif</h2>" +
-      '<div class="grammar-chip-row">' + cases.dativeVerbs.map((verb) => '<span class="chip chip-category">' + escapeHTML(verb) + "</span>").join("") + "</div>" +
-      '<p class="example-de">' + escapeHTML(cases.dativeVerbExample.de) + " " + speakButtonHTML(cases.dativeVerbExample.de) + "</p>" +
-      '<p class="example-fr">' + escapeHTML(cases.dativeVerbExample.fr) + "</p>" +
-    "</section>" +
-    '<section class="panel grammar-section">' +
-      "<h2>Pronoms personnels</h2>" +
-      grammarTableHTML(["Nominatif", "Accusatif", "Datif"], cases.pronouns) +
-    "</section>";
+    GRAMMAR_CASES_CONTENT.map((section, index) => {
+      const examples = [...(section.examples || []), ...(section.extraExamples || [])];
+      return (
+        '<details class="panel grammar-section grammar-accordion" id="grammar-case-' + escapeHTML(section.id) + '"' + (index === 0 ? " open" : "") + ">" +
+          '<summary><span>' + (index + 1) + ". " + escapeHTML(section.title) + '</span><span class="grammar-accordion-icon">⌄</span></summary>' +
+          '<div class="grammar-accordion-body">' +
+            (section.intro || []).map((paragraph) => "<p>" + escapeHTML(paragraph) + "</p>").join("") +
+            grammarTablesHTML(section.tables) +
+            grammarNotesHTML(section.notes) +
+            (examples.length
+              ? '<div class="case-cards grammar-example-grid">' + examples.map(grammarExampleHTML).join("") + "</div>"
+              : "") +
+          "</div>" +
+        "</details>"
+      );
+    }).join("");
 }
 
 function isUserVerbCard(card) {
@@ -5068,37 +6749,223 @@ async function getUserVerbMap() {
   return new Map([...verbs.entries()].sort((a, b) => a[1].inf.localeCompare(b[1].inf, "de")));
 }
 
-async function renderMyVerbs() {
-  const verbs = await getUserVerbMap();
-  const list = [...verbs.values()];
-  const selectedKey = selectedGrammarVerb && verbs.has(selectedGrammarVerb) ? selectedGrammarVerb : (list[0]?.inf.toLowerCase() || null);
-  selectedGrammarVerb = selectedKey;
+function searchFold(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .trim();
+}
 
-  if (list.length === 0) {
-    selectedGrammarVerb = null;
-    $("grammar-panel-my-verbs").innerHTML =
-      '<section class="panel grammar-section"><h2>Mes verbes</h2><p class="muted">Ajoute des verbes dans tes cartes pour les voir ici.</p></section>';
-    return;
-  }
+function verbTypeMeta(infinitive) {
+  const classification = classifyVerb(infinitive);
+  const folded = searchFold(classification);
+  if (folded.includes("modaux")) return { key: "modal", label: "Modal", order: 0 };
+  if (folded.includes("irreg")) return { key: "irregular", label: "Irrégulier", order: 1 };
+  if (folded.includes("particule")) return { key: "particle", label: "Particule", order: 2 };
+  return { key: "regular", label: "Régulier", order: 3 };
+}
 
-  const selected = selectedKey ? verbs.get(selectedKey) : null;
-  $("grammar-panel-my-verbs").innerHTML =
-    '<section class="panel grammar-section">' +
-      "<h2>Mes verbes</h2>" +
-      '<div class="verb-chip-list" id="my-verbs-list">' +
-        list.map((verb) =>
-          '<button class="verb-chip' + (verb.inf.toLowerCase() === selectedKey ? " active" : "") + '" type="button" data-user-verb="' + escapeHTML(verb.inf.toLowerCase()) + '">' +
-            escapeHTML(verb.inf) +
-          "</button>"
-        ).join("") +
-      "</div>" +
-    "</section>" +
-    '<div id="verb-detail-panel">' + (selected ? verbDetailHTML(selected.inf, selected.fr) : "") + "</div>";
+function mergeGrammarVerbItem(map, data) {
+  const inf = String(data.inf || "").trim();
+  if (!inf) return;
+  const key = normalizedGermanWord(inf);
+  if (!key) return;
+  const existing = map.get(key) || { inf: inf, fr: "", inCards: false };
+  map.set(key, {
+    inf: existing.inf || inf,
+    fr: existing.inCards ? (existing.fr || data.fr || "") : (data.fr || existing.fr || ""),
+    inCards: Boolean(existing.inCards || data.inCards),
+  });
+}
 
-  $("my-verbs-list").querySelectorAll("[data-user-verb]").forEach((btn) => {
+async function getGrammarVerbItems() {
+  const userVerbs = await getUserVerbMap();
+  const map = new Map();
+
+  IRREGULAR_VERBS.forEach((verb) => mergeGrammarVerbItem(map, { inf: verb.inf, fr: verb.fr || "" }));
+  COMMON_REGULAR_VERBS.forEach((verb) => mergeGrammarVerbItem(map, verb));
+  userVerbs.forEach((verb) => mergeGrammarVerbItem(map, { inf: verb.inf, fr: verb.fr || "", inCards: true }));
+
+  return [...map.values()].map((verb) => {
+    const type = verbTypeMeta(verb.inf);
+    return {
+      ...verb,
+      type: type,
+      searchText: searchFold(verb.inf + " " + verb.fr),
+    };
+  });
+}
+
+function filteredGrammarVerbs(items) {
+  const query = searchFold(grammarVerbQuery);
+  const filtered = items.filter((verb) => {
+    if (query && !verb.searchText.includes(query)) return false;
+    if (grammarVerbFilter === "mine") return verb.inCards;
+    if (grammarVerbFilter === "all") return true;
+    return verb.type.key === grammarVerbFilter;
+  });
+
+  return filtered.sort((a, b) => {
+    if (grammarVerbSort === "type") {
+      const typeDiff = a.type.order - b.type.order;
+      if (typeDiff) return typeDiff;
+    }
+    return a.inf.localeCompare(b.inf, "de");
+  });
+}
+
+function grammarVerbFilterButtonHTML(key, label) {
+  return '<button class="verb-filter-chip' + (grammarVerbFilter === key ? " active" : "") + '" type="button" data-verb-filter="' + escapeHTML(key) + '">' + escapeHTML(label) + "</button>";
+}
+
+function grammarVerbSortButtonHTML(key, label) {
+  return '<button class="verb-sort-chip' + (grammarVerbSort === key ? " active" : "") + '" type="button" data-verb-sort="' + escapeHTML(key) + '">' + escapeHTML(label) + "</button>";
+}
+
+function grammarVerbRowHTML(verb) {
+  const key = normalizedGermanWord(verb.inf);
+  const open = selectedGrammarVerb === key;
+  return (
+    '<article class="grammar-verb-item' + (open ? " open" : "") + '">' +
+      '<button class="grammar-verb-row" type="button" data-grammar-verb-toggle="' + escapeHTML(key) + '">' +
+        '<span class="grammar-verb-main"><strong>' + escapeHTML(verb.inf) + "</strong>" +
+          (verb.fr ? '<span>' + escapeHTML(verb.fr) + "</span>" : "") +
+        "</span>" +
+        '<span class="grammar-verb-badges">' +
+          '<span class="grammar-badge grammar-badge-' + escapeHTML(verb.type.key) + '">' + escapeHTML(verb.type.label) + "</span>" +
+          (verb.inCards ? '<span class="grammar-badge">dans tes cartes</span>' : "") +
+        "</span>" +
+      "</button>" +
+      (open ? '<div class="grammar-verb-detail">' + verbDetailHTML(verb.inf, verb.fr, { embedded: true }) + "</div>" : "") +
+    "</article>"
+  );
+}
+
+async function renderGrammarVerbList() {
+  const items = filteredGrammarVerbs(await getGrammarVerbItems());
+  const countEl = $("grammar-verb-count");
+  const listEl = $("grammar-verb-list");
+  if (!countEl || !listEl) return;
+
+  countEl.textContent = items.length + " verbe" + (items.length > 1 ? "s" : "");
+  listEl.innerHTML = items.length
+    ? items.map(grammarVerbRowHTML).join("")
+    : '<div class="empty-state"><p>Aucun verbe ne correspond à cette recherche.</p></div>';
+
+  listEl.querySelectorAll("[data-grammar-verb-toggle]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      selectedGrammarVerb = btn.dataset.userVerb;
-      renderMyVerbs();
+      const key = btn.dataset.grammarVerbToggle;
+      selectedGrammarVerb = selectedGrammarVerb === key ? null : key;
+      renderGrammarVerbList();
+    });
+  });
+}
+
+async function renderGrammarVerbs() {
+  $("grammar-panel-verbs").innerHTML =
+    '<section class="panel grammar-section grammar-verbs-panel">' +
+      '<div class="grammar-verbs-header">' +
+        '<div><h2>Verbes</h2><p class="muted">Irréguliers, modaux, verbes à particule et verbes fréquents.</p></div>' +
+        '<strong id="grammar-verb-count" class="grammar-verb-count">0 verbe</strong>' +
+      "</div>" +
+      '<div class="grammar-verb-toolbar">' +
+        '<input id="grammar-verb-search" type="search" placeholder="Rechercher un verbe ou une traduction" value="' + escapeHTML(grammarVerbQuery) + '">' +
+        '<div class="verb-filter-row">' +
+          grammarVerbFilterButtonHTML("all", "Tous") +
+          grammarVerbFilterButtonHTML("modal", "Modaux") +
+          grammarVerbFilterButtonHTML("irregular", "Irréguliers") +
+          grammarVerbFilterButtonHTML("particle", "À particule") +
+          grammarVerbFilterButtonHTML("regular", "Réguliers") +
+          grammarVerbFilterButtonHTML("mine", "Dans mes cartes") +
+        "</div>" +
+        '<div class="verb-sort-row" aria-label="Tri des verbes">' +
+          grammarVerbSortButtonHTML("alpha", "Alphabétique") +
+          grammarVerbSortButtonHTML("type", "Par type") +
+        "</div>" +
+      "</div>" +
+      '<div class="grammar-verb-list" id="grammar-verb-list"></div>' +
+    "</section>";
+
+  $("grammar-verb-search").addEventListener("input", (event) => {
+    clearTimeout(grammarVerbSearchTimer);
+    grammarVerbSearchTimer = setTimeout(() => {
+      grammarVerbQuery = event.target.value;
+      selectedGrammarVerb = null;
+      renderGrammarVerbList();
+    }, 180);
+  });
+
+  $("grammar-panel-verbs").querySelectorAll("[data-verb-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      grammarVerbFilter = btn.dataset.verbFilter;
+      selectedGrammarVerb = null;
+      renderGrammarVerbs();
+    });
+  });
+
+  $("grammar-panel-verbs").querySelectorAll("[data-verb-sort]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      grammarVerbSort = btn.dataset.verbSort;
+      renderGrammarVerbs();
+    });
+  });
+
+  await renderGrammarVerbList();
+}
+
+function grammarLevelByName(levelName) {
+  return GRAMMAR_LEVELS_CONTENT.find((level) => level.level === levelName) || GRAMMAR_LEVELS_CONTENT[0];
+}
+
+function grammarLevelChipHTML(level) {
+  return '<button class="grammar-level-chip' + (selectedGrammarLevel === level.level ? " active" : "") + '" type="button" data-grammar-level="' + escapeHTML(level.level) + '">' + escapeHTML(level.level) + "</button>";
+}
+
+function grammarPointHTML(point, index) {
+  const tableHTML = point.table
+    ? grammarTablesHTML([{ ...point.table, title: point.table.title || "" }])
+    : "";
+  return (
+    '<details class="panel grammar-section grammar-accordion" id="grammar-level-point-' + escapeHTML(point.id) + '"' + (index === 0 ? " open" : "") + ">" +
+      '<summary><span>' + (index + 1) + ". " + escapeHTML(point.title) + '</span><span class="grammar-accordion-icon">⌄</span></summary>' +
+      '<div class="grammar-accordion-body">' +
+        '<p>' + escapeHTML(point.explanation) + "</p>" +
+        (point.caseLink ? '<p class="grammar-case-link">Voir l\'onglet <strong>Les cas</strong> pour les formes liées aux cas.</p>' : "") +
+        tableHTML +
+        (point.examples?.length ? '<div class="case-cards grammar-example-grid">' + point.examples.map(grammarExampleHTML).join("") + "</div>" : "") +
+        grammarNotesHTML(point.pitfalls || []) +
+      "</div>" +
+    "</details>"
+  );
+}
+
+function renderGrammarLevels() {
+  const current = grammarLevelByName(selectedGrammarLevel);
+  selectedGrammarLevel = current.level;
+
+  $("grammar-panel-levels").innerHTML =
+    '<section class="panel grammar-section grammar-levels-home">' +
+      '<div class="grammar-levels-head">' +
+        '<div><h2>Par niveau</h2><p class="muted">Points de grammaire essentiels classés par niveau CEFR.</p></div>' +
+        '<strong class="grammar-verb-count">' + current.points.length + " point" + (current.points.length > 1 ? "s" : "") + "</strong>" +
+      "</div>" +
+      '<div class="grammar-level-tabs">' +
+        GRAMMAR_LEVELS_CONTENT.map(grammarLevelChipHTML).join("") +
+      "</div>" +
+      '<nav class="grammar-case-toc" aria-label="Sommaire du niveau ' + escapeHTML(current.level) + '">' +
+        current.points.map((point, index) =>
+          '<a href="#grammar-level-point-' + escapeHTML(point.id) + '">' + (index + 1) + ". " + escapeHTML(point.title) + "</a>"
+        ).join("") +
+      "</nav>" +
+    "</section>" +
+    current.points.map(grammarPointHTML).join("");
+
+  $("grammar-panel-levels").querySelectorAll("[data-grammar-level]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedGrammarLevel = btn.dataset.grammarLevel;
+      renderGrammarLevels();
     });
   });
 }
@@ -5135,9 +7002,29 @@ function regularPraeteritum(inf) {
   return stem + (/[td]$/.test(stem) ? "ete" : "te");
 }
 
+function findIrregularVerbEntry(infinitive) {
+  const inf = normalizedGermanWord(infinitive);
+  return IRREGULAR_VERBS.find((verb) => normalizedGermanWord(verb.inf) === inf) || null;
+}
+
+function findCommonRegularVerbEntry(infinitive) {
+  const inf = normalizedGermanWord(infinitive);
+  return COMMON_REGULAR_VERBS.find((verb) => normalizedGermanWord(verb.inf) === inf) || null;
+}
+
+function separablePraesens(prefix, baseForms) {
+  return baseForms.map((form) => form + " " + prefix);
+}
+
+function separablePerfekt(prefix, basePerfekt) {
+  const match = String(basePerfekt || "").match(/^(hat|ist)\s+(.+)$/);
+  if (!match) return "hat " + prefix + regularPerfekt("machen").replace(/^hat\s+/, "");
+  return match[1] + " " + prefix + match[2];
+}
+
 function getVerbConjugation(infinitive) {
-  const inf = String(infinitive || "").trim().toLowerCase();
-  const entry = IRREGULAR_VERBS.find((verb) => String(verb.inf || "").trim().toLowerCase() === inf);
+  const inf = normalizedGermanWord(infinitive);
+  const entry = findIrregularVerbEntry(inf);
   const generatedPraesens = regularPraesens(inf);
   if (entry) {
     return {
@@ -5149,9 +7036,25 @@ function getVerbConjugation(infinitive) {
       note: entry.note || "",
     };
   }
+
+  const separable = splitSeparableVerb(inf);
+  if (separable) {
+    const base = getVerbConjugation(separable.base);
+    const commonEntry = findCommonRegularVerbEntry(inf);
+    return {
+      inf: inf,
+      fr: commonEntry?.fr || null,
+      praesens: separablePraesens(separable.prefix, base.praesens),
+      perfekt: separablePerfekt(separable.prefix, base.perfekt),
+      praeteritum: base.praeteritum + " " + separable.prefix,
+      note: "verbe à particule séparable : la particule va en fin de proposition principale",
+    };
+  }
+
+  const commonEntry = findCommonRegularVerbEntry(inf);
   return {
     inf: inf,
-    fr: null,
+    fr: commonEntry?.fr || null,
     praesens: generatedPraesens,
     perfekt: regularPerfekt(inf),
     praeteritum: regularPraeteritum(inf),
@@ -5159,15 +7062,16 @@ function getVerbConjugation(infinitive) {
   };
 }
 
-function verbDetailHTML(infinitive, userTranslation = "") {
+function verbDetailHTML(infinitive, userTranslation = "", options = {}) {
   const verb = getVerbConjugation(infinitive);
   const translation = userTranslation || verb.fr || "";
   const perfektAux = verb.perfekt.startsWith("ist ") ? "bin" : "habe";
   const perfektPart = verb.perfekt.replace(/^(hat|ist)\s+/, "");
   const perfektSentence = "Ich " + perfektAux + " " + perfektPart + ".";
+  const detailClass = (options.embedded ? "" : "panel ") + "verb-detail-card";
 
   return (
-    '<section class="panel verb-detail-card">' +
+    '<section class="' + detailClass + '">' +
       '<div class="panel-heading-row"><div><h2>' + escapeHTML(verb.inf) + (translation ? " · " + escapeHTML(translation) : "") + "</h2>" +
       '<p class="muted">Fiche de conjugaison</p></div>' + speakButtonHTML(verb.inf) + "</div>" +
       '<div class="verb-conjugation-grid">' +
@@ -5189,51 +7093,6 @@ function verbDetailHTML(infinitive, userTranslation = "") {
       (verb.note ? '<p class="grammar-note">' + escapeHTML(verb.note) + "</p>" : "") +
     "</section>"
   );
-}
-
-async function renderIrregularVerbs() {
-  const userVerbs = await getUserVerbMap();
-  const searchInput = $("irregular-verb-search");
-  const shouldRefocus = document.activeElement === searchInput;
-  const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
-  const rows = IRREGULAR_VERBS
-    .map((entry) => getVerbConjugation(entry.inf))
-    .filter((verb) => {
-      const haystack = [verb.inf, verb.fr, ...verb.praesens, verb.perfekt, verb.praeteritum].join(" ").toLowerCase();
-      return !query || haystack.includes(query);
-    });
-
-  $("grammar-panel-irregular").innerHTML =
-    '<section class="panel grammar-section">' +
-      '<div class="irregular-toolbar">' +
-        '<div><h2>Verbes irréguliers</h2><p class="muted">Référence rapide des formes vraiment utiles.</p></div>' +
-        '<input id="irregular-verb-search" type="search" placeholder="Rechercher un verbe…">' +
-      "</div>" +
-      '<div class="grammar-table-wrap"><table class="grammar-table irregular-table"><thead><tr>' +
-        "<th>Infinitif</th><th>Traduction</th><th>du</th><th>er/sie/es</th><th>Perfekt</th><th>Präteritum</th>" +
-      "</tr></thead><tbody>" +
-        rows.map((verb) => {
-          const inCards = userVerbs.has(verb.inf.toLowerCase());
-          return (
-            "<tr>" +
-              '<td><strong>' + escapeHTML(verb.inf) + "</strong>" + (inCards ? '<span class="grammar-badge">dans tes cartes</span>' : "") + "</td>" +
-              '<td>' + escapeHTML(verb.fr || "") + "</td>" +
-              '<td>' + escapeHTML(verb.praesens[1]) + "</td>" +
-              '<td>' + escapeHTML(verb.praesens[2]) + "</td>" +
-              '<td>' + escapeHTML(verb.perfekt) + "</td>" +
-              '<td>' + escapeHTML(verb.praeteritum) + "</td>" +
-            "</tr>"
-          );
-        }).join("") +
-      "</tbody></table></div>" +
-    "</section>";
-
-  $("irregular-verb-search").value = query;
-  $("irregular-verb-search").addEventListener("input", renderIrregularVerbs);
-  if (shouldRefocus) {
-    $("irregular-verb-search").focus();
-    $("irregular-verb-search").setSelectionRange(query.length, query.length);
-  }
 }
 
 
@@ -5315,9 +7174,10 @@ async function exportData() {
 
   const payload = {
     app: "Deutsch Flash Studio",
+    kind: "backup",
     version: 1,
     exportedAt: new Date().toISOString(),
-    cards: cards,          // la progression SRS est incluse dans chaque carte
+    cards: cards,
     reviews: reviews,
     images: exportedImages,
     customDecks: getCustomDecks(),
@@ -5375,12 +7235,23 @@ function isCompleteBackupLikeFile(data) {
   );
 }
 
+function detectImportKind(data) {
+  if (data?.kind === "backup") return "backup";
+  if (data?.kind === "pack") return "pack";
+  if (data?.kind) return "unknown";
+  if (isCompleteBackupLikeFile(data)) return "backup";
+  if (data && data.pack && Array.isArray(data.cards)) return "pack";
+  if (data && Array.isArray(data.cards)) return "backup";
+  return "unknown";
+}
+
 async function readPackImportFile(file) {
   const text = await file.text();
   const data = JSON.parse(text);
 
-  if (!data || data.kind !== "pack") {
-    if (isCompleteBackupLikeFile(data)) throw new Error("BACKUP_FILE_IN_PACK_IMPORT");
+  const kind = detectImportKind(data);
+  if (kind !== "pack") {
+    if (kind === "backup") throw new Error("BACKUP_FILE_IN_PACK_IMPORT");
     throw new Error("PACK_IMPORT_INVALID_KIND");
   }
 
@@ -5409,21 +7280,36 @@ async function analysePackFile(data) {
   const seen = new Set();
   const existing = [];
   const fresh = [];
+  const needsCategory = [];
 
   (data.cards || []).forEach((raw) => {
     const card = normalizeCard(raw || {});
+    const rawCategory = String(raw?.category || "").trim();
     if (!card.de && !card.fr) return;
     const key = cardMatchKey(card);
     if (seen.has(key)) return;
     seen.add(key);
     const local = localKeys.get(key);
     if (local) existing.push(local);
-    else fresh.push(card);
+    else {
+      card.category = rawCategory;
+      const resolvedCategory = rawCategory ? resolveImportedCardCategory(card, data.pack?.name) : inferredRealCategory(card);
+      if (resolvedCategory) {
+        card.category = resolvedCategory;
+      } else {
+        card.category = "";
+        card._needsCategory = true;
+        needsCategory.push(card);
+      }
+      fresh.push(card);
+    }
   });
 
   return {
     existing: existing,
     fresh: fresh,
+    needsCategory: needsCategory,
+    availableCategories: getAllKnownCategories(allCards),
     packName: data.pack?.name,
     packColor: data.pack?.color,
   };
@@ -5443,7 +7329,7 @@ async function previewPackImportFile(file) {
     console.error("Prévisualisation pack impossible :", error);
     closePackImportModal();
     if (error.message === "BACKUP_FILE_IN_PACK_IMPORT") {
-      toast("Ce fichier est une sauvegarde complète. Utilise Plus → Sauvegarde → Importer.");
+      await previewImportFile(file);
     } else if (error.message === "PACK_IMPORT_MISSING_NAME") {
       toast("Fichier pack invalide : nom de pack manquant.");
     } else if (error.message === "PACK_IMPORT_EMPTY_CARDS") {
@@ -5462,15 +7348,31 @@ function renderPackImportModal() {
   const existingPack = getPacks().find((pack) => pack.name.toLowerCase() === String(analysis.packName || "").toLowerCase()) || null;
   const newName = getUniquePackName(analysis.packName);
   const total = analysis.existing.length + analysis.fresh.length;
+  const needsCategory = analysis.needsCategory || [];
 
   $("pack-import-name").textContent = "Pack « " + analysis.packName + " »";
   $("pack-import-total").textContent = total + " carte" + (total > 1 ? "s" : "") + " dans le fichier";
   $("pack-import-existing").textContent = analysis.existing.length;
   $("pack-import-fresh").textContent = analysis.fresh.length;
+  $("pack-import-category-fix").classList.toggle("hidden", needsCategory.length === 0);
+  $("pack-import-category-message").textContent = needsCategory.length
+    ? needsCategory.length + " nouvelle(s) carte(s) n'ont pas de vraie catégorie. Choisis une catégorie avant d'importer."
+    : "";
+  $("pack-import-category-cards").textContent = needsCategory
+    .slice(0, 10)
+    .map(fullWord)
+    .join(", ") + (needsCategory.length > 10 ? "…" : "");
+  $("pack-import-category-select").innerHTML =
+    '<option value="">Choisir une catégorie</option>' +
+    (analysis.availableCategories || []).map((category) => '<option value="' + escapeHTML(category) + '">' + escapeHTML(category) + "</option>").join("") +
+    '<option value="__new__">Nouvelle catégorie…</option>';
+  $("pack-import-category-new").value = "";
+  $("pack-import-category-new").classList.add("hidden");
   $("pack-import-choice").classList.toggle("hidden", !existingPack);
   $("pack-import-new-name").textContent = newName;
   const mergeChoice = document.querySelector('input[name="pack-import-mode"][value="merge"]');
   if (mergeChoice) mergeChoice.checked = true;
+  syncPackImportConfirmState();
 }
 
 function closePackImportModal() {
@@ -5479,6 +7381,23 @@ function closePackImportModal() {
   pendingPackImportData = null;
   pendingPackImportAnalysis = null;
   $("pack-import-file").value = "";
+}
+
+function getPackImportAssignedCategory() {
+  const needsCategory = pendingPackImportAnalysis?.needsCategory || [];
+  if (!needsCategory.length) return "";
+  const selected = $("pack-import-category-select").value;
+  if (selected === "__new__") return $("pack-import-category-new").value.trim();
+  return selected.trim();
+}
+
+function syncPackImportConfirmState() {
+  const needsCategory = pendingPackImportAnalysis?.needsCategory || [];
+  const wantsNew = $("pack-import-category-select").value === "__new__";
+  $("pack-import-category-new").classList.toggle("hidden", !wantsNew);
+  const assigned = getPackImportAssignedCategory();
+  const blocked = needsCategory.length > 0 && isInvalidPackCategory(assigned, pendingPackImportAnalysis?.packName);
+  $("btn-confirm-pack-import").disabled = blocked;
 }
 
 async function confirmPackImport() {
@@ -5490,6 +7409,14 @@ async function confirmPackImport() {
   }
 
   try {
+    const cardsNeedingCategory = analysis.needsCategory || [];
+    const assignedCategory = getPackImportAssignedCategory();
+    if (cardsNeedingCategory.length && isInvalidPackCategory(assignedCategory, analysis.packName)) {
+      toast("Choisis une vraie catégorie avant d'importer.");
+      return;
+    }
+    cardsNeedingCategory.forEach((card) => { card.category = assignedCategory; });
+
     const existingPack = getPacks().find((pack) => pack.name.toLowerCase() === String(analysis.packName || "").toLowerCase()) || null;
     const selectedMode = document.querySelector('input[name="pack-import-mode"]:checked')?.value || "merge";
     let targetPack = existingPack && selectedMode === "merge" ? existingPack : null;
@@ -5562,9 +7489,14 @@ async function confirmPackImport() {
 async function readImportFile(file) {
   const text = await file.text();
   const data = JSON.parse(text);
+  const kind = detectImportKind(data);
 
-  if (data?.kind === "pack") {
+  if (kind === "pack") {
     throw new Error("PACK_FILE_IN_BACKUP_IMPORT");
+  }
+
+  if (kind !== "backup" && !isCompleteBackupLikeFile(data)) {
+    throw new Error("Format de fichier invalide");
   }
 
   if (!data || !Array.isArray(data.cards)) {
@@ -5572,6 +7504,7 @@ async function readImportFile(file) {
   }
 
   return {
+    kind: "backup",
     version: data.version || "",
     exportedAt: data.exportedAt || "",
     cards: data.cards,
@@ -5715,6 +7648,7 @@ async function importData(file, mode = "merge", options = {}) {
 
     // Les images ont pu changer : on vide le cache d'URLs
     clearImageUrlCache();
+    await repairPackCategorySeparationData();
     purgePackCardIds(await getAllCards());
 
     const label = mode === "replace" ? "Restauration complète" : "Import en fusion";
@@ -5749,7 +7683,7 @@ async function previewImportFile(file) {
     console.error("Prévisualisation import impossible :", error);
     closeImportPreviewModal();
     if (error.message === "PACK_FILE_IN_BACKUP_IMPORT") {
-      toast("Ce fichier est un pack. Utilise Mes packs → Importer un pack.");
+      await previewPackImportFile(file);
     } else {
       toast("Fichier invalide : impossible de prévisualiser cet import.");
     }
@@ -5829,6 +7763,7 @@ async function confirmImportPreview(mode) {
 function refreshAfterDangerAction() {
   refreshBackupInfo();
   refreshDashboard();
+  if ($("page-packs").classList.contains("active")) renderPacksPage();
   refreshCategorySuggestions();
   refreshSubcategorySuggestions();
   renderLibraryIfVisible();
@@ -5842,97 +7777,113 @@ function refreshAfterDangerAction() {
   }
 }
 
-async function resetAllSrsProgress() {
+async function deleteAllCardsAndImagesFromBackupPage() {
   const firstConfirm = confirm(
-    "Tu vas réinitialiser toute ta progression SRS. Les cartes et images seront conservées. Continuer ?"
+    "Supprimer toutes les cartes et toutes les images ?\n\nLes packs et les jeux restent visibles, mais ils seront vides. Cette action est irréversible. Pense à exporter avant."
   );
   if (!firstConfirm) return;
 
   const secondConfirm = confirm(
-    "Dernière confirmation : cette action remettra toutes les cartes à zéro. Confirmer ?"
+    "Dernière confirmation : toutes tes cartes, leurs images et ton historique de révision vont être supprimés. Confirmer ?"
   );
   if (!secondConfirm) return;
 
-  const cards = await getAllCards();
-  for (const card of cards) {
-    card.srs = {
-      box: 1,
-      nextReview: todayISO(),
-      correctCount: 0,
-      wrongCount: 0,
-    };
-    card.updatedAt = todayISO();
-    await saveCard(card);
+  try {
+    await clearStore("cards");
+    await clearStore("images");
+    await clearStore("reviews");
+    purgePackCardIds([]);
+
+    clearImageUrlCache();
+    if (editingCard) resetCardForm();
+
+    toast("Toutes les cartes et images ont été supprimées.");
+    refreshAfterDangerAction();
+  } catch (error) {
+    console.error("Échec de suppression des cartes et images :", error);
+    toast("Impossible de supprimer les cartes et images.");
+  }
+}
+
+async function deleteAllPacks() {
+  const firstConfirm = confirm(
+    "Supprimer tous les packs ?\n\nLes cartes resteront intactes. Seules les listes de packs seront supprimées. Cette action est irréversible. Pense à exporter avant."
+  );
+  if (!firstConfirm) return;
+
+  const secondConfirm = confirm(
+    "Dernière confirmation : tous les packs vont être supprimés, mais aucune carte ne sera supprimée. Confirmer ?"
+  );
+  if (!secondConfirm) return;
+
+  localStorage.removeItem(LS_PACKS);
+  currentDeckDetailPackId = null;
+  if (isPackScope(currentReviewCategory)) currentReviewCategory = null;
+
+  toast("Tous les packs ont été supprimés.");
+  refreshAfterDangerAction();
+}
+
+async function deleteAllDecks() {
+  const firstConfirm = confirm(
+    "Supprimer tous les jeux ?\n\nTu peux garder les cartes : elles seront placées dans Général. Tu peux aussi supprimer les cartes avec les jeux. Cette action est irréversible. Pense à exporter avant."
+  );
+  if (!firstConfirm) return;
+
+  const choice = prompt(
+    "Dernière confirmation.\n\nTape GARDER pour supprimer les jeux et placer les cartes dans Général.\nTape SUPPRIMER pour supprimer les jeux, les cartes et les images."
+  );
+  if (choice === null) return;
+
+  const normalizedChoice = choice.trim().toUpperCase();
+  if (normalizedChoice !== "GARDER" && normalizedChoice !== "SUPPRIMER") {
+    toast("Action annulée : choix non reconnu.");
+    return;
   }
 
-  toast("Progression SRS réinitialisée pour " + cards.length + " carte(s).");
-  refreshAfterDangerAction();
-}
+  try {
+    localStorage.removeItem(LS_DECKS);
+    localStorage.removeItem(LS_SUBCATEGORIES);
+    selectedDeckNames.clear();
+    deckGridSelectionMode = false;
+    syncSelectionModeClass();
+    currentDeckDetailName = null;
 
-async function deleteAllCardsAndImages() {
-  const firstConfirm = confirm(
-    "Tu vas supprimer toutes les cartes et toutes les images. Cette action est irréversible sans export. Continuer ?"
-  );
-  if (!firstConfirm) return;
+    if (normalizedChoice === "SUPPRIMER") {
+      await clearStore("cards");
+      await clearStore("images");
+      await clearStore("reviews");
+      purgePackCardIds([]);
+      clearImageUrlCache();
+      if (editingCard) resetCardForm();
+      toast("Tous les jeux, cartes et images ont été supprimés.");
+    } else {
+      const cards = await getAllCards();
+      for (const card of cards) {
+        card.category = "Général";
+        card.subcategory = "";
+        card.updatedAt = todayISO();
+        await saveCard(normalizeCard(card));
+      }
+      toast("Tous les jeux ont été supprimés. Les cartes sont maintenant dans Général.");
+    }
 
-  const secondConfirm = confirm(
-    "Dernière confirmation : toutes les données de vocabulaire vont être supprimées. Confirmer ?"
-  );
-  if (!secondConfirm) return;
-
-  await clearStore("cards");
-  await clearStore("images");
-  await clearStore("reviews");
-  purgePackCardIds([]);
-
-  clearImageUrlCache();
-  if (editingCard) resetCardForm();
-
-  toast("Toutes les cartes et images ont été supprimées.");
-  refreshAfterDangerAction();
-}
-
-async function deleteEverything() {
-  const firstConfirm = confirm(
-    "Tu vas TOUT supprimer : les jeux, les sous-catégories, les cartes, les images et l'historique de révisions. Cette action est irréversible sans export. Continuer ?"
-  );
-  if (!firstConfirm) return;
-
-  const secondConfirm = confirm(
-    "Dernière confirmation : l'application reviendra complètement à zéro. Confirmer ?"
-  );
-  if (!secondConfirm) return;
-
-  // Données IndexedDB
-  await clearStore("cards");
-  await clearStore("images");
-  await clearStore("reviews");
-
-  // Structures stockées dans localStorage (jeux + sous-catégories personnalisés)
-  localStorage.removeItem(LS_DECKS);
-  localStorage.removeItem(LS_PACKS);
-  localStorage.removeItem(LS_SUBCATEGORIES);
-
-  clearImageUrlCache();
-  selectedDeckNames.clear();
-  deckGridSelectionMode = false;
-  syncSelectionModeClass();
-  if (editingCard) resetCardForm();
-
-  toast("Tous les jeux, cartes, images et sous-catégories ont été supprimés.");
-  refreshAfterDangerAction();
+    refreshAfterDangerAction();
+  } catch (error) {
+    console.error("Échec de suppression des jeux :", error);
+    toast("Impossible de supprimer les jeux.");
+  }
 }
 
 function setupBackupPage() {
   $("btn-export").addEventListener("click", exportData);
   $("btn-force-update").addEventListener("click", forceUpdateAppCache);
-  $("btn-delete-everything").addEventListener("click", deleteEverything);
-  $("btn-export-before-reset").addEventListener("click", exportData);
-  $("btn-reset-srs").addEventListener("click", resetAllSrsProgress);
-  $("btn-delete-all-data").addEventListener("click", deleteAllCardsAndImages);
+  $("btn-delete-all-data").addEventListener("click", deleteAllCardsAndImagesFromBackupPage);
+  $("btn-delete-all-packs").addEventListener("click", deleteAllPacks);
+  $("btn-delete-all-decks").addEventListener("click", deleteAllDecks);
   $("btn-toggle-danger-zone").addEventListener("click", () => {
     const hidden = $("danger-zone-content").classList.toggle("hidden");
-    $("btn-toggle-danger-zone").textContent = hidden ? "Afficher la Danger Zone" : "Masquer la Danger Zone";
+    $("btn-toggle-danger-zone").textContent = hidden ? "Afficher les actions" : "Masquer les actions";
   });
 
   $("btn-import-json").addEventListener("click", () => {
@@ -5951,7 +7902,7 @@ function setupBackupPage() {
 
 async function forceUpdateAppCache() {
   const confirmed = confirm(
-    "Vider le cache et recharger l'application ?\n\nTes cartes et ta progression ne sont pas touchées."
+    "Recharger l'application proprement ?\n\nTes cartes ne sont pas touchées."
   );
   if (!confirmed) return;
   try {
@@ -5997,6 +7948,10 @@ function setupServiceWorkerUpdates() {
   });
 }
 
+function cleanupObsoleteLocalStorage() {
+  OBSOLETE_LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
 
 /* =========================================================
    13. DÉMARRAGE DE L'APPLICATION
@@ -6012,9 +7967,12 @@ async function startApp() {
   }
 
   try {
+    cleanupObsoleteLocalStorage();
     await initDB();
     requestPersistentStorage();
     await seedIfEmpty();
+    await runPackCategorySeparationMigration();
+    await runVerbSubcategoryMigration();
   } catch (error) {
     console.error("Échec du démarrage :", error);
     toast("Erreur au démarrage. Certaines données peuvent être indisponibles.");

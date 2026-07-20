@@ -116,6 +116,10 @@
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"></path>
     </symbol>
 
+    <symbol id="icon-flame" viewBox="0 0 24 24">
+      <path d="M12 22a7 7 0 0 0 7-7c0-2.8-1.5-5.1-3.4-7.1-.6 1.7-1.7 2.9-3.1 3.7.7-3.2-.8-6.2-3.8-9.1C8.2 6.6 5 9.7 5 15a7 7 0 0 0 7 7z"></path>
+    </symbol>
+
     <symbol id="icon-pencil" viewBox="0 0 24 24">
       <path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
     </symbol>
@@ -204,47 +208,12 @@
           </div>
           <div class="stat-card">
             <div class="stat-value stat-gold" id="stat-due">0</div>
-            <div class="stat-label">À réviser aujourd'hui</div>
+            <div class="stat-label">Difficiles dues</div>
           </div>
           <div class="stat-card">
             <div class="stat-value stat-green" id="stat-mastered">0</div>
             <div class="stat-label">Cartes acquises</div>
           </div>
-        </div>
-
-        <div class="dashboard-insights">
-          <section class="panel today-stats-panel">
-            <div class="panel-heading-row">
-              <h2>Aujourd'hui</h2>
-              <span id="today-stats-message" class="muted">Pas encore de révision aujourd'hui.</span>
-            </div>
-            <div class="today-stat-grid">
-              <div class="today-stat-card">
-                <span>Streak</span>
-                <strong class="streak-value" id="today-streak">0 jour</strong>
-              </div>
-              <div class="today-stat-card">
-                <span>Révisions aujourd'hui</span>
-                <strong id="today-reviews-count">0</strong>
-              </div>
-              <div class="today-stat-card">
-                <span>Réussite</span>
-                <strong id="today-success-rate">0%</strong>
-              </div>
-              <div class="today-stat-card">
-                <span>Cartes difficiles</span>
-                <strong id="today-hard-count">0</strong>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel hard-cards-panel">
-            <div class="panel-heading-row">
-              <h2>Cartes difficiles</h2>
-              <button class="btn btn-ghost btn-small" data-goto="bibliotheque" type="button">Voir Bibliothèque</button>
-            </div>
-            <div id="hard-cards-list" class="hard-cards-list"></div>
-          </section>
         </div>
 
         <div class="deck-bulk-bar hidden" id="deck-grid-bulk-bar">
@@ -258,6 +227,14 @@
         </div>
 
         <div class="deck-grid" id="deck-grid"></div>
+
+        <section class="hard-cards-strip">
+          <span><strong id="dashboard-hard-due-count">0</strong> due(s) maintenant · <strong id="dashboard-hard-total-count">0</strong> active(s)</span>
+          <div class="hard-cards-strip-actions">
+            <button class="btn btn-primary btn-small" id="btn-review-hard-cards" type="button">Réviser les difficiles</button>
+            <button class="btn btn-ghost btn-small" id="btn-manage-hard-cards" type="button">Gérer</button>
+          </div>
+        </section>
 
         <div class="panel deck-empty hidden" id="deck-empty">
           <p class="muted">Aucun deck pour le moment. Ajoute une carte pour créer ton premier jeu.</p>
@@ -325,6 +302,9 @@
           <input id="deck-detail-search" type="search" placeholder="Rechercher dans ce jeu…">
           <select id="deck-detail-subcategory-filter">
             <option value="">Toutes les sous-catégories</option>
+          </select>
+          <select id="deck-detail-level-filter">
+            <option value="">Tous les niveaux</option>
           </select>
         </div>
 
@@ -408,46 +388,34 @@
       <section id="page-revision" class="page">
         <header class="page-header">
           <h1>Révision</h1>
-          <p>Les cartes du jour et les cartes en retard.</p>
+          <p>Les cartes difficiles que tu as programmées manuellement.</p>
         </header>
 
         <div id="review-hub">
-          <section class="panel hub-summary">
-            <div class="hub-summary-head">
+          <section class="panel review-difficult-panel">
+            <div class="review-panel-head">
               <div>
-                <h2 id="hub-title">Prêt à réviser</h2>
-                <p class="muted" id="hub-subtitle">Choisis ce que tu veux travailler.</p>
+                <h2>Cartes difficiles</h2>
+                <p class="muted"><strong id="review-hard-due-count">0</strong> due(s) maintenant · <strong id="review-hard-total-count">0</strong> active(s)</p>
+              </div>
+              <button class="btn btn-primary" type="button" id="btn-review-page-hard">Réviser les difficiles</button>
+            </div>
+            <div class="difficult-list" id="review-difficult-list"></div>
+          </section>
+
+          <section class="panel review-free-panel">
+            <div class="review-panel-head">
+              <div>
+                <h2>Étude libre</h2>
+                <p class="muted" id="hub-subtitle">Choisis un périmètre et un mode.</p>
               </div>
             </div>
-            <div class="hub-stat-grid">
-              <div class="hub-stat hub-stat-new"><span>Nouvelles en attente</span><strong id="hub-stat-new">0</strong></div>
-              <div class="hub-stat hub-stat-review"><span>À revoir</span><strong id="hub-stat-review">0</strong></div>
-              <div class="hub-stat hub-stat-hard"><span>Difficiles</span><strong id="hub-stat-hard">0</strong></div>
-            </div>
-            <p class="hub-note hidden" id="hub-cap-note"></p>
-            <div class="hub-pace">
-              <label for="hub-max-new">Nouvelles cartes par jour</label>
-              <select id="hub-max-new">
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="unlimited">Illimité</option>
-              </select>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h2>Que réviser ?</h2>
             <div class="hub-scope-chips" id="hub-scope-chips"></div>
-          </section>
 
-          <section class="panel">
-            <h2>Comment ?</h2>
             <div class="hub-mode-grid" id="hub-mode-grid">
               <button class="hub-mode" type="button" data-hub-mode="classic">
                 <span class="hub-mode-title">Classique</span>
-                <span class="hub-mode-desc">Je révèle la réponse et je m'auto-évalue.</span>
+                <span class="hub-mode-desc">Je révèle la réponse, puis je passe à la suivante.</span>
               </button>
               <button class="hub-mode" type="button" data-hub-mode="multiple" id="hub-mode-multiple">
                 <span class="hub-mode-title">Choix multiple</span>
@@ -457,18 +425,10 @@
                 <span class="hub-mode-title">Écrit</span>
                 <span class="hub-mode-desc">J'écris l'article et le mot.</span>
               </button>
-              <button class="hub-mode" type="button" data-hub-mode="learning">
-                <span class="hub-mode-title">Découverte</span>
-                <span class="hub-mode-desc">Je feuillette sans toucher à ma progression.</span>
-              </button>
             </div>
-          </section>
-
-          <div class="hub-cta">
-            <button class="btn btn-primary btn-large" type="button" id="btn-hub-start">Commencer</button>
-            <button class="btn btn-ghost" type="button" id="btn-hub-free">Entraînement libre</button>
+            <button class="btn btn-primary btn-large" type="button" id="btn-hub-free">Étudier</button>
             <p class="muted hub-cta-note" id="hub-cta-note"></p>
-          </div>
+          </section>
         </div>
 
         <!-- État vide : rien à réviser ou bibliothèque vide -->
@@ -516,6 +476,8 @@
               <div class="review-word review-answer-word">
                 <span id="answer-article"></span><span id="answer-word-text"></span>
                 <button class="btn btn-icon" id="btn-answer-speak-word" title="Écouter le mot" aria-label="Écouter le mot"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-volume"></use></svg></button>
+                <button class="btn btn-icon btn-difficult" id="btn-answer-difficult" type="button" title="Carte difficile" aria-label="Carte difficile"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-flame"></use></svg></button>
+                <span class="chip chip-level hidden" id="answer-level"></span>
               </div>
 
               <p class="answer-line" id="answer-plural-row">Pluriel : <strong id="answer-plural"></strong></p>
@@ -529,12 +491,14 @@
                 <p class="example-fr" id="answer-example-fr"></p>
               </div>
 
-              <p class="grade-question">Tu la connaissais&nbsp;?</p>
-              <div class="grade-buttons">
-                <button class="btn grade-fail" data-grade="fail">Raté<span>revient aujourd'hui</span></button>
-                <button class="btn grade-hard" data-grade="hard">Difficile<span>revient demain</span></button>
-                <button class="btn grade-good" data-grade="good">Normal<span>box + 1</span></button>
-                <button class="btn grade-easy" data-grade="easy">Facile<span>box + 2</span></button>
+              <div class="manual-review-actions hidden" id="manual-review-actions">
+                <button class="btn btn-primary" type="button" data-difficult-session-remove>Retirer des difficiles</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="10m">10 min</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="1h">1 h</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="evening">Ce soir</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="tomorrow">Demain</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="3d">3 jours</button>
+                <button class="btn btn-ghost" type="button" data-difficult-session-delay="1w">1 semaine</button>
               </div>
               <button class="btn btn-primary btn-large hidden" id="btn-free-next" type="button">Carte suivante</button>
             </div>
@@ -550,7 +514,7 @@
         </header>
 
         <form id="add-card-form" class="panel form-panel">
-          <p id="edit-mode-note" class="edit-mode-note hidden">Tu modifies une carte existante. Sa progression SRS sera conservée.</p>
+          <p id="edit-mode-note" class="edit-mode-note hidden">Tu modifies une carte existante. Sa progression sera conservée.</p>
 
           <div class="form-grid">
 
@@ -595,6 +559,19 @@
               <label for="f-category">Catégorie</label>
               <input id="f-category" type="text" list="category-suggestions" placeholder="Animaux">
               <datalist id="category-suggestions"></datalist>
+            </div>
+
+            <div class="form-field">
+              <label for="f-level">Niveau</label>
+              <select id="f-level">
+                <option value="">—</option>
+                <option value="A1">A1</option>
+                <option value="A2">A2</option>
+                <option value="B1">B1</option>
+                <option value="B2">B2</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+              </select>
             </div>
 
             <div class="form-field">
@@ -644,7 +621,7 @@
             <strong id="library-stat-mastered">0</strong>
           </div>
           <div class="library-stat-mini">
-            <span>À réviser aujourd'hui</span>
+            <span>Difficiles dues</span>
             <strong id="library-stat-due">0</strong>
           </div>
           <div class="library-stat-mini">
@@ -661,11 +638,14 @@
           <select id="filter-subcategory">
             <option value="">Toutes les sous-catégories</option>
           </select>
+          <select id="filter-level">
+            <option value="">Tous les niveaux</option>
+          </select>
           <select id="library-sort" aria-label="Trier la bibliothèque">
             <option value="recent">Plus récentes</option>
             <option value="az">A → Z allemand</option>
             <option value="hard">Difficiles d'abord</option>
-            <option value="due">Prochaine révision</option>
+            <option value="due">Échéance difficile</option>
           </select>
           <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
           <button class="btn btn-ghost" id="btn-library-select" type="button">Sélectionner</button>
@@ -732,13 +712,13 @@
 
         <div class="grammar-tabs" role="tablist" aria-label="Sections de grammaire">
           <button class="grammar-tab" id="grammar-tab-cases" type="button" data-grammar-tab="cases">Les cas</button>
-          <button class="grammar-tab" id="grammar-tab-my-verbs" type="button" data-grammar-tab="my-verbs">Mes verbes</button>
-          <button class="grammar-tab" id="grammar-tab-irregular" type="button" data-grammar-tab="irregular">Verbes irréguliers</button>
+          <button class="grammar-tab" id="grammar-tab-verbs" type="button" data-grammar-tab="verbs">Verbes</button>
+          <button class="grammar-tab" id="grammar-tab-levels" type="button" data-grammar-tab="levels">Par niveau</button>
         </div>
 
         <div class="grammar-panel" id="grammar-panel-cases"></div>
-        <div class="grammar-panel hidden" id="grammar-panel-my-verbs"></div>
-        <div class="grammar-panel hidden" id="grammar-panel-irregular"></div>
+        <div class="grammar-panel hidden" id="grammar-panel-verbs"></div>
+        <div class="grammar-panel hidden" id="grammar-panel-levels"></div>
       </section>
       <!-- ============ PAGE : SAUVEGARDE ============ -->
       <section id="page-sauvegarde" class="page">
@@ -753,6 +733,7 @@
           <p id="backup-info" class="muted"></p>
           <p id="last-export-note" class="last-export-note"></p>
           <button class="btn btn-primary" id="btn-export">Exporter mes données</button>
+          <p class="backup-format-help">Un fichier de sauvegarde contient tout (cartes, images, progression). Un fichier de pack ne contient qu'une sélection de cartes.</p>
         </div>
 
         <div class="panel">
@@ -763,25 +744,24 @@
             <button class="btn btn-primary" id="btn-import-json" type="button">Importer un fichier JSON</button>
           </div>
           <p class="muted">Tu pourras choisir Fusionner ou Tout remplacer après la prévisualisation.</p>
+          <p class="backup-format-help">Un fichier de sauvegarde contient tout (cartes, images, progression). Un fichier de pack ne contient qu'une sélection de cartes.</p>
         </div>
 
         <div class="panel">
-          <h2>Mise à jour</h2>
-          <p class="muted">Si l'application se comporte bizarrement après une mise à jour, force le rechargement complet.</p>
-          <button class="btn btn-ghost" type="button" id="btn-force-update">Vider le cache et recharger</button>
+          <h2>Problème d'affichage ?</h2>
+          <p class="muted">Si l'application bugue ou affiche une vieille version, ce bouton la recharge proprement. Tes cartes ne sont pas touchées.</p>
+          <button class="btn btn-ghost" type="button" id="btn-force-update">Recharger l'application</button>
         </div>
 
         <div class="panel danger-zone">
-          <h2>Danger Zone</h2>
-          <p class="danger-warning">Actions irréversibles.</p>
-          <button class="btn btn-ghost danger-toggle" id="btn-toggle-danger-zone" type="button">Afficher la Danger Zone</button>
+          <h2>Actions irréversibles</h2>
+          <p class="danger-warning">Pense à exporter avant.</p>
+          <button class="btn btn-ghost danger-toggle" id="btn-toggle-danger-zone" type="button">Afficher les actions</button>
           <div class="danger-zone-content hidden" id="danger-zone-content">
-            <p class="danger-warning">Avant toute action dangereuse, exporte tes données. Ces actions peuvent supprimer ou réinitialiser ta progression.</p>
             <div class="danger-actions">
-              <button class="btn btn-ghost" id="btn-export-before-reset">Exporter avant reset</button>
-              <button class="btn btn-danger-action" id="btn-reset-srs">Réinitialiser uniquement la progression SRS</button>
               <button class="btn btn-danger-action" id="btn-delete-all-data">Supprimer toutes les cartes et images</button>
-              <button class="btn btn-danger-action" id="btn-delete-everything">Tout supprimer : jeux, sous-catégories, cartes et images</button>
+              <button class="btn btn-danger-action" id="btn-delete-all-packs">Supprimer tous les packs</button>
+              <button class="btn btn-danger-action" id="btn-delete-all-decks">Supprimer tous les jeux</button>
             </div>
           </div>
         </div>
@@ -798,7 +778,7 @@
 
       <div class="sheet-segmented" id="study-scope-toggle">
         <button class="sheet-seg active" type="button" data-session-type="due">
-          <span class="sheet-seg-title">Session du jour</span>
+          <span class="sheet-seg-title">Difficiles dues</span>
           <span class="sheet-seg-count" id="seg-count-due">0 cartes</span>
         </button>
         <button class="sheet-seg" type="button" data-session-type="free">
@@ -834,6 +814,35 @@
       <div class="sheet-footer">
         <button class="btn btn-ghost btn-small" type="button" id="btn-study-advanced">Réglages avancés</button>
         <button class="btn btn-ghost btn-small" type="button" id="btn-close-study-mode">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="difficult-modal" class="modal-backdrop sheet-backdrop hidden">
+    <div class="modal-panel sheet-panel difficult-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="difficult-modal-title">Revoir cette carte dans :</h2>
+      <p class="muted" id="difficult-modal-card"></p>
+      <div class="difficult-schedule-grid" id="difficult-schedule-grid">
+        <button class="sheet-mode" type="button" data-difficult-delay="10m">10 min</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="1h">1 h</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="3h">3 h</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="evening">Ce soir (20h)</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="tomorrow">Demain (9h)</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="3d">Dans 3 jours</button>
+        <button class="sheet-mode" type="button" data-difficult-delay="1w">Dans 1 semaine</button>
+      </div>
+      <div class="difficult-custom-row" id="difficult-custom-row">
+        <label for="difficult-custom-datetime">Choisir date/heure</label>
+        <div>
+          <input id="difficult-custom-datetime" type="datetime-local">
+          <button class="btn btn-primary btn-small" id="btn-difficult-custom-save" type="button">Valider</button>
+        </div>
+      </div>
+      <div class="difficult-list hidden" id="difficult-manage-list"></div>
+      <div class="sheet-footer">
+        <button class="btn btn-danger-action hidden" id="btn-difficult-remove" type="button">Retirer des cartes difficiles</button>
+        <button class="btn btn-ghost btn-small" type="button" id="btn-close-difficult-modal">Fermer</button>
       </div>
     </div>
   </div>
@@ -911,6 +920,15 @@
         <div class="pack-import-row">
           <strong>+ <span id="pack-import-fresh">0</span> nouvelles cartes</strong>
           <p>Elles seront créées, dans leurs catégories.</p>
+        </div>
+
+        <div class="pack-import-row pack-import-category-fix hidden" id="pack-import-category-fix">
+          <strong>Catégorie à vérifier</strong>
+          <p id="pack-import-category-message">Certaines cartes utilisent le nom du pack comme catégorie.</p>
+          <p class="pack-import-card-list" id="pack-import-category-cards"></p>
+          <label for="pack-import-category-select">Catégorie réelle</label>
+          <select id="pack-import-category-select"></select>
+          <input type="text" id="pack-import-category-new" maxlength="40" placeholder="Nouvelle catégorie">
         </div>
 
         <div class="pack-import-choice hidden" id="pack-import-choice">
