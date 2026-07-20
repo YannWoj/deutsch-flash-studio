@@ -239,8 +239,6 @@ let currentCardDetailId = null;
 let cardDetailDirty = false;
 let cardDetailTouchStartY = null;
 let bodyScrollLockCount = 0;
-let bodyScrollLockY = 0;
-let bodyScrollLockPreviousStyles = null;
 let visibleModalCount = 0;
 let modalScrollLockObserver = null;
 
@@ -256,21 +254,8 @@ function $(id) {
 
 function lockBodyScroll() {
   if (bodyScrollLockCount === 0) {
-    const body = document.body;
-    bodyScrollLockY = window.scrollY || window.pageYOffset || 0;
-    bodyScrollLockPreviousStyles = {
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      right: body.style.right,
-      width: body.style.width,
-    };
-    body.classList.add("modal-open");
-    body.style.position = "fixed";
-    body.style.top = "-" + bodyScrollLockY + "px";
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    document.documentElement.classList.add("modal-open");
+    document.body.classList.add("modal-open");
   }
   bodyScrollLockCount++;
 }
@@ -280,22 +265,12 @@ function unlockBodyScroll() {
   bodyScrollLockCount--;
   if (bodyScrollLockCount > 0) return;
 
-  const body = document.body;
-  const previousStyles = bodyScrollLockPreviousStyles || {};
-  body.classList.remove("modal-open");
-  body.style.position = previousStyles.position || "";
-  body.style.top = previousStyles.top || "";
-  body.style.left = previousStyles.left || "";
-  body.style.right = previousStyles.right || "";
-  body.style.width = previousStyles.width || "";
-  const y = bodyScrollLockY;
-  bodyScrollLockPreviousStyles = null;
-  bodyScrollLockY = 0;
-  window.scrollTo(0, y);
+  document.documentElement.classList.remove("modal-open");
+  document.body.classList.remove("modal-open");
 }
 
 function countVisibleModals() {
-  return document.querySelectorAll(".modal-backdrop:not(.hidden)").length;
+  return document.querySelectorAll(".modal-backdrop:not(.hidden):not(.no-scroll-lock)").length;
 }
 
 function syncModalScrollLock() {

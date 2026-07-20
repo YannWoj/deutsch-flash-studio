@@ -1,7 +1,7 @@
 "use strict";
 
 // Increment this on every deploy that touches index.html, app.js, or style.css.
-const CACHE_VERSION = "v20";
+const CACHE_VERSION = "v21";
 const CACHE_NAME = "dfs-cache-" + CACHE_VERSION;
 
 // App shell files must stay coherent with each other.

@@ -51,6 +51,11 @@ html {
   background: var(--bg);
 }
 
+html,
+body {
+  touch-action: manipulation;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -61,6 +66,7 @@ body {
   min-height: 100dvh;
 }
 
+html.modal-open,
 body.modal-open {
   overflow: hidden;
 }
@@ -1854,6 +1860,12 @@ label {
   margin-bottom: 6px;
 }
 
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
 input[type="text"],
 input[type="search"],
 select {
@@ -1903,7 +1915,7 @@ input::placeholder {
 input[type="file"] {
   width: 100%;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 input[type="file"]::file-selector-button {
@@ -3663,6 +3675,7 @@ input[type="file"]::file-selector-button:hover {
   place-items: center;
   padding: 18px;
   background: rgba(0, 0, 0, 0.6);
+  touch-action: none;
 }
 
 .modal-panel {
@@ -3672,6 +3685,7 @@ input[type="file"]::file-selector-button:hover {
   background: var(--surface);
   box-shadow: var(--shadow);
   padding: 22px;
+  touch-action: pan-y;
 }
 
 .modal-panel h2 {
@@ -4326,6 +4340,8 @@ input[type="file"]::file-selector-button:hover {
     background: rgba(13, 16, 22, 0.94);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+    transform: none;
+    transition: none;
   }
 
   .logo,
