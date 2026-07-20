@@ -2571,6 +2571,15 @@ function renderDecks(cards) {
     );
   }).join("");
 
+  container.querySelectorAll("[data-open-favorites]").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      if (isInteractiveTarget(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      showPage("favoris");
+    });
+  });
+
   container.querySelectorAll("[data-deck-grid-select]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       setDeckNameSelected(checkbox.dataset.deckGridSelect, checkbox.checked);
