@@ -526,18 +526,27 @@ main {
   align-items: center;
   justify-content: center;
   min-height: 28px;
-  padding: 4px 9px;
+  padding: 4px 10px;
   border: 1px solid rgba(232, 185, 75, 0.24);
   border-radius: 999px;
   background: rgba(232, 185, 75, 0.08);
   color: var(--muted);
   font-size: 0.78rem;
+  font-weight: 800;
   white-space: nowrap;
 }
 
-.hard-cards-badge strong {
+.hard-cards-badge.is-due {
+  border-color: rgba(232, 185, 75, 0.46);
+  background: rgba(232, 185, 75, 0.18);
   color: var(--gold-strong);
-  font-variant-numeric: tabular-nums;
+}
+
+.hard-cards-info {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
 }
 
 .hard-cards-strip-actions {
@@ -556,6 +565,16 @@ main {
   color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.4;
+}
+
+.hard-cards-inline-icon {
+  width: 1em;
+  height: 1em;
+  margin: 0 0.12em;
+  color: var(--orange);
+  fill: currentColor;
+  stroke: currentColor;
+  vertical-align: -0.16em;
 }
 
 .review-difficult-panel .difficult-list {

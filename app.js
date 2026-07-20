@@ -1564,6 +1564,66 @@ function difficultStats(cards) {
   return { active: active, due: due, activeCount: active.length, dueCount: due.length };
 }
 
+function difficultEmptyHintHTML() {
+  return 'Aucune pour le moment. Marque une carte avec l\'icône <svg class="hard-cards-inline-icon" focusable="false" aria-hidden="true"><use href="#icon-flame"></use></svg> pour la retrouver ici.';
+}
+
+function setDifficultReviewButtonState(btn, state) {
+  btn.classList.toggle("btn-primary", state === "due");
+  btn.classList.toggle("btn-ghost", state !== "due");
+  btn.textContent = state === "waiting" ? "Revoir quand même" : "Revoir";
+  btn.disabled = state === "empty";
+}
+
+function renderDifficultSummary(stats, options) {
+  const badge = $(options.badgeId);
+  const info = $(options.infoId);
+  const actions = $(options.actionsId);
+  const reviewBtn = $(options.reviewBtnId);
+  const manageBtn = $(options.manageBtnId);
+  const empty = $(options.emptyId);
+  const list = options.listId ? $(options.listId) : null;
+
+  if (list) {
+    list.classList.add("hidden");
+    list.innerHTML = "";
+  }
+
+  badge.classList.remove("is-due");
+  info.classList.add("hidden");
+  info.textContent = "";
+  empty.classList.add("hidden");
+  empty.innerHTML = "";
+
+  if (stats.activeCount === 0) {
+    badge.classList.add("hidden");
+    badge.textContent = "";
+    actions.classList.add("hidden");
+    setDifficultReviewButtonState(reviewBtn, "empty");
+    empty.innerHTML = difficultEmptyHintHTML();
+    empty.classList.remove("hidden");
+    return;
+  }
+
+  actions.classList.remove("hidden");
+  manageBtn.classList.remove("hidden");
+  badge.classList.remove("hidden");
+
+  if (stats.dueCount === 0) {
+    const nextCard = stats.active[0];
+    const nextDue = nextCard ? formatDifficultDue(cardDifficult(nextCard).dueAt) : "bientôt";
+    badge.textContent = stats.activeCount + "\u00a0en attente";
+    info.textContent = "Prochaine à revoir : " + nextDue;
+    info.classList.remove("hidden");
+    setDifficultReviewButtonState(reviewBtn, "waiting");
+    return;
+  }
+
+  badge.textContent = stats.dueCount + "\u00a0à revoir";
+  badge.classList.add("is-due");
+  setDifficultReviewButtonState(reviewBtn, "due");
+}
+
 function localDateTimeValue(date) {
   const pad = (value) => String(value).padStart(2, "0");
   return date.getFullYear() + "-" +
@@ -2472,13 +2532,14 @@ async function refreshDashboard() {
 
 async function renderDashboardHardCards() {
   const stats = difficultStats(await getAllCards());
-  $("dashboard-hard-due-count").textContent = stats.dueCount;
-  $("dashboard-hard-total-count").textContent = stats.activeCount;
-  $("btn-review-hard-cards").disabled = stats.activeCount === 0;
-  $("btn-review-hard-cards").textContent = stats.dueCount > 0 ? "Réviser" : "Revoir";
-  $("dashboard-hard-empty").classList.toggle("hidden", stats.activeCount > 0);
-  $("btn-review-hard-cards").classList.toggle("hidden", stats.activeCount === 0);
-  $("btn-manage-hard-cards").classList.toggle("hidden", stats.activeCount === 0);
+  renderDifficultSummary(stats, {
+    badgeId: "dashboard-hard-badge",
+    infoId: "dashboard-hard-info",
+    actionsId: "dashboard-hard-actions",
+    reviewBtnId: "btn-review-hard-cards",
+    manageBtnId: "btn-manage-hard-cards",
+    emptyId: "dashboard-hard-empty",
+  });
 }
 
 async function renderDashboardStats() {
@@ -3823,14 +3884,15 @@ function renderReviewHubIfVisible() {
 
 async function renderReviewDifficultPanel() {
   const stats = difficultStats(await getAllCards());
-  $("review-hard-due-count").textContent = stats.dueCount;
-  $("review-hard-total-count").textContent = stats.activeCount;
-  $("btn-review-page-hard").disabled = stats.activeCount === 0;
-  $("btn-review-page-hard").textContent = stats.dueCount > 0 ? "Réviser" : "Revoir";
-  $("review-hard-actions").classList.toggle("hidden", stats.activeCount === 0);
-  $("review-hard-empty").classList.toggle("hidden", stats.activeCount > 0);
-  $("review-difficult-list").classList.toggle("hidden", stats.activeCount === 0);
-  $("review-difficult-list").innerHTML = difficultManageRowsHTML(stats.active);
+  renderDifficultSummary(stats, {
+    badgeId: "review-hard-badge",
+    infoId: "review-hard-info",
+    actionsId: "review-hard-actions",
+    reviewBtnId: "btn-review-page-hard",
+    manageBtnId: "btn-review-page-manage-hard",
+    emptyId: "review-hard-empty",
+    listId: "review-difficult-list",
+  });
 }
 
 async function renderHubScopeChips() {
@@ -5438,8 +5500,8 @@ async function openDifficultManager() {
     pendingDifficultCardId = null;
     $("difficult-modal-title").textContent = "Cartes difficiles";
     $("difficult-modal-card").textContent = difficultManageCards.length
-      ? difficultManageCards.length + " carte" + (difficultManageCards.length > 1 ? "s" : "") + " active" + (difficultManageCards.length > 1 ? "s" : "")
-      : "Aucune carte difficile active.";
+      ? difficultManageCards.length + " carte" + (difficultManageCards.length > 1 ? "s" : "") + " programmée" + (difficultManageCards.length > 1 ? "s" : "")
+      : "Aucune carte difficile programmée.";
     $("difficult-schedule-grid").classList.add("hidden");
     $("difficult-custom-row").classList.add("hidden");
     $("btn-difficult-remove").classList.add("hidden");
@@ -5477,7 +5539,7 @@ function difficultManageRowsHTML(cards) {
         '</div>' +
       '</div>';
     }).join("")
-    : '<p class="muted">Aucune carte difficile active.</p>';
+    : '<p class="muted">Aucune carte difficile programmée.</p>';
 }
 
 async function startDifficultDashboardReview() {
@@ -5485,7 +5547,7 @@ async function startDifficultDashboardReview() {
     const cards = await getAllCards();
     const stats = difficultStats(cards);
     if (stats.activeCount === 0) {
-      toast("Aucune carte difficile active.");
+      toast("Aucune carte difficile pour le moment.");
       return;
     }
     currentReviewCategory = null;

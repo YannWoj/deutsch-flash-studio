@@ -235,13 +235,14 @@
         <section class="hard-cards-strip">
           <div class="hard-cards-strip-head">
             <h2>Cartes difficiles</h2>
-            <span class="hard-cards-badge"><strong id="dashboard-hard-due-count">0</strong> due · <strong id="dashboard-hard-total-count">0</strong> active</span>
+            <span class="hard-cards-badge hidden" id="dashboard-hard-badge"></span>
           </div>
-          <div class="hard-cards-strip-actions">
+          <p class="hard-cards-info hidden" id="dashboard-hard-info"></p>
+          <div class="hard-cards-strip-actions hidden" id="dashboard-hard-actions">
             <button class="btn btn-primary btn-small" id="btn-review-hard-cards" type="button">Revoir</button>
             <button class="btn btn-ghost btn-small" id="btn-manage-hard-cards" type="button">Gérer</button>
           </div>
-          <p class="hard-cards-empty hidden" id="dashboard-hard-empty">Aucune carte difficile — marque-les avec l'icône flamme.</p>
+          <p class="hard-cards-empty hidden" id="dashboard-hard-empty"></p>
         </section>
 
         <div class="panel deck-empty hidden" id="deck-empty">
@@ -414,13 +415,14 @@
           <section class="panel review-difficult-panel hard-cards-strip">
             <div class="hard-cards-strip-head">
               <h2>Cartes difficiles</h2>
-              <span class="hard-cards-badge"><strong id="review-hard-due-count">0</strong> due · <strong id="review-hard-total-count">0</strong> active</span>
+              <span class="hard-cards-badge hidden" id="review-hard-badge"></span>
             </div>
+            <p class="hard-cards-info hidden" id="review-hard-info"></p>
             <div class="hard-cards-strip-actions" id="review-hard-actions">
               <button class="btn btn-primary btn-small" type="button" id="btn-review-page-hard">Revoir</button>
               <button class="btn btn-ghost btn-small" type="button" id="btn-review-page-manage-hard">Gérer</button>
             </div>
-            <p class="hard-cards-empty hidden" id="review-hard-empty">Aucune carte difficile — marque-les avec l'icône flamme.</p>
+            <p class="hard-cards-empty hidden" id="review-hard-empty"></p>
             <div class="difficult-list" id="review-difficult-list"></div>
           </section>
 
@@ -637,7 +639,7 @@
             <strong id="library-stat-total">0</strong>
           </div>
           <div class="library-stat-mini">
-            <span>Difficiles actives</span>
+            <span>Difficiles</span>
             <strong id="library-stat-hard">0</strong>
           </div>
           <div class="library-stat-mini">
