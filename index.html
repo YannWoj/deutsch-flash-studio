@@ -233,11 +233,15 @@
         <div class="deck-grid" id="deck-grid"></div>
 
         <section class="hard-cards-strip">
-          <span><strong id="dashboard-hard-due-count">0</strong> due(s) maintenant · <strong id="dashboard-hard-total-count">0</strong> active(s)</span>
+          <div class="hard-cards-strip-head">
+            <h2>Cartes difficiles</h2>
+            <span class="hard-cards-badge"><strong id="dashboard-hard-due-count">0</strong> due · <strong id="dashboard-hard-total-count">0</strong> active</span>
+          </div>
           <div class="hard-cards-strip-actions">
-            <button class="btn btn-primary btn-small" id="btn-review-hard-cards" type="button">Réviser les difficiles</button>
+            <button class="btn btn-primary btn-small" id="btn-review-hard-cards" type="button">Revoir</button>
             <button class="btn btn-ghost btn-small" id="btn-manage-hard-cards" type="button">Gérer</button>
           </div>
+          <p class="hard-cards-empty hidden" id="dashboard-hard-empty">Aucune carte difficile — marque-les avec l'icône flamme.</p>
         </section>
 
         <div class="panel deck-empty hidden" id="deck-empty">
@@ -407,14 +411,16 @@
         </header>
 
         <div id="review-hub">
-          <section class="panel review-difficult-panel">
-            <div class="review-panel-head">
-              <div>
-                <h2>Cartes difficiles</h2>
-                <p class="muted"><strong id="review-hard-due-count">0</strong> due(s) maintenant · <strong id="review-hard-total-count">0</strong> active(s)</p>
-              </div>
-              <button class="btn btn-primary" type="button" id="btn-review-page-hard">Réviser les difficiles</button>
+          <section class="panel review-difficult-panel hard-cards-strip">
+            <div class="hard-cards-strip-head">
+              <h2>Cartes difficiles</h2>
+              <span class="hard-cards-badge"><strong id="review-hard-due-count">0</strong> due · <strong id="review-hard-total-count">0</strong> active</span>
             </div>
+            <div class="hard-cards-strip-actions" id="review-hard-actions">
+              <button class="btn btn-primary btn-small" type="button" id="btn-review-page-hard">Revoir</button>
+              <button class="btn btn-ghost btn-small" type="button" id="btn-review-page-manage-hard">Gérer</button>
+            </div>
+            <p class="hard-cards-empty hidden" id="review-hard-empty">Aucune carte difficile — marque-les avec l'icône flamme.</p>
             <div class="difficult-list" id="review-difficult-list"></div>
           </section>
 
@@ -425,8 +431,10 @@
                 <p class="muted" id="hub-subtitle">Choisis un périmètre et un mode.</p>
               </div>
             </div>
+            <p class="hub-section-label">Que réviser ?</p>
             <div class="hub-scope-chips" id="hub-scope-chips"></div>
 
+            <p class="hub-section-label">Comment ?</p>
             <div class="hub-mode-grid" id="hub-mode-grid">
               <button class="hub-mode" type="button" data-hub-mode="classic">
                 <span class="hub-mode-title">Classique</span>
@@ -437,8 +445,10 @@
                 <span class="hub-mode-desc">J'écris l'article et le mot.</span>
               </button>
             </div>
-            <button class="btn btn-primary btn-large" type="button" id="btn-hub-free">Étudier</button>
-            <p class="muted hub-cta-note" id="hub-cta-note"></p>
+            <div class="hub-cta">
+              <button class="btn btn-primary btn-large" type="button" id="btn-hub-free">Étudier</button>
+              <p class="muted hub-cta-note" id="hub-cta-note"></p>
+            </div>
           </section>
         </div>
 

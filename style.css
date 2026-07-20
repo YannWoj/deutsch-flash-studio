@@ -399,17 +399,31 @@ main {
 }
 
 .deck-top-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+}
+
+.deck-top-actions #btn-study-all {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 54px;
+}
+
+.deck-top-actions .btn:not(#btn-study-all) {
+  width: 100%;
 }
 
 .stat-card {
+  display: grid;
+  place-items: center;
+  align-content: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px;
+  text-align: center;
 }
 
 .stat-value {
@@ -477,30 +491,69 @@ main {
 }
 
 .hard-cards-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
-  margin: 14px 0 10px;
-  padding: 10px 12px;
+  margin: 18px 0 12px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-small);
-  background: var(--surface);
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, rgba(251, 146, 60, 0.06), rgba(255, 255, 255, 0.012)), var(--surface);
   color: var(--muted);
   font-size: 0.88rem;
 }
 
-.hard-cards-strip strong {
+.hard-cards-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hard-cards-strip h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.hard-cards-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid rgba(232, 185, 75, 0.24);
+  border-radius: 999px;
+  background: rgba(232, 185, 75, 0.08);
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.hard-cards-badge strong {
   color: var(--gold-strong);
   font-variant-numeric: tabular-nums;
 }
 
 .hard-cards-strip-actions {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+}
+
+.hard-cards-strip-actions .btn {
+  width: 100%;
+  min-height: 38px;
+}
+
+.hard-cards-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.review-difficult-panel .difficult-list {
+  margin-top: 4px;
 }
 
 .panel-heading-row {
@@ -1217,7 +1270,7 @@ body.selection-mode-active #toast {
 
 #review-hub {
   display: grid;
-  gap: 16px;
+  gap: 22px;
 }
 
 #review-hub.hidden {
@@ -1229,7 +1282,7 @@ body.selection-mode-active #toast {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .review-panel-head h2 {
@@ -1240,8 +1293,21 @@ body.selection-mode-active #toast {
   margin-top: 4px;
 }
 
+.review-free-panel {
+  display: grid;
+}
+
+.hub-section-label {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .review-free-panel .hub-scope-chips {
-  margin-bottom: 14px;
+  margin-bottom: 22px;
 }
 
 .hub-scope-chips {
@@ -1313,13 +1379,15 @@ body.selection-mode-active #toast {
 
 .hub-mode-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  margin-bottom: 20px;
 }
 
 .hub-mode {
   display: grid;
   gap: 3px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1356,17 +1424,21 @@ body.selection-mode-active #toast {
   display: grid;
   gap: 10px;
   justify-items: center;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .hub-cta .btn-large {
-  width: min(420px, 100%);
+  width: 100%;
   min-height: 54px;
 }
 
 .hub-cta .btn-large:disabled {
-  opacity: 0.5;
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  opacity: 0.62;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .hub-cta-note {
@@ -3060,29 +3132,50 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .grammar-case-toc {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
+  display: grid;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .grammar-case-toc a {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 34px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
+  gap: 12px;
+  min-height: 48px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--border);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.93rem;
   font-weight: 800;
   text-decoration: none;
 }
 
 .grammar-case-toc a:hover {
-  border-color: rgba(232, 185, 75, 0.42);
   color: var(--gold-strong);
+}
+
+.grammar-toc-number {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(232, 185, 75, 0.32);
+  border-radius: 50%;
+  background: rgba(232, 185, 75, 0.1);
+  color: var(--gold-strong);
+  font-size: 0.8rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.grammar-toc-title {
+  min-width: 0;
+}
+
+.grammar-toc-chevron {
+  color: var(--muted);
+  font-size: 1.25rem;
 }
 
 .grammar-accordion {
@@ -3095,11 +3188,16 @@ input[type="file"]::file-selector-button:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   cursor: pointer;
   list-style: none;
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.grammar-accordion summary:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .grammar-accordion summary::-webkit-details-marker {
@@ -3108,7 +3206,7 @@ input[type="file"]::file-selector-button:hover {
 
 .grammar-accordion-icon {
   color: var(--muted);
-  transition: transform 0.18s ease;
+  transition: transform 0.22s ease;
 }
 
 .grammar-accordion[open] .grammar-accordion-icon {
@@ -3117,6 +3215,13 @@ input[type="file"]::file-selector-button:hover {
 
 .grammar-accordion-body {
   padding: 0 20px 20px;
+}
+
+.grammar-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .grammar-subblock {
@@ -3150,6 +3255,7 @@ input[type="file"]::file-selector-button:hover {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
+  background: var(--surface);
 }
 
 .grammar-table {
@@ -3160,7 +3266,7 @@ input[type="file"]::file-selector-button:hover {
 
 .grammar-table th,
 .grammar-table td {
-  padding: 11px 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
@@ -3169,8 +3275,13 @@ input[type="file"]::file-selector-button:hover {
 .grammar-table th {
   color: var(--muted);
   background: rgba(255, 255, 255, 0.025);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.grammar-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .grammar-table strong {
@@ -3218,12 +3329,46 @@ input[type="file"]::file-selector-button:hover {
   margin-top: 8px;
 }
 
+.tense-card .example-de {
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-weight: 800;
+}
+
 .grammar-example-grid {
   margin-top: 16px;
 }
 
 .grammar-example-card {
-  padding: 14px;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.grammar-example-de-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.grammar-example-de-row strong {
+  min-width: 0;
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.grammar-example-card .example-fr {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .grammar-chip-row {
@@ -4487,7 +4632,7 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .hub-mode-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hub-cta .btn-ghost {

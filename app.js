@@ -2463,9 +2463,10 @@ async function renderDashboardHardCards() {
   $("dashboard-hard-due-count").textContent = stats.dueCount;
   $("dashboard-hard-total-count").textContent = stats.activeCount;
   $("btn-review-hard-cards").disabled = stats.activeCount === 0;
-  $("btn-review-hard-cards").textContent = stats.dueCount > 0
-    ? "Réviser les difficiles"
-    : "Revoir les difficiles";
+  $("btn-review-hard-cards").textContent = stats.dueCount > 0 ? "Réviser" : "Revoir";
+  $("dashboard-hard-empty").classList.toggle("hidden", stats.activeCount > 0);
+  $("btn-review-hard-cards").classList.toggle("hidden", stats.activeCount === 0);
+  $("btn-manage-hard-cards").classList.toggle("hidden", stats.activeCount === 0);
 }
 
 async function renderDashboardStats() {
@@ -3800,7 +3801,7 @@ async function renderReviewHub() {
     ? "Aucune carte à étudier"
     : "Étudier · " + stats.totalCards + " carte" + (stats.totalCards > 1 ? "s" : "");
   $("hub-cta-note").textContent = stats.totalCards === 0
-    ? "Aucune carte dans ce périmètre."
+    ? ""
     : "Toutes les cartes du périmètre seront mélangées.";
 }
 
@@ -3813,9 +3814,10 @@ async function renderReviewDifficultPanel() {
   $("review-hard-due-count").textContent = stats.dueCount;
   $("review-hard-total-count").textContent = stats.activeCount;
   $("btn-review-page-hard").disabled = stats.activeCount === 0;
-  $("btn-review-page-hard").textContent = stats.dueCount > 0
-    ? "Réviser les difficiles"
-    : "Revoir les difficiles";
+  $("btn-review-page-hard").textContent = stats.dueCount > 0 ? "Réviser" : "Revoir";
+  $("review-hard-actions").classList.toggle("hidden", stats.activeCount === 0);
+  $("review-hard-empty").classList.toggle("hidden", stats.activeCount > 0);
+  $("review-difficult-list").classList.toggle("hidden", stats.activeCount === 0);
   $("review-difficult-list").innerHTML = difficultManageRowsHTML(stats.active);
 }
 
@@ -4174,6 +4176,7 @@ function setupReviewPage() {
     });
   });
   $("btn-review-page-hard").addEventListener("click", startDifficultDashboardReview);
+  $("btn-review-page-manage-hard").addEventListener("click", openDifficultManager);
   $("review-difficult-list").addEventListener("click", (event) => {
     const rescheduleBtn = event.target.closest("[data-difficult-manage-reschedule]");
     if (rescheduleBtn) openDifficultModal(rescheduleBtn.dataset.difficultManageReschedule);
@@ -6931,14 +6934,45 @@ function grammarTableHTML(headers, rows, articleCells = false) {
 
 function grammarExampleHTML(example) {
   return (
-    '<article class="case-card grammar-example-card">' +
-      '<p class="example-de">' + escapeHTML(example.de) + " " + speakButtonHTML(example.de) + "</p>" +
+    '<article class="grammar-example-card">' +
+      '<div class="grammar-example-de-row"><strong>' + escapeHTML(example.de) + "</strong>" + speakButtonHTML(example.de) + "</div>" +
       (example.fr ? '<p class="example-fr">' + escapeHTML(example.fr) + "</p>" : "") +
       (Array.isArray(example.notes) && example.notes.length
         ? '<ul class="grammar-note-list">' + example.notes.map((note) => '<li>' + escapeHTML(note) + "</li>").join("") + "</ul>"
         : "") +
     "</article>"
   );
+}
+
+function grammarTocItemHTML(targetId, title, index) {
+  return (
+    '<a href="#' + escapeHTML(targetId) + '" data-grammar-toc-target="' + escapeHTML(targetId) + '">' +
+      '<span class="grammar-toc-number">' + (index + 1) + "</span>" +
+      '<span class="grammar-toc-title">' + escapeHTML(title) + "</span>" +
+      '<span class="grammar-toc-chevron" aria-hidden="true">›</span>' +
+    "</a>"
+  );
+}
+
+function grammarSummaryHTML(title, index) {
+  return (
+    '<summary><span class="grammar-summary-title">' +
+      '<span class="grammar-toc-number">' + (index + 1) + "</span>" +
+      '<span>' + escapeHTML(title) + "</span>" +
+    '</span><span class="grammar-accordion-icon">⌄</span></summary>'
+  );
+}
+
+function attachGrammarTocHandlers(container) {
+  container.querySelectorAll("[data-grammar-toc-target]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const target = $(link.dataset.grammarTocTarget);
+      if (!target) return;
+      event.preventDefault();
+      if (target.tagName.toLowerCase() === "details") target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 }
 
 function grammarTablesHTML(tables = []) {
@@ -6963,7 +6997,7 @@ function renderGrammarCases() {
       '<p class="muted">Référence structurée : articles, adjectifs, pronoms, prépositions et exemples.</p>' +
       '<nav class="grammar-case-toc" aria-label="Sommaire des cas">' +
         GRAMMAR_CASES_CONTENT.map((section, index) =>
-          '<a href="#grammar-case-' + escapeHTML(section.id) + '">' + (index + 1) + ". " + escapeHTML(section.title) + "</a>"
+          grammarTocItemHTML("grammar-case-" + section.id, section.title, index)
         ).join("") +
       "</nav>" +
     "</section>" +
@@ -6971,7 +7005,7 @@ function renderGrammarCases() {
       const examples = [...(section.examples || []), ...(section.extraExamples || [])];
       return (
         '<details class="panel grammar-section grammar-accordion" id="grammar-case-' + escapeHTML(section.id) + '"' + (index === 0 ? " open" : "") + ">" +
-          '<summary><span>' + (index + 1) + ". " + escapeHTML(section.title) + '</span><span class="grammar-accordion-icon">⌄</span></summary>' +
+          grammarSummaryHTML(section.title, index) +
           '<div class="grammar-accordion-body">' +
             (section.intro || []).map((paragraph) => "<p>" + escapeHTML(paragraph) + "</p>").join("") +
             grammarTablesHTML(section.tables) +
@@ -6983,6 +7017,7 @@ function renderGrammarCases() {
         "</details>"
       );
     }).join("");
+  attachGrammarTocHandlers($("grammar-panel-cases"));
 }
 
 function isUserVerbCard(card) {
@@ -7192,7 +7227,7 @@ function grammarPointHTML(point, index) {
     : "";
   return (
     '<details class="panel grammar-section grammar-accordion" id="grammar-level-point-' + escapeHTML(point.id) + '"' + (index === 0 ? " open" : "") + ">" +
-      '<summary><span>' + (index + 1) + ". " + escapeHTML(point.title) + '</span><span class="grammar-accordion-icon">⌄</span></summary>' +
+      grammarSummaryHTML(point.title, index) +
       '<div class="grammar-accordion-body">' +
         '<p>' + escapeHTML(point.explanation) + "</p>" +
         (point.caseLink ? '<p class="grammar-case-link">Voir l\'onglet <strong>Les cas</strong> pour les formes liées aux cas.</p>' : "") +
@@ -7219,7 +7254,7 @@ function renderGrammarLevels() {
       "</div>" +
       '<nav class="grammar-case-toc" aria-label="Sommaire du niveau ' + escapeHTML(current.level) + '">' +
         current.points.map((point, index) =>
-          '<a href="#grammar-level-point-' + escapeHTML(point.id) + '">' + (index + 1) + ". " + escapeHTML(point.title) + "</a>"
+          grammarTocItemHTML("grammar-level-point-" + point.id, point.title, index)
         ).join("") +
       "</nav>" +
     "</section>" +
@@ -7231,6 +7266,7 @@ function renderGrammarLevels() {
       renderGrammarLevels();
     });
   });
+  attachGrammarTocHandlers($("grammar-panel-levels"));
 }
 
 function regularStem(inf) {
