@@ -540,7 +540,7 @@ function getEffectiveImageQuery(card) {
 
 function imageSearchURL(query) {
   const encoded = encodeURIComponent(String(query || "").trim());
-  return "https://www.google.com/search?tbm=isch&tbs=ic:trans&q=" + encoded;
+  return "https://www.google.com/search" + "?tbm=isch&tbs=ic:trans&q=" + encoded;
 }
 
 function openImageSearchForCard(card) {
