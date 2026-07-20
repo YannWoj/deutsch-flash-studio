@@ -3156,12 +3156,6 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 12px;
 }
 
-.grammar-cases-home {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
 .grammar-case-toc {
   display: grid;
   margin-top: 16px;
@@ -4612,9 +4606,6 @@ input[type="file"]::file-selector-button:hover {
     min-height: 44px;
   }
 
-  .grammar-cases-home {
-    top: env(safe-area-inset-top, 0px);
-  }
 }
 
 @media (max-width: 760px) {
@@ -5210,10 +5201,6 @@ input[type="file"]::file-selector-button:hover {
 
   .grammar-tab {
     width: 100%;
-  }
-
-  .grammar-cases-home {
-    position: static;
   }
 
   .grammar-case-toc {
