@@ -90,6 +90,10 @@
       <path d="M19 12h.01"></path>
     </symbol>
 
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="M6 9l6 6 6-6"></path>
+    </symbol>
+
     <symbol id="icon-upload" viewBox="0 0 24 24">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
       <path d="M17 8l-5-5-5 5"></path>
@@ -211,8 +215,8 @@
             <div class="stat-label">Difficiles dues</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value stat-green" id="stat-mastered">0</div>
-            <div class="stat-label">Cartes acquises</div>
+            <div class="stat-value stat-green" id="stat-favorites">0</div>
+            <div class="stat-label">Favoris</div>
           </div>
         </div>
 
@@ -269,8 +273,8 @@
         <div class="panel favorites-hero">
           <div class="favorites-hero-stats">
             <div><span>Total</span><strong id="fav-total">0</strong></div>
-            <div><span>À réviser</span><strong id="fav-due">0</strong></div>
-            <div><span>Mémorisées</span><strong id="fav-mastered">0</strong></div>
+            <div><span>Difficiles</span><strong id="fav-hard">0</strong></div>
+            <div><span>À revoir</span><strong id="fav-due">0</strong></div>
           </div>
           <button class="btn btn-primary btn-large" type="button" id="btn-review-favorites-page">Réviser mes favoris</button>
         </div>
@@ -298,26 +302,37 @@
           <button class="btn btn-ghost" id="btn-deck-detail-select" type="button">Sélectionner</button>
         </div>
 
-        <div class="panel deck-detail-toolbar">
+        <div class="panel deck-detail-toolbar filter-collapse" id="deck-detail-filter-panel">
           <input id="deck-detail-search" type="search" placeholder="Rechercher dans ce jeu…">
-          <select id="deck-detail-subcategory-filter">
-            <option value="">Toutes les sous-catégories</option>
-          </select>
-          <select id="deck-detail-level-filter">
-            <option value="">Tous les niveaux</option>
-          </select>
+          <div class="filter-collapse-actions">
+            <button class="btn btn-ghost btn-small filter-toggle-btn" id="btn-deck-detail-filters-toggle" type="button" aria-expanded="false" aria-controls="deck-detail-filter-body">
+              <span id="deck-detail-filters-label">Filtres</span>
+              <svg class="btn-svg-icon filter-chevron" focusable="false" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
+            <button class="btn btn-ghost btn-small hidden" id="btn-deck-detail-filters-reset" type="button">Réinitialiser</button>
+          </div>
+          <div class="filter-collapse-body" id="deck-detail-filter-body">
+            <div class="filter-collapse-inner deck-detail-filter-inner">
+              <select id="deck-detail-subcategory-filter">
+                <option value="">Toutes les sous-catégories</option>
+              </select>
+              <select id="deck-detail-level-filter">
+                <option value="">Tous les niveaux</option>
+              </select>
+              <div class="deck-detail-subcategories" id="deck-detail-subcategories"></div>
+            </div>
+          </div>
         </div>
 
         <div class="deck-bulk-bar hidden" id="deck-bulk-bar">
           <strong id="deck-bulk-count">0 carte sélectionnée</strong>
           <div class="deck-bulk-actions">
+            <button class="btn btn-primary btn-small" id="btn-deck-bulk-add-to-pack" type="button">Ajouter à un pack</button>
             <button class="btn btn-primary btn-small" id="btn-bulk-subcategory" type="button">Changer sous-catégorie</button>
             <button class="btn btn-ghost btn-small" id="btn-bulk-select-all" type="button">Tout sélectionner</button>
             <button class="btn btn-ghost btn-small" id="btn-bulk-clear" type="button">Désélectionner</button>
           </div>
         </div>
-
-        <div class="deck-detail-subcategories" id="deck-detail-subcategories"></div>
 
         <div id="deck-detail-empty" class="empty-state hidden">
           <div class="empty-emoji">🗂️</div>
@@ -417,10 +432,6 @@
                 <span class="hub-mode-title">Classique</span>
                 <span class="hub-mode-desc">Je révèle la réponse, puis je passe à la suivante.</span>
               </button>
-              <button class="hub-mode" type="button" data-hub-mode="multiple" id="hub-mode-multiple">
-                <span class="hub-mode-title">Choix multiple</span>
-                <span class="hub-mode-desc">Je choisis parmi 4 réponses.</span>
-              </button>
               <button class="hub-mode" type="button" data-hub-mode="written">
                 <span class="hub-mode-title">Écrit</span>
                 <span class="hub-mode-desc">J'écris l'article et le mot.</span>
@@ -458,8 +469,7 @@
             <p class="review-front-fr" id="review-front-fr"></p>
             <p class="review-front-hint" id="review-front-hint">Retrouve le mot allemand</p>
 
-            <div class="multiple-choice hidden" id="multiple-choice"></div>
-            <p class="multiple-feedback hidden" id="multiple-feedback"></p>
+            <p class="review-feedback hidden" id="review-feedback"></p>
 
             <div class="written-review hidden" id="written-review">
               <div class="written-fields">
@@ -617,8 +627,8 @@
             <strong id="library-stat-total">0</strong>
           </div>
           <div class="library-stat-mini">
-            <span>Mémorisées</span>
-            <strong id="library-stat-mastered">0</strong>
+            <span>Difficiles actives</span>
+            <strong id="library-stat-hard">0</strong>
           </div>
           <div class="library-stat-mini">
             <span>Difficiles dues</span>
@@ -630,33 +640,44 @@
           </div>
         </div>
 
-        <div class="panel library-toolbar">
+        <div class="panel library-toolbar filter-collapse" id="library-filter-panel">
           <input id="search-input" type="search" placeholder="Rechercher un mot (allemand ou français)…">
-          <select id="filter-category">
-            <option value="">Toutes les catégories</option>
-          </select>
-          <select id="filter-subcategory">
-            <option value="">Toutes les sous-catégories</option>
-          </select>
-          <select id="filter-level">
-            <option value="">Tous les niveaux</option>
-          </select>
-          <select id="library-sort" aria-label="Trier la bibliothèque">
-            <option value="recent">Plus récentes</option>
-            <option value="az">A → Z allemand</option>
-            <option value="hard">Difficiles d'abord</option>
-            <option value="due">Échéance difficile</option>
-          </select>
-          <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
-          <button class="btn btn-ghost" id="btn-library-select" type="button">Sélectionner</button>
+          <div class="filter-collapse-actions">
+            <button class="btn btn-ghost btn-small filter-toggle-btn" id="btn-library-filters-toggle" type="button" aria-expanded="false" aria-controls="library-filter-body">
+              <span id="library-filters-label">Filtres</span>
+              <svg class="btn-svg-icon filter-chevron" focusable="false" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
+            <button class="btn btn-ghost btn-small hidden" id="btn-library-filters-reset" type="button">Réinitialiser</button>
+          </div>
+          <div class="filter-collapse-body" id="library-filter-body">
+            <div class="filter-collapse-inner library-filter-inner">
+              <select id="filter-category">
+                <option value="">Toutes les catégories</option>
+              </select>
+              <select id="filter-subcategory">
+                <option value="">Toutes les sous-catégories</option>
+              </select>
+              <select id="filter-level">
+                <option value="">Tous les niveaux</option>
+              </select>
+              <select id="library-sort" aria-label="Trier la bibliothèque">
+                <option value="recent">Plus récentes</option>
+                <option value="az">A → Z allemand</option>
+                <option value="hard">Difficiles d'abord</option>
+                <option value="due">Échéance difficile</option>
+              </select>
+              <button class="btn btn-ghost" id="btn-open-missing-images" type="button">Images manquantes</button>
+              <button class="btn btn-ghost" id="btn-library-select" type="button">Sélectionner</button>
+              <div class="library-filter-chips" aria-label="Filtres rapides">
+                <button class="library-filter-chip" id="library-filter-favorites" type="button"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</button>
+                <button class="library-filter-chip" id="library-filter-no-image" type="button">Sans image</button>
+                <button class="library-filter-chip" id="library-filter-due" type="button">À réviser</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="library-toolbar-extra">
-          <div class="library-filter-chips" aria-label="Filtres rapides">
-            <button class="library-filter-chip" id="library-filter-favorites" type="button"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</button>
-            <button class="library-filter-chip" id="library-filter-no-image" type="button">Sans image</button>
-            <button class="library-filter-chip" id="library-filter-due" type="button">À réviser</button>
-          </div>
           <div class="library-view-toggle" aria-label="Affichage bibliothèque">
             <button class="btn btn-small" id="library-view-grid" type="button"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-grid"></use></svg> Grille</button>
             <button class="btn btn-small" id="library-view-list" type="button"><svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-library"></use></svg> Liste</button>
@@ -794,11 +815,6 @@
           <span class="sheet-mode-text"><strong>Cartes</strong><em>Je révèle la réponse et je m'auto-évalue</em></span>
           <span class="sheet-mode-chevron" aria-hidden="true">›</span>
         </button>
-        <button class="sheet-mode" type="button" data-study-mode="multiple" id="sheet-mode-multiple">
-          <span class="sheet-mode-icon icon-orange"><svg focusable="false" aria-hidden="true"><use href="#icon-list-check"></use></svg></span>
-          <span class="sheet-mode-text"><strong>Choix multiple</strong><em>Je choisis parmi 4 réponses</em></span>
-          <span class="sheet-mode-chevron" aria-hidden="true">›</span>
-        </button>
         <button class="sheet-mode" type="button" data-study-mode="written">
           <span class="sheet-mode-icon icon-purple"><svg focusable="false" aria-hidden="true"><use href="#icon-pencil"></use></svg></span>
           <span class="sheet-mode-text"><strong>Écrit</strong><em>J'écris l'article et le mot</em></span>
@@ -900,6 +916,14 @@
         <button class="btn btn-primary" type="button" id="btn-confirm-add-to-pack">Ajouter</button>
         <button class="btn btn-ghost" type="button" id="btn-cancel-add-to-pack">Annuler</button>
       </div>
+    </div>
+  </div>
+
+  <div id="card-detail-modal" class="modal-backdrop sheet-backdrop hidden">
+    <div class="modal-panel sheet-panel card-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="card-detail-word">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="modal-close-btn" id="btn-close-card-detail" type="button" aria-label="Fermer">×</button>
+      <div id="card-detail-content"></div>
     </div>
   </div>
 

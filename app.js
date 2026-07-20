@@ -35,6 +35,8 @@ const LS_PACKS = "dfs_packs";
 const LS_SUBCATEGORIES = "dfs_custom_subcategories";
 const LS_LAST_EXPORT_AT = "dfs_last_export_at";
 const LS_LIBRARY_VIEW = "dfs_library_view";
+const LS_LIBRARY_FILTERS_OPEN = "dfs_library_filters_open";
+const LS_DECK_DETAIL_FILTERS_OPEN = "dfs_deck_detail_filters_open";
 const LS_GRAMMAR_TAB = "dfs_grammar_tab";
 const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
@@ -166,13 +168,16 @@ let pendingLearningCategory = null;   // null = tout, string = un deck, array = 
 let currentLearningScope = null;      // null = tout, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewCategory = null;     // null = révision globale, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let currentReviewMode = localStorage.getItem(LS_REVIEW_MODE) || "classic";
+if (!["classic", "written"].includes(currentReviewMode)) {
+  currentReviewMode = "classic";
+  localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
+}
 let difficultReviewFallbackAllOnce = false;
 let reviewSessionType = "due";        // "due" = cartes difficiles, "free" = entraînement libre
 let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let pendingSessionType = "due";
 let reviewReturnPage = "dashboard";
 let skipHubOnce = false;
-let reviewChoicePool = [];
 let currentDeckDetailCategory = null;
 let currentDeckDetailPackId = null;
 let deckDetailSearch = "";
@@ -213,6 +218,8 @@ let learningRenderVersion = 0;
 let libraryOnlyFavorites = false;
 let libraryOnlyNoImage = false;
 let libraryOnlyDue = false;
+let libraryFiltersOpen = localStorage.getItem(LS_LIBRARY_FILTERS_OPEN) === "1";
+let deckDetailFiltersOpen = localStorage.getItem(LS_DECK_DETAIL_FILTERS_OPEN) === "1";
 let selectedGrammarVerb = null;
 let grammarVerbQuery = "";
 let grammarVerbFilter = "all";
@@ -228,6 +235,9 @@ let lastImageTargetCardId = null;
 let imagePickerTargetCardId = null;
 let skippedMissingImageIds = new Set();
 let longPressFiredAt = 0;             // timestamp du dernier long-press déclenché
+let currentCardDetailId = null;
+let cardDetailDirty = false;
+let cardDetailTouchStartY = null;
 
 
 /* =========================================================
@@ -250,16 +260,16 @@ function syncSelectionModeClass() {
   );
 }
 
+function isInteractiveTarget(target) {
+  return Boolean(target?.closest('button, input, select, textarea, a, label, [role="button"]'));
+}
+
 function attachLongPress(element, callback, options = {}) {
   const delay = options.delay || 450;
   const moveTolerance = options.moveTolerance || 8;
   let timer = null;
   let startX = 0;
   let startY = 0;
-
-  function isInteractiveTarget(target) {
-    return Boolean(target.closest('button, input, select, textarea, a, label, [role="button"]'));
-  }
 
   function clearPress() {
     clearTimeout(timer);
@@ -307,10 +317,6 @@ function attachLongPress(element, callback, options = {}) {
 // Date du jour au format "2026-07-05" (en heure locale, pas UTC)
 function todayISO() {
   return dateToISO(new Date());
-}
-
-function isMastered(card) {
-  return normalizeSrs(card.srs).box >= 4;
 }
 
 function isNewCard(card) {
@@ -1791,7 +1797,7 @@ function attachImageDropHandlers(container) {
   container.querySelectorAll("[data-image-target-card]").forEach((el) => {
     const cardId = el.dataset.imageTargetCard;
     el.addEventListener("click", (event) => {
-      if (event.target.closest("button, input, select, textarea, a")) return;
+      if (isInteractiveTarget(event.target)) return;
       setImageTarget(cardId, el);
       if (event.target.closest(".smart-placeholder")) openImagePickerForCard(cardId);
     });
@@ -1936,6 +1942,11 @@ function showPage(name) {
   if (name !== "bibliotheque" && librarySelectionMode) {
     librarySelectionMode = false;
     selectedLibraryCardIds.clear();
+    syncSelectionModeClass();
+  }
+  if (name !== "deck-detail" && deckDetailSelectionMode) {
+    deckDetailSelectionMode = false;
+    selectedDeckCardIds.clear();
     syncSelectionModeClass();
   }
 
@@ -2087,6 +2098,56 @@ function setupNavigation() {
   $("add-to-pack-modal").addEventListener("click", (event) => {
     if (event.target === $("add-to-pack-modal")) closeAddToPackModal();
   });
+  $("card-detail-modal").addEventListener("click", async (event) => {
+    if (event.target === $("card-detail-modal")) {
+      closeCardDetailModal();
+      return;
+    }
+    const favoriteBtn = event.target.closest("[data-card-detail-favorite]");
+    if (favoriteBtn) {
+      event.stopPropagation();
+      cardDetailDirty = true;
+      await toggleFavorite(favoriteBtn.dataset.cardDetailFavorite);
+      await refreshCardDetailSheet();
+      return;
+    }
+    const addToPackBtn = event.target.closest("[data-card-detail-add-to-pack]");
+    if (addToPackBtn) {
+      event.stopPropagation();
+      const id = addToPackBtn.dataset.cardDetailAddToPack;
+      cardDetailDirty = true;
+      closeCardDetailModal();
+      openAddToPackModal([id]);
+      return;
+    }
+    const editBtn = event.target.closest("[data-card-detail-edit]");
+    if (editBtn) {
+      event.stopPropagation();
+      const id = editBtn.dataset.cardDetailEdit;
+      closeCardDetailModal();
+      startEditCard(id);
+      return;
+    }
+    const deleteBtn = event.target.closest("[data-card-detail-delete]");
+    if (deleteBtn) {
+      event.stopPropagation();
+      const id = deleteBtn.dataset.cardDetailDelete;
+      cardDetailDirty = true;
+      await handleDelete(id);
+      if (!(await getCard(id))) closeCardDetailModal();
+    }
+  });
+  $("btn-close-card-detail").addEventListener("click", closeCardDetailModal);
+  $("card-detail-modal").addEventListener("touchstart", (event) => {
+    cardDetailTouchStartY = event.touches[0]?.clientY ?? null;
+  }, { passive: true });
+  $("card-detail-modal").addEventListener("touchend", (event) => {
+    if (cardDetailTouchStartY === null) return;
+    const panel = event.target.closest(".card-detail-sheet");
+    const endY = event.changedTouches[0]?.clientY ?? cardDetailTouchStartY;
+    if (panel && panel.scrollTop <= 5 && endY - cardDetailTouchStartY > 80) closeCardDetailModal();
+    cardDetailTouchStartY = null;
+  }, { passive: true });
   $("subcategory-select").addEventListener("change", onSubcategorySelectChange);
   $("btn-save-subcategory-choice").addEventListener("click", saveSubcategoryChoice);
   $("btn-cancel-subcategory-choice").addEventListener("click", closeSubcategoryModal);
@@ -2108,6 +2169,7 @@ function setupNavigation() {
       closeImportPreviewModal();
       closeMoreMenu();
       closeDifficultModal();
+      closeCardDetailModal();
       closePackModal();
       closeAddToPackModal();
       closePackImportModal();
@@ -2138,6 +2200,10 @@ function setupNavigation() {
     const difficultBtn = event.target.closest("[data-difficult]");
     if (difficultBtn) {
       event.stopPropagation();
+      if (difficultBtn.closest("#card-detail-modal")) {
+        cardDetailDirty = true;
+        closeCardDetailModal();
+      }
       openDifficultModal(difficultBtn.dataset.difficult);
       return;
     }
@@ -2261,10 +2327,18 @@ function setupDeckDetailPage() {
   $("btn-bulk-select-all").addEventListener("click", selectAllVisibleDeckCards);
   $("btn-bulk-clear").addEventListener("click", clearDeckSelection);
   $("btn-bulk-subcategory").addEventListener("click", openBulkSubcategoryModal);
+  $("btn-deck-bulk-add-to-pack").addEventListener("click", () => openAddToPackModal([...selectedDeckCardIds]));
+  $("btn-deck-detail-filters-toggle").addEventListener("click", () => {
+    deckDetailFiltersOpen = !deckDetailFiltersOpen;
+    localStorage.setItem(LS_DECK_DETAIL_FILTERS_OPEN, deckDetailFiltersOpen ? "1" : "0");
+    syncDeckDetailFilterCollapse();
+  });
+  $("btn-deck-detail-filters-reset").addEventListener("click", resetDeckDetailFilters);
 
   const debouncedRenderDeckDetail = debounce(renderDeckDetail, 150);
   $("deck-detail-search").addEventListener("input", () => {
     deckDetailSearch = $("deck-detail-search").value;
+    syncDeckDetailFilterCollapse();
     debouncedRenderDeckDetail();
   });
   $("deck-detail-subcategory-filter").addEventListener("change", () => {
@@ -2293,8 +2367,7 @@ async function refreshDashboard() {
   badge.textContent = dueToday;
   badge.classList.toggle("hidden", dueToday === 0);
   $("btn-study-all").disabled = false;
-  // Une carte est "acquise" quand elle a été réussie au moins 3 fois
-  $("stat-mastered").textContent = cards.filter(isMastered).length;
+  $("stat-favorites").textContent = cards.filter((card) => card.favorite === true).length;
 
   try {
     await renderDashboardHardCards();
@@ -2323,14 +2396,11 @@ function favoritesDeckCardHTML(cards) {
   const favorites = cards.filter((card) => card.favorite === true);
   if (favorites.length === 0) return "";
   const due = difficultStats(favorites).dueCount;
-  const mastered = favorites.filter(isMastered).length;
-  const percent = Math.round((mastered / favorites.length) * 100);
+  const hard = difficultStats(favorites).activeCount;
   return (
     '<article class="deck-card deck-favorites" data-open-favorites>' +
       '<div class="deck-name"><svg class="deck-favorites-icon" focusable="false" aria-hidden="true"><use href="#icon-heart"></use></svg> Favoris</div>' +
-      '<p class="deck-count">' + favorites.length + ' carte(s) · ' + due + ' à réviser</p>' +
-      '<div class="deck-progress-line"><span>' + mastered + " / " + favorites.length + ' mémorisé</span><strong>' + percent + '%</strong></div>' +
-      '<div class="progress-track deck-track"><div class="progress-fill fill-blue" style="width:' + percent + '%"></div></div>' +
+      '<p class="deck-count">' + favorites.length + ' carte(s) · ' + hard + ' difficile(s) · ' + due + ' à revoir</p>' +
       '<div class="deck-actions">' +
         '<button class="btn btn-primary btn-small" type="button" id="btn-study-favorites">Étudier</button>' +
         '<button class="btn btn-ghost btn-small" type="button" id="btn-browse-favorites">Voir</button>' +
@@ -2352,17 +2422,17 @@ function renderDecks(cards) {
     if (!isPreferredDeckCategory(category)) return;
     deckCardCounts.set(category, (deckCardCounts.get(category) || 0) + 1);
     if (!groups[category]) {
-      groups[category] = { name: category, total: 0, mastered: 0, due: 0, color: "", emoji: "", custom: false };
+      groups[category] = { name: category, total: 0, hard: 0, due: 0, color: "", emoji: "", custom: false };
     }
     groups[category].total++;
-    if (isMastered(card)) groups[category].mastered++;
+    if (isDifficultActive(card)) groups[category].hard++;
     if (isDifficultDue(card)) groups[category].due++;
   });
 
   customDecks.forEach((deck) => {
     if (!isPreferredDeckCategory(deck.name)) return;
     if (!groups[deck.name]) {
-      groups[deck.name] = { name: deck.name, total: 0, mastered: 0, due: 0, color: deck.color, emoji: deck.emoji, custom: true };
+      groups[deck.name] = { name: deck.name, total: 0, hard: 0, due: 0, color: deck.color, emoji: deck.emoji, custom: true };
     } else {
       groups[deck.name].color = deck.color;
       groups[deck.name].emoji = deck.emoji;
@@ -2376,7 +2446,7 @@ function renderDecks(cards) {
     decks = categories.map((category) => ({
       name: category,
       total: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category).length,
-      mastered: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && isMastered(card)).length,
+      hard: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && isDifficultActive(card)).length,
       due: cards.filter((card) => (String(card.category || "Général").trim() || "Général") === category && isDifficultDue(card)).length,
       color: "",
       emoji: "",
@@ -2398,7 +2468,6 @@ function renderDecks(cards) {
 
   empty.classList.add("hidden");
   container.innerHTML = favoritesDeckCardHTML(cards) + decks.map((deck, index) => {
-    const percent = deck.total === 0 ? 0 : Math.round((deck.mastered / deck.total) * 100);
     const color = deck.color || accents[index % accents.length];
     const displayName = (deck.emoji ? deck.emoji + " " : "") + deck.name;
     const emptyText = deck.total === 0 ? '<p class="deck-empty-note">Commence par ajouter une carte.</p>' : "";
@@ -2412,15 +2481,8 @@ function renderDecks(cards) {
         cornerControl +
         '<span class="deck-open-hint">' + (deckGridSelectionMode ? "Sélectionner" : "Ouvrir le jeu") + '</span>' +
         '<div class="deck-name">' + escapeHTML(displayName) + '</div>' +
-        '<p class="deck-count">' + deck.total + ' carte(s) · ' + deck.due + ' à réviser</p>' +
+        '<p class="deck-count">' + deck.total + ' carte(s) · ' + deck.hard + ' difficile(s) · ' + deck.due + ' à revoir</p>' +
         emptyText +
-        '<div class="deck-progress-line">' +
-          '<span>' + deck.mastered + ' / ' + deck.total + ' mémorisé</span>' +
-          '<strong>' + percent + '%</strong>' +
-        '</div>' +
-        '<div class="progress-track deck-track">' +
-          '<div class="progress-fill fill-blue" style="width:' + percent + '%"></div>' +
-        '</div>' +
         '<div class="deck-actions">' +
           '<button class="btn btn-primary btn-small" type="button" data-study-deck="' + escapeHTML(deck.name) + '">Étudier</button>' +
           '<button class="btn btn-ghost btn-small" data-add-card-category="' + escapeHTML(deck.name) + '">+ Ajouter</button>' +
@@ -2460,25 +2522,18 @@ async function renderPacksPage() {
   const packHTML = packs.map((pack) => {
     const cardsInPack = packCards(pack, cards);
     const total = cardsInPack.length;
-    const due = difficultStats(cardsInPack).dueCount;
-    const mastered = cardsInPack.filter(isMastered).length;
-    const percent = total === 0 ? 0 : Math.round((mastered / total) * 100);
+    const hardStats = difficultStats(cardsInPack);
+    const due = hardStats.dueCount;
+    const hard = hardStats.activeCount;
     const countText = total === 0
       ? "Aucune carte · ajoute-en depuis la Bibliothèque"
-      : pack.name + " · " + total + " carte" + (total > 1 ? "s" : "") + " · " + due + " à réviser";
+      : pack.name + " · " + total + " carte" + (total > 1 ? "s" : "") + " · " + hard + " difficile" + (hard > 1 ? "s" : "") + " · " + due + " à revoir";
     return (
       '<article class="deck-card pack-card" style="--deck-accent:' + escapeHTML(pack.color) + '" data-open-pack="' + escapeHTML(pack.id) + '">' +
         '<button class="deck-menu-btn" type="button" data-pack-menu="' + escapeHTML(pack.id) + '">...</button>' +
         '<span class="deck-open-hint">Ouvrir le pack</span>' +
         '<div class="deck-name"><span class="pack-dot"></span>' + escapeHTML(pack.name) + '</div>' +
         '<p class="deck-count">' + escapeHTML(countText) + '</p>' +
-        '<div class="deck-progress-line">' +
-          '<span>' + mastered + ' / ' + total + ' mémorisé</span>' +
-          '<strong>' + percent + '%</strong>' +
-        '</div>' +
-        '<div class="progress-track deck-track">' +
-          '<div class="progress-fill fill-blue" style="width:' + percent + '%"></div>' +
-        '</div>' +
         '<div class="deck-actions">' +
           '<button class="btn btn-primary btn-small" type="button" data-study-pack="' + escapeHTML(pack.id) + '"' + (total === 0 ? " disabled" : "") + '>Étudier</button>' +
           '<button class="btn btn-ghost btn-small" type="button" data-browse-pack="' + escapeHTML(pack.id) + '">Voir</button>' +
@@ -2649,8 +2704,9 @@ async function renderDeckDetail() {
   const deck = findCustomDeckByName(deckName);
   const displayName = isPackDetail ? pack.name : (deck?.emoji ? deck.emoji + " " : "") + deckName;
   const deckCards = isPackDetail ? packCards(pack, allCards) : allCards.filter((card) => cardDeckName(card) === deckName);
-  const mastered = deckCards.filter(isMastered).length;
-  const due = difficultStats(deckCards).dueCount;
+  const hardStats = difficultStats(deckCards);
+  const hard = hardStats.activeCount;
+  const due = hardStats.dueCount;
   $("btn-deck-detail-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-empty-add").textContent = isPackDetail ? "Ajouter depuis la Bibliothèque" : "+ Ajouter une carte";
   $("btn-deck-detail-appearance").textContent = isPackDetail ? "Modifier le pack" : "Modifier apparence";
@@ -2670,8 +2726,9 @@ async function renderDeckDetail() {
 
   $("deck-detail-title").textContent = displayName;
   $("deck-detail-subtitle").textContent =
-    deckCards.length + " carte(s) · " + mastered + " mémorisée(s) · " + due + " à réviser";
+    deckCards.length + " carte(s) · " + hard + " difficile(s) · " + due + " à revoir";
   $("deck-detail-search").value = deckDetailSearch;
+  syncDeckDetailFilterCollapse();
 
   const query = deckDetailSearch.trim().toLowerCase();
   const visibleCards = deckCards
@@ -2760,7 +2817,7 @@ async function renderDeckDetail() {
         event.stopPropagation();
         return;
       }
-      if (!deckDetailSelectionMode || event.target.closest("button, input, select, textarea, a")) return;
+      if (!deckDetailSelectionMode || isInteractiveTarget(event.target)) return;
       const id = cardEl.dataset.deckSelectCard;
       setDeckCardSelected(id, !selectedDeckCardIds.has(id));
       renderDeckDetail();
@@ -2779,6 +2836,7 @@ async function renderDeckDetail() {
       renderDeckDetail();
     });
   });
+  attachCardDetailOpenHandlers(grid, "[data-deck-select-card]", () => deckDetailSelectionMode);
   attachImageActionHandlers(grid);
   attachImageDropHandlers(grid);
 }
@@ -2831,6 +2889,7 @@ function updateDeckBulkBar() {
   const count = selectedDeckCardIds.size;
   $("deck-bulk-count").textContent = count + " carte" + (count > 1 ? "s" : "") + " sélectionnée" + (count > 1 ? "s" : "");
   $("btn-bulk-subcategory").disabled = count === 0;
+  $("btn-deck-bulk-add-to-pack").disabled = count === 0;
   $("btn-bulk-clear").disabled = count === 0;
   $("btn-bulk-select-all").disabled = visibleDeckDetailCardIds.length === 0;
 }
@@ -3011,6 +3070,32 @@ function renderDeckDetailIfVisible() {
   if ($("page-deck-detail").classList.contains("active")) renderDeckDetail();
 }
 
+function getDeckDetailActiveFilterCount() {
+  let count = 0;
+  if ($("deck-detail-search").value.trim()) count++;
+  if ($("deck-detail-subcategory-filter").value) count++;
+  if ($("deck-detail-level-filter").value) count++;
+  return count;
+}
+
+function syncDeckDetailFilterCollapse() {
+  const activeCount = getDeckDetailActiveFilterCount();
+  $("deck-detail-filter-panel").classList.toggle("expanded", deckDetailFiltersOpen);
+  $("btn-deck-detail-filters-toggle").setAttribute("aria-expanded", String(deckDetailFiltersOpen));
+  $("deck-detail-filters-label").textContent = activeCount > 0 ? "Filtres · " + activeCount : "Filtres";
+  $("btn-deck-detail-filters-reset").classList.toggle("hidden", activeCount === 0);
+}
+
+function resetDeckDetailFilters() {
+  deckDetailSearch = "";
+  deckDetailSubcategoryFilter = "";
+  deckDetailLevelFilter = "";
+  $("deck-detail-search").value = "";
+  $("deck-detail-subcategory-filter").value = "";
+  $("deck-detail-level-filter").value = "";
+  renderDeckDetail();
+}
+
 function deckDetailCardHTML(card, imageUrl, options = {}) {
   const pluralText = formatPlural(card);
   const pluralLine = pluralText
@@ -3034,6 +3119,10 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
       data: { "remove-from-pack": card.id },
     })
     : "";
+  const statusLabel = cardStatusLabel(card);
+  const statusHTML = statusLabel
+    ? '<span class="deck-detail-status">' + escapeHTML(statusLabel) + "</span>"
+    : "";
 
   return (
     '<article class="deck-detail-card' + (selected ? " selected" : "") + '" data-deck-select-card="' + escapeHTML(card.id) + '" data-image-target-card="' + escapeHTML(card.id) + '"' + imageSearchDataAttribute(card) + ' tabindex="0">' +
@@ -3045,7 +3134,7 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
             '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
             levelBadgeHTML(card) +
           "</div>" +
-          '<span class="deck-detail-status">' + escapeHTML(cardStatusLabel(card)) + "</span>" +
+          statusHTML +
         "</div>" +
         '<p class="deck-detail-fr">' + escapeHTML(card.fr) + "</p>" +
         '<div class="deck-detail-word">' + wordHTML(card) + "</div>" +
@@ -3060,12 +3149,7 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
 }
 
 function cardStatusLabel(card) {
-  const difficult = cardDifficult(card);
-  if (difficult.active) {
-    return isDifficultDue(card) ? "Difficile · à revoir" : "Difficile · " + formatDifficultDue(difficult.dueAt);
-  }
-  if (isMastered(card)) return "Acquise";
-  return "Libre";
+  return isDifficultActive(card) ? "Difficile" : "";
 }
 
 async function deckHasCards(name) {
@@ -3087,11 +3171,6 @@ async function getReviewHubStats(scope = null) {
     reviewCards: due.length,
     hardCards: hard.length,
     sessionSize: queue.length,
-    distinctGermanWords: new Set(
-      scoped
-        .map((card) => String(card.de || "").trim().toLowerCase())
-        .filter(Boolean)
-    ).size,
   };
 }
 
@@ -3111,7 +3190,6 @@ async function openStudyModeModal(scope = null, originPage = "") {
   $("study-mode-modal").dataset.studyStats = JSON.stringify({
     sessionSize: stats.sessionSize,
     totalCards: stats.totalCards,
-    distinctGermanWords: stats.distinctGermanWords,
   });
   $("study-mode-modal").classList.remove("hidden");
 }
@@ -3120,7 +3198,6 @@ function syncStudySheet(stats) {
   const data = stats || JSON.parse($("study-mode-modal").dataset.studyStats || "{}");
   const sessionSize = Number(data.sessionSize) || 0;
   const totalCards = Number(data.totalCards) || 0;
-  const distinctGermanWords = Number(data.distinctGermanWords) || 0;
   if (sessionSize === 0) pendingSessionType = "free";
 
   document.querySelectorAll("[data-session-type]").forEach((btn) => {
@@ -3133,7 +3210,7 @@ function syncStudySheet(stats) {
     : "Toutes les cartes du périmètre, mélangées. Ta progression n'est pas modifiée.";
 
   document.querySelectorAll("#study-mode-modal [data-study-mode]").forEach((btn) => {
-    const disabled = totalCards === 0 || (btn.dataset.studyMode === "multiple" && distinctGermanWords < 4);
+    const disabled = totalCards === 0;
     btn.disabled = disabled;
     btn.classList.toggle("disabled", disabled);
   });
@@ -3400,6 +3477,8 @@ function confirmAddToPack() {
   closeAddToPackModal();
   librarySelectionMode = false;
   selectedLibraryCardIds.clear();
+  deckDetailSelectionMode = false;
+  selectedDeckCardIds.clear();
   syncSelectionModeClass();
   renderPacksPageIfVisible();
   renderLibraryIfVisible();
@@ -3604,7 +3683,7 @@ async function renderReviewHub() {
     renderReviewHub();
     return;
   }
-  if (!["classic", "multiple", "written"].includes(currentReviewMode)) {
+  if (!["classic", "written"].includes(currentReviewMode)) {
     currentReviewMode = "classic";
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
@@ -3619,14 +3698,6 @@ async function renderReviewHub() {
   await renderReviewDifficultPanel();
   $("hub-subtitle").textContent =
     "Périmètre : " + scopeLabel(currentReviewCategory) + " · " + stats.totalCards + " carte(s)";
-
-  const multipleOk = stats.distinctGermanWords >= 4;
-  $("hub-mode-multiple").disabled = !multipleOk;
-  $("hub-mode-multiple").classList.toggle("disabled", !multipleOk);
-  if (!multipleOk && currentReviewMode === "multiple") {
-    currentReviewMode = "classic";
-    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-  }
 
   document.querySelectorAll("[data-hub-mode]").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.hubMode === currentReviewMode);
@@ -3721,12 +3792,7 @@ async function startReviewSession() {
   const scopedCards = cards.filter((card) => cardInScope(card, currentReviewCategory));
   reviewSessionStats = { seen: 0, markedDifficultIds: [] };
   isGrading = false;
-  reviewChoicePool = scopedCards;
   if (reviewSessionType === "due") {
-    currentReviewMode = "classic";
-    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-  }
-  if (currentReviewMode === "multiple" && new Set(scopedCards.map((card) => fullWord(card))).size < 4) {
     currentReviewMode = "classic";
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
@@ -3758,15 +3824,6 @@ function reviewEmptyScopeMessage() {
   return isMultiScope(currentReviewCategory) ? "Aucune carte dans cette sélection." : "Aucune carte dans ce deck.";
 }
 
-function updateReviewSetup(scopedCards) {
-  const distinctChoices = new Set(scopedCards.map((card) => fullWord(card))).size;
-  const multipleAvailable = distinctChoices >= 4;
-  if (!multipleAvailable && currentReviewMode === "multiple") {
-    currentReviewMode = "classic";
-    localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-  }
-}
-
 function setReviewSessionActive(active) {
   $("page-revision").classList.toggle("session-active", active);
   document.body.classList.toggle("review-session-active", active);
@@ -3777,7 +3834,6 @@ function reviewSessionLabelText() {
     reviewSessionType === "free" ? "Entraînement libre" : "Cartes difficiles",
     scopeLabel(currentReviewCategory),
   ];
-  if (currentReviewMode === "multiple") parts.push("Choix multiple");
   if (currentReviewMode === "written") parts.push("Écrit");
   return parts.join(" · ");
 }
@@ -3867,9 +3923,7 @@ async function showNextReviewCard() {
 
   // --- On cache la réponse jusqu'au clic ---
   $("review-answer").classList.add("hidden");
-  $("multiple-feedback").classList.add("hidden");
-  $("multiple-choice").classList.add("hidden");
-  $("multiple-choice").innerHTML = "";
+  $("review-feedback").classList.add("hidden");
   $("written-review").classList.add("hidden");
   $("written-article").value = "";
   $("written-word").value = "";
@@ -3880,10 +3934,7 @@ async function showNextReviewCard() {
   $("manual-review-actions").classList.add("hidden");
   syncAnswerDifficultButton(currentCard);
 
-  if (currentReviewMode === "multiple") {
-    $("btn-show-answer").classList.add("hidden");
-    renderMultipleChoice();
-  } else if (currentReviewMode === "written") {
+  if (currentReviewMode === "written") {
     $("btn-show-answer").classList.add("hidden");
     $("review-front-hint").textContent = "Écris le mot allemand";
     $("written-review").classList.remove("hidden");
@@ -3891,56 +3942,6 @@ async function showNextReviewCard() {
   } else {
     $("btn-show-answer").classList.remove("hidden");
   }
-}
-
-function renderMultipleChoice() {
-  if (!currentCard || reviewChoicePool.length < 4) return;
-
-  const correctAnswer = fullWord(currentCard);
-  const wrongChoices = [...new Set(
-    reviewChoicePool
-      .filter((card) => card.id !== currentCard.id)
-      .map((card) => fullWord(card))
-  )].filter((word) => word !== correctAnswer);
-  shuffleArray(wrongChoices);
-
-  if (wrongChoices.length < 3) {
-    $("multiple-feedback").textContent = "Pas assez de réponses distinctes pour ce QCM.";
-    $("multiple-feedback").className = "multiple-feedback ko";
-    return;
-  }
-
-  const choices = [correctAnswer, ...wrongChoices.slice(0, 3)];
-  shuffleArray(choices);
-
-  $("multiple-choice").innerHTML = choices.map((choice) => {
-    return '<button class="btn multiple-choice-btn" data-choice="' + escapeHTML(choice) + '">' + escapeHTML(choice) + '</button>';
-  }).join("");
-  $("multiple-choice").classList.remove("hidden");
-}
-
-function setMultipleChoiceDisabled(disabled) {
-  document.querySelectorAll(".multiple-choice-btn").forEach((btn) => {
-    btn.disabled = disabled;
-  });
-}
-
-function handleMultipleChoice(choice) {
-  if (isGrading || !currentCard) return;
-
-  const correctAnswer = fullWord(currentCard);
-  const isCorrect = choice === correctAnswer;
-  $("multiple-feedback").textContent = isCorrect
-    ? "Bonne réponse"
-    : "Réponse correcte : " + correctAnswer;
-  $("multiple-feedback").className = "multiple-feedback " + (isCorrect ? "ok" : "ko");
-  setMultipleChoiceDisabled(true);
-  isGrading = true;
-
-  setTimeout(() => {
-    isGrading = false;
-    handleGrade(isCorrect ? "good" : "fail");
-  }, 550);
 }
 
 function normalizeTypedAnswer(value) {
@@ -3957,11 +3958,11 @@ function handleWrittenAnswer() {
   const isCorrect = typedArticle === expectedArticle && typedWord === expectedWord;
   const correctAnswer = fullWord(currentCard);
 
-  $("multiple-feedback").textContent = isCorrect
+  $("review-feedback").textContent = isCorrect
     ? "Bonne réponse"
     : "Réponse correcte : " + correctAnswer;
-  $("multiple-feedback").className = "multiple-feedback " + (isCorrect ? "ok" : "ko");
-  $("multiple-feedback").classList.remove("hidden");
+  $("review-feedback").className = "review-feedback " + (isCorrect ? "ok" : "ko");
+  $("review-feedback").classList.remove("hidden");
   $("btn-check-written").disabled = true;
   $("written-article").disabled = true;
   $("written-word").disabled = true;
@@ -4098,10 +4099,6 @@ function setupReviewPage() {
   $("session-summary").addEventListener("click", (event) => {
     if (event.target.closest("[data-review-hub-return]")) leaveReviewSession();
   });
-  $("multiple-choice").addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-choice]");
-    if (btn) handleMultipleChoice(btn.dataset.choice);
-  });
   $("btn-check-written").addEventListener("click", handleWrittenAnswer);
   ["written-article", "written-word"].forEach((id) => {
     $(id).addEventListener("keydown", (event) => {
@@ -4161,7 +4158,7 @@ function isTypingTarget(target) {
 function onReviewShortcut(event) {
   if (event.repeat || isTypingTarget(event.target)) return;
   if (isGrading || !$("page-revision").classList.contains("active") || !currentCard) return;
-  if (currentReviewMode === "multiple" || currentReviewMode === "written") return;
+  if (currentReviewMode === "written") return;
 
   const answerHidden = $("review-answer").classList.contains("hidden");
 
@@ -4216,7 +4213,142 @@ function onReviewShortcut(event) {
 
 
 /* =========================================================
-   8. AJOUTER UNE CARTE
+   8. DÉTAIL D'UNE CARTE
+   ========================================================= */
+
+function cardDetailBadgesHTML(card) {
+  return (
+    '<div class="card-detail-badges">' +
+      '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
+      (card.subcategory ? subcategoryChipHTML(card, true) : "") +
+      levelBadgeHTML(card) +
+      cardStatusHTML(card) +
+    "</div>"
+  );
+}
+
+function cardDetailHTML(card, imageUrl) {
+  const pluralText = formatPlural(card);
+  const pluralLine = pluralText
+    ? '<p class="card-detail-plural">Pluriel : ' + escapeHTML(pluralText) + "</p>"
+    : "";
+  const exampleBlock = card.exampleDe || card.exampleFr
+    ? '<div class="card-detail-example">' +
+        '<div class="card-detail-example-head">' +
+          '<strong>Exemple</strong>' +
+          (card.exampleDe ? iconButtonHTML("icon-volume", { label: "Écouter la phrase", data: { speak: card.exampleDe } }) : "") +
+        "</div>" +
+        (card.exampleDe ? '<p class="card-detail-example-de">' + escapeHTML(card.exampleDe) + "</p>" : "") +
+        (card.exampleFr ? '<p class="card-detail-example-fr">' + escapeHTML(card.exampleFr) + "</p>" : "") +
+      "</div>"
+    : "";
+
+  return (
+    '<div class="card-detail-layout" data-card-detail-id="' + escapeHTML(card.id) + '">' +
+      '<div class="card-detail-image">' + cardImageHTML(card, imageUrl) + "</div>" +
+      '<div class="card-detail-main">' +
+        '<div class="card-detail-word-row">' +
+          '<div>' +
+            '<h2 id="card-detail-word">' + wordHTML(card) + "</h2>" +
+            pluralLine +
+          "</div>" +
+          iconButtonHTML("icon-volume", { label: "Écouter le mot", data: { speak: fullWord(card) } }) +
+        "</div>" +
+        '<p class="card-detail-fr">' + escapeHTML(card.fr || "") + "</p>" +
+        exampleBlock +
+        cardDetailBadgesHTML(card) +
+        '<div class="card-detail-actions">' +
+          iconButtonHTML("icon-volume", { label: "Écouter", data: { speak: fullWord(card) } }) +
+          iconButtonHTML("icon-heart", {
+            label: "Favori",
+            className: "btn-favorite " + (card.favorite ? "active" : ""),
+            data: { "card-detail-favorite": card.id },
+          }) +
+          iconButtonHTML("icon-flame", {
+            label: "Carte difficile",
+            className: "btn-difficult " + (isDifficultActive(card) ? "active" : ""),
+            data: { difficult: card.id },
+          }) +
+          iconButtonHTML("icon-layers", {
+            label: "Ajouter à un pack",
+            className: "btn-add-pack",
+            data: { "card-detail-add-to-pack": card.id },
+          }) +
+          iconButtonHTML("icon-pencil", { label: "Modifier", className: "btn-edit", data: { "card-detail-edit": card.id } }) +
+          iconButtonHTML("icon-trash", { label: "Supprimer", className: "btn-danger", data: { "card-detail-delete": card.id } }) +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+async function refreshCardDetailSheet() {
+  if (!currentCardDetailId || $("card-detail-modal").classList.contains("hidden")) return;
+  const card = await getCard(currentCardDetailId);
+  if (!card) {
+    closeCardDetailModal();
+    return;
+  }
+  const imageUrl = await getImageURL(card.imageId);
+  $("card-detail-content").innerHTML = cardDetailHTML(card, imageUrl);
+}
+
+async function openCardDetailModal(cardId) {
+  try {
+    const card = await getCard(cardId);
+    if (!card) return;
+    currentCardDetailId = card.id;
+    cardDetailDirty = false;
+    const imageUrl = await getImageURL(card.imageId);
+    $("card-detail-content").innerHTML = cardDetailHTML(card, imageUrl);
+    $("card-detail-modal").classList.remove("hidden");
+  } catch (error) {
+    console.error("Échec d'ouverture du détail de carte :", error);
+    toast("Impossible d'ouvrir le détail de cette carte.");
+  }
+}
+
+function refreshAfterCardDetailChange() {
+  renderLibraryIfVisible();
+  renderFavoritesPageIfVisible();
+  renderDeckDetailIfVisible();
+  renderMissingImagesIfVisible();
+  renderLearningIfVisible();
+  refreshDashboard();
+  renderReviewHubIfVisible();
+}
+
+function closeCardDetailModal() {
+  const shouldRefresh = cardDetailDirty;
+  $("card-detail-modal").classList.add("hidden");
+  $("card-detail-content").innerHTML = "";
+  currentCardDetailId = null;
+  cardDetailDirty = false;
+  cardDetailTouchStartY = null;
+  if (shouldRefresh) refreshAfterCardDetailChange();
+}
+
+function attachCardDetailOpenHandlers(container, selector, isSelectionModeActive) {
+  container.querySelectorAll(selector).forEach((cardEl) => {
+    cardEl.addEventListener("click", (event) => {
+      if (wasLongPressJustFired()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (isSelectionModeActive() || isInteractiveTarget(event.target)) return;
+      const cardId = cardEl.dataset.librarySelectCard || cardEl.dataset.deckSelectCard;
+      if (!cardId) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openCardDetailModal(cardId);
+    }, true);
+  });
+}
+
+
+/* =========================================================
+   9. AJOUTER UNE CARTE
    ========================================================= */
 
 function setupAddForm() {
@@ -4611,7 +4743,7 @@ async function renderLibrary() {
         event.stopPropagation();
         return;
       }
-      if (!librarySelectionMode || event.target.closest("button, input, select, textarea, a")) return;
+      if (!librarySelectionMode || isInteractiveTarget(event.target)) return;
       const id = cardEl.dataset.librarySelectCard;
       setLibraryCardSelected(id, !selectedLibraryCardIds.has(id));
       renderLibrary();
@@ -4631,6 +4763,7 @@ async function renderLibrary() {
     });
   });
 
+  attachCardDetailOpenHandlers(container, "[data-library-select-card]", () => librarySelectionMode);
   attachImageActionHandlers(container);
   attachImageDropHandlers(container);
 }
@@ -4650,8 +4783,9 @@ async function renderFavoritesPage() {
   const view = getLibraryView();
 
   $("fav-total").textContent = favorites.length;
-  $("fav-due").textContent = difficultStats(favorites).dueCount;
-  $("fav-mastered").textContent = favorites.filter(isMastered).length;
+  const favoriteHardStats = difficultStats(favorites);
+  $("fav-hard").textContent = favoriteHardStats.activeCount;
+  $("fav-due").textContent = favoriteHardStats.dueCount;
   if (hero) hero.classList.toggle("hidden", favorites.length === 0);
   empty.classList.toggle("hidden", favorites.length > 0);
   container.className = view === "list" ? "library-list" : "library-grid";
@@ -4681,6 +4815,7 @@ async function renderFavoritesPage() {
     btn.addEventListener("click", () => openAddToPackModal([btn.dataset.addToPack]));
   });
 
+  attachCardDetailOpenHandlers(container, "[data-library-select-card]", () => false);
   attachImageActionHandlers(container);
   attachImageDropHandlers(container);
 }
@@ -4743,9 +4878,43 @@ function updateLibraryBulkBar() {
 
 function updateLibraryStats(cards) {
   $("library-stat-total").textContent = cards.length;
-  $("library-stat-mastered").textContent = cards.filter(isMastered).length;
-  $("library-stat-due").textContent = difficultStats(cards).dueCount;
+  const stats = difficultStats(cards);
+  $("library-stat-hard").textContent = stats.activeCount;
+  $("library-stat-due").textContent = stats.dueCount;
   $("library-stat-favorites").textContent = cards.filter((card) => card.favorite === true).length;
+}
+
+function getLibraryActiveFilterCount() {
+  let count = 0;
+  if ($("search-input").value.trim()) count++;
+  if ($("filter-category").value) count++;
+  if ($("filter-subcategory").value) count++;
+  if ($("filter-level").value) count++;
+  if ($("library-sort").value && $("library-sort").value !== "recent") count++;
+  if (libraryOnlyFavorites) count++;
+  if (libraryOnlyNoImage) count++;
+  if (libraryOnlyDue) count++;
+  return count;
+}
+
+function syncLibraryFilterCollapse() {
+  const activeCount = getLibraryActiveFilterCount();
+  $("library-filter-panel").classList.toggle("expanded", libraryFiltersOpen);
+  $("btn-library-filters-toggle").setAttribute("aria-expanded", String(libraryFiltersOpen));
+  $("library-filters-label").textContent = activeCount > 0 ? "Filtres · " + activeCount : "Filtres";
+  $("btn-library-filters-reset").classList.toggle("hidden", activeCount === 0);
+}
+
+function resetLibraryFilters() {
+  $("search-input").value = "";
+  $("filter-category").value = "";
+  $("filter-subcategory").value = "";
+  $("filter-level").value = "";
+  $("library-sort").value = "recent";
+  libraryOnlyFavorites = false;
+  libraryOnlyNoImage = false;
+  libraryOnlyDue = false;
+  renderLibrary();
 }
 
 function updateLibraryControls() {
@@ -4755,6 +4924,7 @@ function updateLibraryControls() {
   const view = getLibraryView();
   $("library-view-grid").classList.toggle("active", view === "grid");
   $("library-view-list").classList.toggle("active", view === "list");
+  syncLibraryFilterCollapse();
 }
 
 function sortLibraryCards(a, b, sortMode) {
@@ -4776,19 +4946,13 @@ function sortLibraryCards(a, b, sortMode) {
 }
 
 function cardStatusMeta(card) {
-  const difficult = cardDifficult(card);
-  if (difficult.active) {
-    return {
-      label: isDifficultDue(card) ? "Difficile due" : formatDifficultDue(difficult.dueAt),
-      className: isDifficultDue(card) ? "status-due" : "status-hard",
-    };
-  }
-  if (isMastered(card)) return { label: "Acquise", className: "status-mastered" };
-  return { label: "Libre", className: "status-learning" };
+  if (!isDifficultActive(card)) return null;
+  return { label: "Difficile", className: isDifficultDue(card) ? "status-due" : "status-hard" };
 }
 
 function cardStatusHTML(card) {
   const status = cardStatusMeta(card);
+  if (!status) return "";
   return (
     '<span class="card-status ' + status.className + '">' +
       '<span class="card-status-dot"></span>' +
@@ -5062,6 +5226,7 @@ async function refreshAfterDifficultChange() {
   renderMissingImagesIfVisible();
   renderLearningIfVisible();
   renderReviewHubIfVisible();
+  await refreshCardDetailSheet();
   if (currentCard) syncAnswerDifficultButton(currentCard);
   if (!$("difficult-modal").classList.contains("hidden") && difficultManageCards.length) {
     await renderDifficultManageList();
@@ -5331,7 +5496,16 @@ function matchesLevelFilter(card, level) {
 
 function setupLibraryPage() {
   const debouncedRenderLibrary = debounce(renderLibrary, 150);
-  $("search-input").addEventListener("input", debouncedRenderLibrary);
+  $("btn-library-filters-toggle").addEventListener("click", () => {
+    libraryFiltersOpen = !libraryFiltersOpen;
+    localStorage.setItem(LS_LIBRARY_FILTERS_OPEN, libraryFiltersOpen ? "1" : "0");
+    syncLibraryFilterCollapse();
+  });
+  $("btn-library-filters-reset").addEventListener("click", resetLibraryFilters);
+  $("search-input").addEventListener("input", () => {
+    syncLibraryFilterCollapse();
+    debouncedRenderLibrary();
+  });
   $("filter-category").addEventListener("change", renderLibrary);
   $("filter-subcategory").addEventListener("change", renderLibrary);
   $("filter-level").addEventListener("change", renderLibrary);
@@ -5981,7 +6155,7 @@ const GRAMMAR_CASES_CONTENT = [
     notes: [
       "ins = in das ; im = in dem.",
       "Le vrai principe n'est pas seulement « mouvement ou pas mouvement » : destination / changement de position → accusatif ; lieu où quelque chose se trouve ou se passe → datif.",
-      "Tu as aussi commencé à rencontrer auf et an, mais tu ne les maîtrises pas encore autant que in.",
+      "Tu as aussi commencé à rencontrer auf et an, mais ils restent moins familiers que in.",
     ],
     examples: [
       { de: "Ich gehe in den Garten.", fr: "Je vais dans le jardin." },
@@ -6047,7 +6221,7 @@ const GRAMMAR_CASES_CONTENT = [
       "Même modèle avec mein, dein, sein, ihr, unser, euer, Ihr.",
       "Exemple avec mein : mein großer Hund, meinen großen Hund, meinem großen Hund, meines großen Hundes.",
       "Sans article, tu as surtout travaillé le nominatif et l'accusatif : guter Käse, guten Käse kaufen, frisches Brot, rote Äpfel.",
-      "Tu as moins pratiqué le datif et le génitif sans article ; ce serait prématuré de dire que tu les maîtrises parfaitement.",
+      "Tu as moins pratiqué le datif et le génitif sans article ; ils restent à consolider.",
     ],
   },
 ];
