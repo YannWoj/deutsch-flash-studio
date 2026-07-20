@@ -28,7 +28,6 @@ const DB_NAME = "deutsch-flash-studio";
 const DB_VERSION = 2;
 
 // Clés utilisées dans localStorage (uniquement pour de petits réglages)
-const LS_LAST_PAGE = "dfs_lastPage"; // dernier onglet ouvert
 const LS_SEEDED = "dfs_seeded";      // "les cartes d'exemple ont déjà été créées"
 const LS_DECKS = "dfs_custom_decks";
 const LS_PACKS = "dfs_packs";
@@ -42,7 +41,7 @@ const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
 const LS_PACK_CATEGORY_MIGRATION_V1 = "dfs_separate_packs_categories_v1";
 const LS_VERB_SUBCATEGORY_MIGRATION_V1 = "dfs_verb_subcategories_v1";
-const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards"];
+const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards", "dfs_lastPage"];
 const FAVORITES_SCOPE = "__favorites__";
 const PACK_SCOPE_PREFIX = "pack:";
 const PACK_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f472b6", "#fbbf24", "#fb923c"];
@@ -241,6 +240,7 @@ let cardDetailTouchStartY = null;
 let bodyScrollLockCount = 0;
 let visibleModalCount = 0;
 let modalScrollLockObserver = null;
+let viewportReflowTimer = null;
 
 
 /* =========================================================
@@ -302,6 +302,46 @@ function setupModalScrollLock() {
     modalScrollLockObserver.observe(modal, { attributes: true, attributeFilter: ["class"] });
   });
   syncModalScrollLock();
+}
+
+function resetModalScrollLockState() {
+  bodyScrollLockCount = 0;
+  visibleModalCount = 0;
+  document.documentElement.classList.remove("modal-open");
+  document.body.classList.remove("modal-open");
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+}
+
+function forceMobileViewportReflow(resetScroll = false) {
+  if (resetScroll) window.scrollTo(0, 0);
+  const sidebar = document.querySelector(".sidebar");
+  document.body.classList.add("viewport-reflowing");
+  void (sidebar ? sidebar.offsetHeight : document.body.offsetHeight);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      void (sidebar ? sidebar.offsetHeight : document.body.offsetHeight);
+      document.body.classList.remove("viewport-reflowing");
+    });
+  });
+}
+
+function scheduleMobileViewportReflow(resetScroll = false) {
+  clearTimeout(viewportReflowTimer);
+  viewportReflowTimer = setTimeout(() => forceMobileViewportReflow(resetScroll), 100);
+}
+
+function setupMobileViewportReflow() {
+  window.addEventListener("resize", () => scheduleMobileViewportReflow(), { passive: true });
+  window.addEventListener("orientationchange", () => scheduleMobileViewportReflow(true), { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => scheduleMobileViewportReflow(), { passive: true });
+  }
 }
 
 function wasLongPressJustFired() {
@@ -2018,9 +2058,6 @@ function showPage(name) {
   if (moreBtn) {
     moreBtn.classList.toggle("active", ["revision", "bibliotheque", "grammaire", "sauvegarde", "missing-images"].includes(name));
   }
-
-  // Mémorise le dernier onglet ouvert (petit réglage -> localStorage suffit)
-  localStorage.setItem(LS_LAST_PAGE, name);
 
   // Rafraîchit le contenu de la page qu'on vient d'ouvrir
   if (name === "dashboard")    refreshDashboard();
@@ -8344,6 +8381,8 @@ async function startApp() {
     }
   }
 
+  resetModalScrollLockState();
+
   try {
     cleanupObsoleteLocalStorage();
     await initDB();
@@ -8367,17 +8406,17 @@ async function startApp() {
   runSetup("imagePicker", setupImagePicker);
   runSetup("serviceWorker", setupServiceWorkerUpdates);
   runSetup("voices", warmUpVoices);
+  runSetup("mobileViewportReflow", setupMobileViewportReflow);
 
-  // On ne restaure jamais une page de session ou un détail de deck :
-  // au lancement, l'utilisateur veut voir ses jeux.
-  const RESTORABLE_PAGES = ["dashboard", "packs", "favoris", "bibliotheque", "ajouter", "grammaire"];
-  const lastPage = localStorage.getItem(LS_LAST_PAGE);
   try {
-    showPage(RESTORABLE_PAGES.includes(lastPage) ? lastPage : "dashboard");
+    resetModalScrollLockState();
+    showPage("dashboard");
+    forceMobileViewportReflow(true);
   } catch (error) {
     console.error("Échec de l'affichage initial :", error);
     document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
     $("page-dashboard").classList.add("active");
+    forceMobileViewportReflow(true);
     toast("Erreur d'affichage. Retour aux jeux.");
   }
 }
