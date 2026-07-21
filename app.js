@@ -213,6 +213,7 @@ if (!["classic", "written"].includes(currentReviewMode)) {
   localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
 }
 let difficultReviewFallbackAllOnce = false;
+let difficultReviewAllActiveOnce = false;
 let reviewSessionType = "due";        // "due" = cartes difficiles, "free" = entraînement libre
 let pendingStudyScope = null;         // null = toutes les cartes, string = un deck, array = plusieurs decks, "__favorites__" = favoris
 let pendingSessionType = "due";
@@ -1726,7 +1727,7 @@ function difficultEmptyHintHTML() {
 function setDifficultReviewButtonState(btn, state) {
   btn.classList.toggle("btn-primary", state === "due");
   btn.classList.toggle("btn-ghost", state !== "due");
-  btn.textContent = state === "waiting" ? "Revoir quand même" : "Revoir";
+  btn.textContent = "Revoir";
   btn.disabled = state === "empty";
 }
 
@@ -1768,7 +1769,7 @@ function renderDifficultSummary(stats, options) {
     const nextCard = stats.active[0];
     const nextDue = nextCard ? formatDifficultDue(cardDifficult(nextCard).dueAt) : "bientôt";
     badge.textContent = stats.activeCount + "\u00a0en attente";
-    info.textContent = "Prochaine à revoir : " + nextDue;
+    info.textContent = "Prochaine à revoir : " + nextDue + " · Révise les " + stats.activeCount + " carte" + (stats.activeCount > 1 ? "s" : "") + " difficile" + (stats.activeCount > 1 ? "s" : "") + ", quand tu veux.";
     info.classList.remove("hidden");
     setDifficultReviewButtonState(reviewBtn, "waiting");
     return;
@@ -1776,6 +1777,8 @@ function renderDifficultSummary(stats, options) {
 
   badge.textContent = stats.dueCount + "\u00a0à revoir";
   badge.classList.add("is-due");
+  info.textContent = "Révise les " + stats.activeCount + " carte" + (stats.activeCount > 1 ? "s" : "") + " difficile" + (stats.activeCount > 1 ? "s" : "") + ", quand tu veux.";
+  info.classList.remove("hidden");
   setDifficultReviewButtonState(reviewBtn, "due");
 }
 
@@ -4222,9 +4225,11 @@ async function startReviewSession() {
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
   }
   const fallbackAllActive = difficultReviewFallbackAllOnce;
+  const reviewAllActive = difficultReviewAllActiveOnce;
   difficultReviewFallbackAllOnce = false;
+  difficultReviewAllActiveOnce = false;
   reviewQueue = reviewSessionType === "due"
-    ? buildReviewQueue(scopedCards, { fallbackAllActive: fallbackAllActive })
+    ? buildReviewQueue(scopedCards, { fallbackAllActive: fallbackAllActive, allActive: reviewAllActive })
     : buildFreePracticeQueue(scopedCards);
 
   if (cards.length === 0) {
@@ -4317,6 +4322,7 @@ function showSessionSummary() {
 }
 
 function buildReviewQueue(cards, options = {}) {
+  if (options.allActive) return difficultCards(cards);
   const due = difficultCards(cards, { onlyDue: true });
   if (due.length > 0 || !options.fallbackAllActive) return due;
   return difficultCards(cards);
@@ -5982,7 +5988,8 @@ async function startDifficultDashboardReview() {
     reviewSessionType = "due";
     currentReviewMode = "classic";
     localStorage.setItem(LS_REVIEW_MODE, currentReviewMode);
-    difficultReviewFallbackAllOnce = stats.dueCount === 0;
+    difficultReviewFallbackAllOnce = false;
+    difficultReviewAllActiveOnce = true;
     skipHubOnce = true;
     reviewReturnPage = "dashboard";
     showPage("revision");
