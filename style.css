@@ -1653,7 +1653,19 @@ body.selection-mode-active #toast {
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
+  gap: 8px;
   flex: 0 0 100%;
+  min-width: 0;
+}
+
+#answer-word-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#btn-answer-speak-inline {
+  align-self: center;
+  flex: 0 0 30px;
 }
 
 .answer-actions {

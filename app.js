@@ -2377,6 +2377,7 @@ function openCaseInfoModal(data) {
 
 function closeCaseInfoModal() {
   hideModal("case-info-modal");
+  syncReviewNavButtons();
 }
 
 function handleCaseInfoClick(event) {
@@ -2543,7 +2544,7 @@ function setupNavigation() {
     if (panel && panel.scrollTop <= 5 && endY - caseInfoTouchStartY > 80) closeCaseInfoModal();
     caseInfoTouchStartY = null;
   }, { passive: true });
-  document.addEventListener("click", handleCaseInfoClick, true);
+  document.addEventListener("click", handleCaseInfoClick);
   $("card-detail-modal").addEventListener("touchstart", (event) => {
     cardDetailTouchStartY = event.touches[0]?.clientY ?? null;
   }, { passive: true });
@@ -4580,6 +4581,7 @@ async function handleGrade(grade) {
     toast("Impossible d'enregistrer la réponse. Réessaie.");
   } finally {
     isGrading = false;
+    syncReviewNavButtons();
   }
 }
 
@@ -4639,6 +4641,7 @@ function setupReviewPage() {
         if (removed) await advanceManualReview();
       } finally {
         isGrading = false;
+        syncReviewNavButtons();
       }
       return;
     }
@@ -4649,12 +4652,13 @@ function setupReviewPage() {
         await handleDifficultDelay(currentCard.id, delayBtn.dataset.difficultSessionDelay, { nextCard: true });
       } finally {
         isGrading = false;
+        syncReviewNavButtons();
       }
     }
   });
 
   // Lire le mot avec son article : "der Hund"
-  $("btn-answer-speak-word").addEventListener("click", () => {
+  $("btn-answer-speak-inline").addEventListener("click", () => {
     if (currentCard) speakGerman(fullWord(currentCard));
   });
 
@@ -4666,6 +4670,7 @@ function setupReviewPage() {
       currentCard.updatedAt = updatedCard.updatedAt;
     }
     syncAnswerFavoriteButton(currentCard);
+    syncReviewNavButtons();
   };
   $("btn-answer-favorite").addEventListener("click", handleCurrentCardFavoriteToggle);
   $("btn-written-favorite").addEventListener("click", handleCurrentCardFavoriteToggle);
@@ -4747,6 +4752,7 @@ function onReviewShortcut(event) {
         }
       } finally {
         isGrading = false;
+        syncReviewNavButtons();
       }
     })();
   }
