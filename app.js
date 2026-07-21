@@ -41,8 +41,7 @@ const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
 const LS_PACK_CATEGORY_MIGRATION_V1 = "dfs_separate_packs_categories_v1";
 const LS_VERB_SUBCATEGORY_MIGRATION_V1 = "dfs_verb_subcategories_v1";
-const LS_PREPOSITION_CASE_MIGRATION_V1 = "dfs_preposition_cases_v1";
-const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards", "dfs_lastPage"];
+const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards", "dfs_lastPage", "dfs_preposition_cases_v1"];
 const FAVORITES_SCOPE = "__favorites__";
 const PACK_SCOPE_PREFIX = "pack:";
 const PACK_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f472b6", "#fbbf24", "#fb923c"];
@@ -1456,19 +1455,15 @@ async function runVerbSubcategoryMigration() {
   if (changed) console.info("Migration sous-catégories Verbes terminée.");
 }
 
-async function runGovernedCaseMigration() {
-  const migrationState = localStorage.getItem(LS_PREPOSITION_CASE_MIGRATION_V1);
-  if (migrationState === "governed-cases-v2") return 0;
-
+async function enrichGovernedCaseForKnownWords() {
   const cards = await getAllCards();
   let migratedCount = 0;
-  const shouldMigratePrepositions = migrationState !== "done";
 
   for (const card of cards) {
     if (cardGovernedCase(card)) continue;
     const category = cardDeckName(card);
     let governedCase = "";
-    if (shouldMigratePrepositions && isGrammarPrepositionContext(category, card.subcategory)) {
+    if (isGrammarPrepositionContext(category, card.subcategory)) {
       governedCase = prepositionGovernedCase(card.de);
     } else if (category.toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
       governedCase = dativeVerbGovernedCase(card.de);
@@ -1482,8 +1477,7 @@ async function runGovernedCaseMigration() {
     migratedCount++;
   }
 
-  localStorage.setItem(LS_PREPOSITION_CASE_MIGRATION_V1, "governed-cases-v2");
-  console.info("Migration cas gouvernés terminée :", migratedCount);
+  console.info("Enrichissement cas gouvernés terminé :", migratedCount);
   return migratedCount;
 }
 
@@ -7767,10 +7761,14 @@ async function importData(file, mode = "merge", options = {}) {
     // Les images ont pu changer : on vide le cache d'URLs
     clearImageUrlCache();
     await repairPackCategorySeparationData();
+    const governedCaseCount = await enrichGovernedCaseForKnownWords();
     purgePackCardIds(await getAllCards());
 
     const label = mode === "replace" ? "Restauration complète" : "Import en fusion";
-    toast(label + " réussi : " + cardCount + " carte(s), " + imageCount + " image(s), " + reviewCount + " révision(s) ✓");
+    toast(
+      label + " réussi : " + cardCount + " carte(s), " + imageCount + " image(s), " + reviewCount + " révision(s)" +
+      (governedCaseCount ? ", " + governedCaseCount + " cas ajouté(s)" : "") + " ✓"
+    );
     refreshBackupInfo();
     refreshDashboard();
     refreshCategorySuggestions();
@@ -8197,7 +8195,7 @@ async function startApp() {
     await seedIfEmpty();
     await runPackCategorySeparationMigration();
     await runVerbSubcategoryMigration();
-    await runGovernedCaseMigration();
+    await enrichGovernedCaseForKnownWords();
   } catch (error) {
     console.error("Échec du démarrage :", error);
     toast("Erreur au démarrage. Certaines données peuvent être indisponibles.");
