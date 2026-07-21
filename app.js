@@ -76,6 +76,16 @@ const DATIVE_VERBS = Object.fromEntries(
     : ["helfen", "danken", "gefallen", "gehören", "antworten", "folgen", "gratulieren", "schmecken", "passen", "gelingen", "fehlen", "vertrauen", "glauben", "widersprechen", "zuhören"])
     .map((verb) => [normalizedGermanWord(verb), "Datif"])
 );
+const PRONOUN_CASE_OVERRIDES = {
+  // Ces formes servent aussi d'accusatif dans d'autres contextes. Ici, elles
+  // correspondent aux cartes sujet par defaut du jeu ; corriger a la main pour
+  // une carte separee au sens accusatif.
+  sie: "Nominatif",
+  Sie: "Nominatif",
+  es: "Nominatif",
+  uns: "Accusatif/Datif",
+  euch: "Accusatif/Datif",
+};
 const VERB_CATEGORY_NAME = "Verbes";
 const STANDARD_VERB_SUBCATEGORIES = ["Verbes modaux", "Verbes irréguliers", "Verbes à particule", "Verbes réguliers"];
 const MODAL_VERBS = new Set(["können", "müssen", "wollen", "sollen", "dürfen", "mögen", "möchten"]);
@@ -269,6 +279,7 @@ let longPressFiredAt = 0;             // timestamp du dernier long-press déclen
 let currentCardDetailId = null;
 let cardDetailDirty = false;
 let cardDetailTouchStartY = null;
+let caseInfoTouchStartY = null;
 let bodyScrollLockCount = 0;
 let visibleModalCount = 0;
 let modalScrollLockObserver = null;
@@ -624,7 +635,18 @@ function governedCaseBadgeHTML(card) {
   const governedCase = cardGovernedCase(card);
   if (!governedCase) return "";
   const label = governedCase === "Accusatif/Datif" ? "Acc. / Dat." : governedCase;
-  return '<span class="chip chip-case ' + governedCaseBadgeClass(governedCase) + '">' + escapeHTML(label) + "</span>";
+  return '<button type="button" class="chip chip-case ' + governedCaseBadgeClass(governedCase) + '" ' + caseInfoDataAttributes(card, governedCase) + ">" + escapeHTML(label) + "</button>";
+}
+
+function caseInfoDataAttributes(card, governedCase = cardGovernedCase(card)) {
+  return (
+    'data-case-info-word="' + escapeHTML(card?.de || "") + '" ' +
+    'data-case-info-value="' + escapeHTML(governedCase) + '" ' +
+    'data-case-info-category="' + escapeHTML(cardDeckName(card || {})) + '" ' +
+    'data-case-info-subcategory="' + escapeHTML(card?.subcategory || "") + '" ' +
+    'data-case-info-example-de="' + escapeHTML(card?.exampleDe || "") + '" ' +
+    'data-case-info-example-fr="' + escapeHTML(card?.exampleFr || "") + '"'
+  );
 }
 
 function governedCaseBadgeClass(governedCase) {
@@ -671,7 +693,32 @@ function isGrammarPrepositionContext(category, subcategory) {
     normalizedCaseContext(subcategory) === "prepositions";
 }
 
+function isGrammarPronounContext(category, subcategory) {
+  return normalizedCaseContext(category) === "grammaire" &&
+    normalizedCaseContext(subcategory).includes("pronoms");
+}
+
+function pronounCaseFromSubcategory(subcategory) {
+  const normalized = normalizedCaseContext(subcategory);
+  const match = normalized.match(/(?:^|\s)[—-]\s*(nominatif|accusatif|datif)$/);
+  if (!match) return "";
+  return {
+    nominatif: "Nominatif",
+    accusatif: "Accusatif",
+    datif: "Datif",
+  }[match[1]] || "";
+}
+
+function pronounCaseOverride(card) {
+  const normalized = normalizedGermanWord(card?.de);
+  const exact = String(card?.de || "").trim();
+  return PRONOUN_CASE_OVERRIDES[exact] || PRONOUN_CASE_OVERRIDES[normalized] || "";
+}
+
 function suggestedGovernedCaseForCardData(data) {
+  if (isGrammarPronounContext(data?.category, data?.subcategory)) {
+    return pronounCaseFromSubcategory(data?.subcategory) || pronounCaseOverride(data);
+  }
   if (String(data?.category || "").trim().toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
     return dativeVerbGovernedCase(data?.de);
   }
@@ -1461,13 +1508,7 @@ async function enrichGovernedCaseForKnownWords() {
 
   for (const card of cards) {
     if (cardGovernedCase(card)) continue;
-    const category = cardDeckName(card);
-    let governedCase = "";
-    if (isGrammarPrepositionContext(category, card.subcategory)) {
-      governedCase = prepositionGovernedCase(card.de);
-    } else if (category.toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
-      governedCase = dativeVerbGovernedCase(card.de);
-    }
+    const governedCase = suggestedGovernedCaseForCardData(card);
     if (!governedCase) continue;
     await saveCard(normalizeCard({
       ...card,
@@ -2269,6 +2310,90 @@ function closeMoreMenu() {
   hideModal("more-menu-modal");
 }
 
+function caseTitleLabel(governedCase) {
+  return governedCase === "Accusatif/Datif" ? "Accusatif ou Datif" : governedCase;
+}
+
+function caseFallbackText(governedCase) {
+  return {
+    Nominatif: "Le nominatif marque le sujet de la phrase.",
+    Accusatif: "L'accusatif marque le complément d'objet direct : qui ? quoi ?",
+    Datif: "Le datif marque le complément d'objet indirect : à qui ?",
+    "Génitif": "Le génitif marque surtout la possession ou le lien : de qui ?",
+    "Accusatif/Datif": "Cette forme peut dépendre du contexte : accusatif ou datif.",
+  }[governedCase] || "Ce badge indique le cas grammatical gouverné par cette carte.";
+}
+
+function caseExampleHTML(example) {
+  if (!example?.de && !example?.fr) return "";
+  return (
+    '<article class="case-info-example">' +
+      (example.de ? '<div class="case-info-example-de"><strong>' + escapeHTML(example.de) + "</strong>" + speakButtonHTML(example.de) + "</div>" : "") +
+      (example.fr ? '<p class="example-fr">' + escapeHTML(example.fr) + "</p>" : "") +
+    "</article>"
+  );
+}
+
+function caseInfoContentHTML(data) {
+  const word = String(data.word || "").trim();
+  const governedCase = cardGovernedCase({ governedCase: data.governedCase });
+  const category = String(data.category || "").trim();
+  const subcategory = String(data.subcategory || "").trim();
+  const exampleDe = String(data.exampleDe || "").trim();
+  const exampleFr = String(data.exampleFr || "").trim();
+  const grammarCases = typeof GRAMMAR_CASES !== "undefined" ? GRAMMAR_CASES : {};
+  const title = (word ? escapeHTML(word) : "Cas") + (governedCase ? " — " + escapeHTML(caseTitleLabel(governedCase)) : "");
+  let body = "";
+
+  if (governedCase === "Accusatif/Datif" && isGrammarPrepositionContext(category, subcategory)) {
+    body += '<p>' + escapeHTML(grammarCases.mixedRule || "Prépositions mixtes : datif = position. Accusatif = mouvement.") + "</p>";
+    body += (grammarCases.mixedExamples || []).map(caseExampleHTML).join("");
+  } else if (governedCase === "Datif" && category.toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
+    body += "<p>Ce verbe est toujours suivi du datif (à qui ?).</p>";
+    if (normalizedGermanWord(word) === "helfen" && grammarCases.dativeVerbExample) {
+      body += caseExampleHTML(grammarCases.dativeVerbExample);
+    }
+  } else if ((governedCase === "Datif" || governedCase === "Accusatif") && isGrammarPrepositionContext(category, subcategory)) {
+    body += "<p>Cette préposition est toujours suivie du " + escapeHTML(governedCase.toLowerCase()) + ".</p>";
+    body += caseExampleHTML({ de: exampleDe, fr: exampleFr });
+  } else if (["Nominatif", "Accusatif", "Datif"].includes(governedCase) && isGrammarPronounContext(category, subcategory)) {
+    body += "<p>" + escapeHTML({
+      Nominatif: "C'est le sujet de la phrase (qui fait l'action ?).",
+      Accusatif: "C'est le complément d'objet direct (qui ? quoi ?).",
+      Datif: "C'est le complément d'objet indirect (à qui ?).",
+    }[governedCase]) + "</p>";
+    body += '<p class="muted">Voir l\'onglet Les cas pour le tableau complet.</p>';
+  } else {
+    body += "<p>" + escapeHTML(caseFallbackText(governedCase)) + "</p>";
+  }
+
+  return '<div class="case-info-content"><h2 id="case-info-title">' + title + "</h2>" + body + "</div>";
+}
+
+function openCaseInfoModal(data) {
+  $("case-info-content").innerHTML = caseInfoContentHTML(data);
+  showModal("case-info-modal");
+}
+
+function closeCaseInfoModal() {
+  hideModal("case-info-modal");
+}
+
+function handleCaseInfoClick(event) {
+  const btn = event.target.closest("[data-case-info-word]");
+  if (!btn) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openCaseInfoModal({
+    word: btn.dataset.caseInfoWord || "",
+    governedCase: btn.dataset.caseInfoValue || "",
+    category: btn.dataset.caseInfoCategory || "",
+    subcategory: btn.dataset.caseInfoSubcategory || "",
+    exampleDe: btn.dataset.caseInfoExampleDe || "",
+    exampleFr: btn.dataset.caseInfoExampleFr || "",
+  });
+}
+
 function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -2404,6 +2529,21 @@ function setupNavigation() {
     }
   });
   $("btn-close-card-detail").addEventListener("click", closeCardDetailModal);
+  $("btn-close-case-info").addEventListener("click", closeCaseInfoModal);
+  $("case-info-modal").addEventListener("click", (event) => {
+    if (event.target === $("case-info-modal")) closeCaseInfoModal();
+  });
+  $("case-info-modal").addEventListener("touchstart", (event) => {
+    caseInfoTouchStartY = event.touches[0]?.clientY ?? null;
+  }, { passive: true });
+  $("case-info-modal").addEventListener("touchend", (event) => {
+    if (caseInfoTouchStartY === null) return;
+    const panel = event.target.closest(".case-info-sheet");
+    const endY = event.changedTouches[0]?.clientY ?? caseInfoTouchStartY;
+    if (panel && panel.scrollTop <= 5 && endY - caseInfoTouchStartY > 80) closeCaseInfoModal();
+    caseInfoTouchStartY = null;
+  }, { passive: true });
+  document.addEventListener("click", handleCaseInfoClick, true);
   $("card-detail-modal").addEventListener("touchstart", (event) => {
     cardDetailTouchStartY = event.touches[0]?.clientY ?? null;
   }, { passive: true });
@@ -2436,6 +2576,7 @@ function setupNavigation() {
       closeMoreMenu();
       closeDifficultModal();
       closeCardDetailModal();
+      closeCaseInfoModal();
       closePackModal();
       closeAddToPackModal();
       closePackImportModal();
@@ -4359,9 +4500,21 @@ function showAnswer() {
   if (governedCase) {
     caseEl.textContent = governedCase === "Accusatif/Datif" ? "Acc. / Dat." : governedCase;
     caseEl.className = "chip chip-case " + governedCaseBadgeClass(governedCase);
+    caseEl.dataset.caseInfoWord = card.de || "";
+    caseEl.dataset.caseInfoValue = governedCase;
+    caseEl.dataset.caseInfoCategory = cardDeckName(card);
+    caseEl.dataset.caseInfoSubcategory = card.subcategory || "";
+    caseEl.dataset.caseInfoExampleDe = card.exampleDe || "";
+    caseEl.dataset.caseInfoExampleFr = card.exampleFr || "";
   } else {
     caseEl.className = "chip chip-case hidden";
     caseEl.textContent = "";
+    delete caseEl.dataset.caseInfoWord;
+    delete caseEl.dataset.caseInfoValue;
+    delete caseEl.dataset.caseInfoCategory;
+    delete caseEl.dataset.caseInfoSubcategory;
+    delete caseEl.dataset.caseInfoExampleDe;
+    delete caseEl.dataset.caseInfoExampleFr;
   }
 
   const exampleBlock = $("answer-example-block");

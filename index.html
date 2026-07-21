@@ -509,7 +509,7 @@
               <div class="review-word review-answer-word">
                 <span class="answer-word-main"><span id="answer-article"></span><span id="answer-word-text"></span></span>
                 <span class="chip chip-level hidden" id="answer-level"></span>
-                <span class="chip chip-case hidden" id="answer-case"></span>
+                <button class="chip chip-case hidden" id="answer-case" type="button"></button>
               </div>
 
               <p class="answer-line" id="answer-plural-row">Pluriel : <strong id="answer-plural"></strong></p>
@@ -975,6 +975,14 @@
       <div class="sheet-handle" aria-hidden="true"></div>
       <button class="modal-close-btn" id="btn-close-card-detail" type="button" aria-label="Fermer">×</button>
       <div id="card-detail-content"></div>
+    </div>
+  </div>
+
+  <div id="case-info-modal" class="modal-backdrop sheet-backdrop sheet-centered hidden">
+    <div class="modal-panel sheet-panel case-info-sheet" role="dialog" aria-modal="true" aria-labelledby="case-info-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="modal-close-btn" id="btn-close-case-info" type="button" aria-label="Fermer">×</button>
+      <div id="case-info-content"></div>
     </div>
   </div>
 

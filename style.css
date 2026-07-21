@@ -398,8 +398,12 @@ main {
 }
 
 .chip-case {
+  appearance: none;
+  font-family: inherit;
   font-size: 0.75rem;
   font-weight: 700;
+  cursor: pointer;
+  text-align: center;
 }
 
 .chip-case-nominatif {
@@ -432,6 +436,11 @@ main {
   background:
     linear-gradient(90deg, rgba(251, 191, 36, 0.16), rgba(139, 92, 246, 0.18));
   box-shadow: inset 0 0 0 1px rgba(196, 181, 253, 0.22);
+}
+
+.chip-case:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(232, 185, 75, 0.16);
 }
 
 /* ---------- 9. Dashboard ---------- */
@@ -3981,6 +3990,32 @@ input[type="file"]::file-selector-button:hover {
 
 .sheet-panel h2 { margin: 0 0 4px; }
 .sheet-panel > .muted { margin: 0 0 16px; font-size: 0.86rem; }
+
+.case-info-content {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.case-info-content p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.case-info-example {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+}
+
+.case-info-example-de {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 
 .sheet-segmented {
   display: grid;
