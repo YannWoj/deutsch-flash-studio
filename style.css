@@ -365,6 +365,7 @@ main {
 .art-der { color: var(--art-der); font-weight: 700; }
 .art-die { color: var(--art-die); font-weight: 700; }
 .art-das { color: var(--art-das); font-weight: 700; }
+.word-article { margin-right: 0.3em; }
 
 /* ---------- 8. Badges (catégories) ---------- */
 .chips {
@@ -1596,10 +1597,6 @@ body.selection-mode-active #toast {
   margin-bottom: 22px;
 }
 
-#answer-article {
-  margin-right: -4px; /* rapproche l'article du mot */
-}
-
 .review-answer-word {
   flex-direction: column;
   gap: 8px;
@@ -1658,6 +1655,47 @@ body.selection-mode-active #toast {
   grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 8px;
   margin-top: 14px;
+}
+
+.review-card-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  min-height: 52px;
+}
+
+.review-nav-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(232, 185, 75, 0.22);
+  border-radius: 50%;
+  background: rgba(16, 19, 26, 0.72);
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.86;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
+}
+
+.review-nav-btn .btn-svg-icon {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+
+.review-nav-btn:not(:disabled):hover {
+  border-color: rgba(232, 185, 75, 0.55);
+  background: rgba(232, 185, 75, 0.12);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.review-nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.28;
 }
 
 .review-feedback {

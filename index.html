@@ -94,6 +94,14 @@
       <path d="M6 9l6 6 6-6"></path>
     </symbol>
 
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24">
+      <path d="M15 18l-6-6 6-6"></path>
+    </symbol>
+
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+      <path d="M9 18l6-6-6-6"></path>
+    </symbol>
+
     <symbol id="icon-upload" viewBox="0 0 24 24">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
       <path d="M17 8l-5-5-5 5"></path>
@@ -530,6 +538,15 @@
                 <button class="btn btn-ghost" type="button" data-difficult-session-delay="1w">1 semaine</button>
               </div>
               <button class="btn btn-primary btn-large hidden" id="btn-free-next" type="button">Carte suivante</button>
+            </div>
+
+            <div class="review-card-nav" aria-label="Navigation de la session">
+              <button class="review-nav-btn review-nav-prev" id="btn-review-prev" type="button" title="Carte précédente" aria-label="Carte précédente">
+                <svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-chevron-left"></use></svg>
+              </button>
+              <button class="review-nav-btn review-nav-next" id="btn-review-next" type="button" title="Carte suivante" aria-label="Carte suivante">
+                <svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+              </button>
             </div>
           </div>
         </div>

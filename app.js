@@ -155,6 +155,7 @@ let db = null;                       // connexion IndexedDB
 const imageUrlCache = new Map();     // imageId -> URL d'affichage (évite de recréer les URLs)
 let reviewQueue = [];                // cartes restantes dans la séance de révision
 let currentCard = null;              // carte affichée en ce moment
+let reviewHistory = [];              // cartes deja vues dans la session courante
 let previewUrl = null;               // URL de l'aperçu d'image dans le formulaire
 let reviewSessionStats = null;
 let toastTimer = null;               // pour la notification
@@ -1391,7 +1392,7 @@ function validateCardForm(data) {
 // HTML du mot avec son article coloré (der = bleu, die = rose, das = vert)
 function wordHTML(card) {
   const articlePart = card.article
-    ? '<span class="art-' + card.article + '">' + escapeHTML(card.article) + "</span> "
+    ? '<span class="art-' + card.article + ' word-article">' + escapeHTML(card.article) + "</span>"
     : "";
   return articlePart + escapeHTML(card.de);
 }
@@ -3958,7 +3959,8 @@ async function startReviewSession() {
   const cards = await getAllCards();
   currentReviewCategory = normalizeScope(currentReviewCategory);
   const scopedCards = cards.filter((card) => cardInScope(card, currentReviewCategory));
-  reviewSessionStats = { seen: 0, markedDifficultIds: [] };
+  reviewSessionStats = { seen: 0, seenIds: [], markedDifficultIds: [] };
+  reviewHistory = [];
   isGrading = false;
   if (reviewSessionType === "due") {
     currentReviewMode = "classic";
@@ -4008,6 +4010,7 @@ function reviewSessionLabelText() {
 
 function exitReviewSession() {
   reviewQueue = [];
+  reviewHistory = [];
   currentCard = null;
   reviewSessionStats = null;
   isGrading = false;
@@ -4027,6 +4030,7 @@ function leaveReviewSession() {
 
 function showReviewEmpty(message, canStartFreePractice = false) {
   currentCard = null;
+  reviewHistory = [];
   setReviewSessionActive(false);
   $("review-hub").classList.add("hidden");
   $("review-area").classList.add("hidden");
@@ -4041,6 +4045,7 @@ function showSessionSummary() {
   const stats = reviewSessionStats || { seen: 0, markedDifficultIds: [] };
   const markedCount = new Set(stats.markedDifficultIds || []).size;
   setReviewSessionActive(false);
+  reviewHistory = [];
   $("review-hub").classList.add("hidden");
   $("review-area").classList.add("hidden");
   $("review-empty").classList.remove("hidden");
@@ -4068,28 +4073,28 @@ function buildFreePracticeQueue(cards) {
   return queue;
 }
 
-async function showNextReviewCard() {
-  if (reviewQueue.length === 0) {
-    showSessionSummary();
-    return;
-  }
+function syncReviewNavButtons() {
+  const prevBtn = $("btn-review-prev");
+  const nextBtn = $("btn-review-next");
+  if (!prevBtn || !nextBtn) return;
+  const active = Boolean(currentCard) && isSessionRunning();
+  prevBtn.disabled = !active || reviewHistory.length === 0 || isGrading;
+  nextBtn.disabled = !active || isGrading;
+}
 
-  // On prend la première carte de la file
-  currentCard = reviewQueue.shift();
-
+async function renderReviewCard(card) {
+  currentCard = card;
   $("review-empty").classList.add("hidden");
   $("review-area").classList.remove("hidden");
   setReviewSessionActive(true);
   $("review-session-label").textContent = reviewSessionLabelText();
   $("review-counter").textContent = "Cartes restantes : " + (reviewQueue.length + 1);
 
-  // --- Face avant : image + traduction française ---
   $("review-category").textContent = "Catégorie : " + cardDeckName(currentCard);
   $("review-image").src = await getImageURL(currentCard.imageId);
   $("review-front-fr").textContent = currentCard.fr;
   $("review-front-hint").textContent = "Retrouve le mot allemand";
 
-  // --- On cache la réponse jusqu'au clic ---
   $("review-answer").classList.add("hidden");
   $("review-feedback").classList.add("hidden");
   $("written-review").classList.add("hidden");
@@ -4111,10 +4116,64 @@ async function showNextReviewCard() {
   } else {
     $("btn-show-answer").classList.remove("hidden");
   }
+  syncReviewNavButtons();
+}
+
+async function showNextReviewCard() {
+  if (reviewQueue.length === 0) {
+    showSessionSummary();
+    return;
+  }
+
+  await renderReviewCard(reviewQueue.shift());
 }
 
 function normalizeTypedAnswer(value) {
   return value.trim().toLowerCase();
+}
+
+function rememberReviewCard(card = currentCard) {
+  if (card) reviewHistory.push(card);
+  syncReviewNavButtons();
+}
+
+async function navigateNextReviewCard() {
+  if (isGrading || !currentCard) return;
+  const card = currentCard;
+  isGrading = true;
+  try {
+    updateSessionStats(card);
+    rememberReviewCard(card);
+    currentCard = null;
+    await showNextReviewCard();
+  } catch (error) {
+    console.error("Echec de navigation vers la carte suivante :", error);
+    currentCard = card;
+    toast("Impossible de charger la carte suivante.");
+  } finally {
+    isGrading = false;
+    syncReviewNavButtons();
+  }
+}
+
+async function navigatePreviousReviewCard() {
+  if (isGrading || !currentCard || reviewHistory.length === 0) return;
+  const nextCurrent = currentCard;
+  const previousCard = reviewHistory.pop();
+  isGrading = true;
+  try {
+    reviewQueue.unshift(nextCurrent);
+    await renderReviewCard(previousCard);
+  } catch (error) {
+    console.error("Echec de navigation vers la carte precedente :", error);
+    reviewQueue.shift();
+    reviewHistory.push(previousCard);
+    currentCard = nextCurrent;
+    toast("Impossible de charger la carte precedente.");
+  } finally {
+    isGrading = false;
+    syncReviewNavButtons();
+  }
 }
 
 function handleWrittenAnswer() {
@@ -4151,8 +4210,8 @@ function showAnswer() {
   if (!card) return;
 
   const articleEl = $("answer-article");
-  articleEl.textContent = card.article ? card.article + " " : "";
-  articleEl.className = card.article ? "art-" + card.article : "";
+  articleEl.textContent = card.article ? card.article : "";
+  articleEl.className = card.article ? "art-" + card.article + " word-article" : "";
   $("answer-word-text").textContent = card.de;
 
   const pluralRow = $("answer-plural-row");
@@ -4212,9 +4271,16 @@ async function saveReviewLogSafely(card, grade) {
   }
 }
 
-function updateSessionStats() {
+function updateSessionStats(card = currentCard) {
   if (!reviewSessionStats) return;
-  reviewSessionStats.seen++;
+  if (!card || !card.id) {
+    reviewSessionStats.seen++;
+    return;
+  }
+  if (!Array.isArray(reviewSessionStats.seenIds)) reviewSessionStats.seenIds = [];
+  if (reviewSessionStats.seenIds.includes(card.id)) return;
+  reviewSessionStats.seenIds.push(card.id);
+  reviewSessionStats.seen = reviewSessionStats.seenIds.length;
 }
 
 async function handleGrade(grade) {
@@ -4228,7 +4294,8 @@ async function handleGrade(grade) {
 
   try {
     await saveReviewLogSafely(card, grade);
-    updateSessionStats();
+    updateSessionStats(card);
+    rememberReviewCard(card);
     await showNextReviewCard();
     refreshDashboard();
   } catch (error) {
@@ -4242,6 +4309,8 @@ async function handleGrade(grade) {
 
 function setupReviewPage() {
   $("btn-show-answer").addEventListener("click", showAnswer);
+  $("btn-review-prev").addEventListener("click", navigatePreviousReviewCard);
+  $("btn-review-next").addEventListener("click", navigateNextReviewCard);
   $("btn-review-exit").addEventListener("click", exitReviewSession);
   document.querySelectorAll("[data-hub-mode]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -4341,6 +4410,19 @@ function isTypingTarget(target) {
 function onReviewShortcut(event) {
   if (event.repeat || isTypingTarget(event.target)) return;
   if (isGrading || !$("page-revision").classList.contains("active") || !currentCard) return;
+
+  if (event.code === "ArrowLeft") {
+    event.preventDefault();
+    navigatePreviousReviewCard();
+    return;
+  }
+
+  if (event.code === "ArrowRight") {
+    event.preventDefault();
+    navigateNextReviewCard();
+    return;
+  }
+
   if (currentReviewMode === "written") return;
 
   const answerHidden = $("review-answer").classList.contains("hidden");
@@ -5595,7 +5677,8 @@ async function startDifficultDashboardReview() {
 
 async function advanceManualReview(card = currentCard) {
   try {
-    if (reviewSessionStats && card) reviewSessionStats.seen++;
+    updateSessionStats(card);
+    rememberReviewCard(card);
     currentCard = null;
     await showNextReviewCard();
     await refreshAfterDifficultChange();
