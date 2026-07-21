@@ -41,11 +41,42 @@ const LS_REVIEW_MODE = "dfs_review_mode";
 const LS_LEARNING_FILTER = "dfs_learning_filter";
 const LS_PACK_CATEGORY_MIGRATION_V1 = "dfs_separate_packs_categories_v1";
 const LS_VERB_SUBCATEGORY_MIGRATION_V1 = "dfs_verb_subcategories_v1";
+const LS_PREPOSITION_CASE_MIGRATION_V1 = "dfs_preposition_cases_v1";
 const OBSOLETE_LOCAL_STORAGE_KEYS = ["dfs_max_new_cards", "dfs_lastPage"];
 const FAVORITES_SCOPE = "__favorites__";
 const PACK_SCOPE_PREFIX = "pack:";
 const PACK_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f472b6", "#fbbf24", "#fb923c"];
 const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const GOVERNED_CASES = ["Nominatif", "Accusatif", "Datif", "Génitif", "Accusatif/Datif"];
+const PREPOSITION_CASES = {
+  aus: "Datif",
+  bei: "Datif",
+  mit: "Datif",
+  nach: "Datif",
+  seit: "Datif",
+  von: "Datif",
+  zu: "Datif",
+  durch: "Accusatif",
+  "für": "Accusatif",
+  gegen: "Accusatif",
+  ohne: "Accusatif",
+  um: "Accusatif",
+  in: "Accusatif/Datif",
+  an: "Accusatif/Datif",
+  auf: "Accusatif/Datif",
+  "über": "Accusatif/Datif",
+  unter: "Accusatif/Datif",
+  vor: "Accusatif/Datif",
+  hinter: "Accusatif/Datif",
+  neben: "Accusatif/Datif",
+  zwischen: "Accusatif/Datif",
+};
+const DATIVE_VERBS = Object.fromEntries(
+  ((typeof GRAMMAR_CASES !== "undefined" && Array.isArray(GRAMMAR_CASES.dativeVerbs))
+    ? GRAMMAR_CASES.dativeVerbs
+    : ["helfen", "danken", "gefallen", "gehören", "antworten", "folgen", "gratulieren", "schmecken", "passen", "gelingen", "fehlen", "vertrauen", "glauben", "widersprechen", "zuhören"])
+    .map((verb) => [normalizedGermanWord(verb), "Datif"])
+);
 const VERB_CATEGORY_NAME = "Verbes";
 const STANDARD_VERB_SUBCATEGORIES = ["Verbes modaux", "Verbes irréguliers", "Verbes à particule", "Verbes réguliers"];
 const MODAL_VERBS = new Set(["können", "müssen", "wollen", "sollen", "dürfen", "mögen", "möchten"]);
@@ -201,6 +232,7 @@ let pendingPackImportAnalysis = null;
 let pendingFormCategory = null;
 let pendingFormSubcategory = null;
 let verbSubcategoryAutofillValue = "";
+let governedCaseAutofillValue = "";
 let pendingSubcategoryCardId = null;
 let pendingSubcategoryCardIds = [];
 let pendingDifficultCardId = null;
@@ -584,6 +616,32 @@ function levelBadgeHTML(card) {
   return level ? '<span class="chip chip-level">' + escapeHTML(level) + "</span>" : "";
 }
 
+function cardGovernedCase(card) {
+  const governedCase = String(card?.governedCase || "").trim();
+  return GOVERNED_CASES.includes(governedCase) ? governedCase : "";
+}
+
+function governedCaseBadgeHTML(card) {
+  const governedCase = cardGovernedCase(card);
+  if (!governedCase) return "";
+  const label = governedCase === "Accusatif/Datif" ? "Acc. / Dat." : governedCase;
+  return '<span class="chip chip-case ' + governedCaseBadgeClass(governedCase) + '">' + escapeHTML(label) + "</span>";
+}
+
+function governedCaseBadgeClass(governedCase) {
+  return {
+    "Nominatif": "chip-case-nominatif",
+    "Accusatif": "chip-case-accusatif",
+    "Datif": "chip-case-datif",
+    "Génitif": "chip-case-genitif",
+    "Accusatif/Datif": "chip-case-mixed",
+  }[governedCase] || "";
+}
+
+function levelAndCaseBadgesHTML(card) {
+  return levelBadgeHTML(card) + governedCaseBadgeHTML(card);
+}
+
 function normalizedGermanWord(value) {
   return String(value || "")
     .trim()
@@ -591,6 +649,34 @@ function normalizedGermanWord(value) {
     .normalize("NFC")
     .replace(/^sich\s+/, "")
     .replace(/\s+/g, "");
+}
+
+function normalizedCaseContext(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function prepositionGovernedCase(value) {
+  return PREPOSITION_CASES[normalizedGermanWord(value)] || "";
+}
+
+function dativeVerbGovernedCase(value) {
+  return DATIVE_VERBS[normalizedGermanWord(value)] || "";
+}
+
+function isGrammarPrepositionContext(category, subcategory) {
+  return normalizedCaseContext(category) === "grammaire" &&
+    normalizedCaseContext(subcategory) === "prepositions";
+}
+
+function suggestedGovernedCaseForCardData(data) {
+  if (String(data?.category || "").trim().toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
+    return dativeVerbGovernedCase(data?.de);
+  }
+  return prepositionGovernedCase(data?.de);
 }
 
 async function requestPersistentStorage() {
@@ -760,6 +846,7 @@ function normalizeCard(card) {
     exampleDe: String(card.exampleDe || "").trim(),
     exampleFr: String(card.exampleFr || "").trim(),
     level: cardLevel(card),
+    governedCase: cardGovernedCase(card),
     category: String(card.category || "Général").trim() || "Général",
     subcategory: String(card.subcategory || "").trim(),
     difficult: normalizeDifficult(card.difficult),
@@ -1369,6 +1456,37 @@ async function runVerbSubcategoryMigration() {
   if (changed) console.info("Migration sous-catégories Verbes terminée.");
 }
 
+async function runGovernedCaseMigration() {
+  const migrationState = localStorage.getItem(LS_PREPOSITION_CASE_MIGRATION_V1);
+  if (migrationState === "governed-cases-v2") return 0;
+
+  const cards = await getAllCards();
+  let migratedCount = 0;
+  const shouldMigratePrepositions = migrationState !== "done";
+
+  for (const card of cards) {
+    if (cardGovernedCase(card)) continue;
+    const category = cardDeckName(card);
+    let governedCase = "";
+    if (shouldMigratePrepositions && isGrammarPrepositionContext(category, card.subcategory)) {
+      governedCase = prepositionGovernedCase(card.de);
+    } else if (category.toLowerCase() === VERB_CATEGORY_NAME.toLowerCase()) {
+      governedCase = dativeVerbGovernedCase(card.de);
+    }
+    if (!governedCase) continue;
+    await saveCard(normalizeCard({
+      ...card,
+      governedCase: governedCase,
+      updatedAt: todayISO(),
+    }));
+    migratedCount++;
+  }
+
+  localStorage.setItem(LS_PREPOSITION_CASE_MIGRATION_V1, "governed-cases-v2");
+  console.info("Migration cas gouvernés terminée :", migratedCount);
+  return migratedCount;
+}
+
 function validateCardForm(data) {
   const tips = [];
 
@@ -1408,6 +1526,7 @@ function createNewCard(data) {
     exampleDe: data.exampleDe || "",
     exampleFr: data.exampleFr || "",
     level: cardLevel(data),
+    governedCase: cardGovernedCase(data),
     category: data.category || "Général",
     subcategory: data.subcategory || "",
     difficult: normalizeDifficult(data.difficult),
@@ -3299,7 +3418,7 @@ function deckDetailCardHTML(card, imageUrl, options = {}) {
         '<div class="deck-detail-card-top">' +
           '<div class="deck-detail-chips">' +
             '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
-            levelBadgeHTML(card) +
+            levelAndCaseBadgesHTML(card) +
           "</div>" +
           statusHTML +
         "</div>" +
@@ -4241,6 +4360,16 @@ function showAnswer() {
     levelEl.classList.add("hidden");
   }
 
+  const caseEl = $("answer-case");
+  const governedCase = cardGovernedCase(card);
+  if (governedCase) {
+    caseEl.textContent = governedCase === "Accusatif/Datif" ? "Acc. / Dat." : governedCase;
+    caseEl.className = "chip chip-case " + governedCaseBadgeClass(governedCase);
+  } else {
+    caseEl.className = "chip chip-case hidden";
+    caseEl.textContent = "";
+  }
+
   const exampleBlock = $("answer-example-block");
   if (card.exampleDe) {
     exampleBlock.classList.remove("hidden");
@@ -4486,7 +4615,7 @@ function cardDetailBadgesHTML(card) {
     '<div class="card-detail-badges">' +
       '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
       (card.subcategory ? subcategoryChipHTML(card, true) : "") +
-      levelBadgeHTML(card) +
+      levelAndCaseBadgesHTML(card) +
       cardStatusHTML(card) +
     "</div>"
   );
@@ -4682,13 +4811,21 @@ function setupAddForm() {
   });
 
   $("btn-cancel-edit").addEventListener("click", resetCardForm);
-  $("f-de").addEventListener("input", syncVerbSubcategoryPrefill);
+  $("f-de").addEventListener("input", () => {
+    syncVerbSubcategoryPrefill();
+    syncGovernedCasePrefill();
+  });
   $("f-category").addEventListener("input", debounce(() => {
     refreshSubcategorySuggestions();
     syncVerbSubcategoryPrefill();
+    syncGovernedCasePrefill();
   }, 150));
   $("f-subcategory").addEventListener("input", () => {
     if ($("f-subcategory").value !== verbSubcategoryAutofillValue) verbSubcategoryAutofillValue = "";
+    syncGovernedCasePrefill();
+  });
+  $("f-case").addEventListener("change", () => {
+    if ($("f-case").value !== governedCaseAutofillValue) governedCaseAutofillValue = "";
   });
   $("btn-no-normal-plural").addEventListener("click", () => {
     $("f-plural").value = "kein Plural";
@@ -4707,6 +4844,7 @@ function setupAddForm() {
       exampleDe: $("f-example-de").value.trim(),
       exampleFr: $("f-example-fr").value.trim(),
       level: $("f-level").value,
+      governedCase: $("f-case").value,
       category: $("f-category").value.trim() || "Général",
       subcategory: $("f-subcategory").value.trim(),
       imageQuery: $("f-image-query").value.trim(),
@@ -4781,6 +4919,7 @@ function resetCardForm() {
   imageMarkedForRemoval = false;
   pendingImageBlob = null;
   verbSubcategoryAutofillValue = "";
+  governedCaseAutofillValue = "";
 
   $("form-title").textContent = "Ajouter une carte";
   $("form-help").innerHTML = "En allemand, on n'apprend jamais un nom seul&nbsp;: toujours <strong>l'article + le mot + le pluriel</strong>.";
@@ -4806,6 +4945,7 @@ function applyPendingFormCategory() {
     pendingFormSubcategory = null;
   }
   syncVerbSubcategoryPrefill();
+  syncGovernedCasePrefill();
 }
 
 function syncVerbSubcategoryPrefill() {
@@ -4828,6 +4968,28 @@ function syncVerbSubcategoryPrefill() {
   }
 }
 
+function syncGovernedCasePrefill() {
+  const caseSelect = $("f-case");
+  const suggestion = suggestedGovernedCaseForCardData({
+    de: $("f-de").value,
+    category: $("f-category").value,
+    subcategory: $("f-subcategory").value,
+  });
+
+  if (!suggestion) {
+    if (governedCaseAutofillValue && caseSelect.value === governedCaseAutofillValue) {
+      caseSelect.value = "";
+    }
+    governedCaseAutofillValue = "";
+    return;
+  }
+
+  if (!caseSelect.value || caseSelect.value === governedCaseAutofillValue) {
+    caseSelect.value = suggestion;
+    governedCaseAutofillValue = suggestion;
+  }
+}
+
 async function startEditCard(cardId) {
   const card = await getCard(cardId);
   if (!card) {
@@ -4839,6 +5001,7 @@ async function startEditCard(cardId) {
   pendingFormCategory = null;
   pendingFormSubcategory = null;
   verbSubcategoryAutofillValue = "";
+  governedCaseAutofillValue = "";
   imageMarkedForRemoval = false;
   pendingImageBlob = null;
   imageInputVersion++;
@@ -4854,6 +5017,7 @@ async function startEditCard(cardId) {
   $("f-example-de").value = card.exampleDe || "";
   $("f-example-fr").value = card.exampleFr || "";
   $("f-level").value = cardLevel(card);
+  $("f-case").value = cardGovernedCase(card);
   $("f-category").value = card.category || "";
   $("f-subcategory").value = card.subcategory || "";
   $("f-image-query").value = card.imageQuery || "";
@@ -5288,7 +5452,7 @@ function libraryMetaHTML(card) {
   return (
     '<div class="library-card-meta">' +
       '<span class="chip chip-category">' + escapeHTML(cardDeckName(card)) + "</span>" +
-      levelBadgeHTML(card) +
+      levelAndCaseBadgesHTML(card) +
       (card.subcategory ? subcategoryChipHTML(card, true) : "") +
       cardStatusHTML(card) +
     "</div>"
@@ -5349,7 +5513,7 @@ function libraryRowHTML(card, imageUrl) {
         '<div class="library-row-fr">' + escapeHTML(card.fr) + "</div>" +
         '<div class="library-row-meta">' +
           '<span>' + escapeHTML(cardDeckName(card)) + "</span>" +
-          levelBadgeHTML(card) +
+          levelAndCaseBadgesHTML(card) +
           (card.subcategory ? '<span>' + escapeHTML(card.subcategory) + "</span>" : "") +
           pluralLine +
         "</div>" +
@@ -8033,6 +8197,7 @@ async function startApp() {
     await seedIfEmpty();
     await runPackCategorySeparationMigration();
     await runVerbSubcategoryMigration();
+    await runGovernedCaseMigration();
   } catch (error) {
     console.error("Échec du démarrage :", error);
     toast("Erreur au démarrage. Certaines données peuvent être indisponibles.");

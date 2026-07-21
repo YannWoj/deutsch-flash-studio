@@ -29,7 +29,7 @@ const GRAMMAR_CASES = {
     { de: "Ich bin in der Stadt.", fr: "Je suis en ville." },
     { de: "Ich gehe in die Stadt.", fr: "Je vais en ville." },
   ],
-  dativeVerbs: ["helfen", "danken", "gefallen", "gehören", "antworten"],
+  dativeVerbs: ["helfen", "danken", "gefallen", "gehören", "antworten", "folgen", "gratulieren", "schmecken", "passen", "gelingen", "fehlen", "vertrauen", "glauben", "widersprechen", "zuhören"],
   dativeVerbExample: { de: "Kannst du mir helfen?", fr: "Peux-tu m'aider ?" },
   pronouns: [
     ["ich", "mich", "mir"],

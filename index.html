@@ -509,6 +509,7 @@
               <div class="review-word review-answer-word">
                 <span class="answer-word-main"><span id="answer-article"></span><span id="answer-word-text"></span></span>
                 <span class="chip chip-level hidden" id="answer-level"></span>
+                <span class="chip chip-case hidden" id="answer-case"></span>
               </div>
 
               <p class="answer-line" id="answer-plural-row">Pluriel : <strong id="answer-plural"></strong></p>
@@ -618,6 +619,19 @@
                 <option value="C1">C1</option>
                 <option value="C2">C2</option>
               </select>
+            </div>
+
+            <div class="form-field">
+              <label for="f-case">Cas grammatical (optionnel)</label>
+              <select id="f-case">
+                <option value="">— (aucun)</option>
+                <option value="Nominatif">Nominatif</option>
+                <option value="Accusatif">Accusatif</option>
+                <option value="Datif">Datif</option>
+                <option value="Génitif">Génitif</option>
+                <option value="Accusatif/Datif">Accusatif/Datif</option>
+              </select>
+              <p class="field-help">Pour les prépositions ou verbes à cas fixe : nach → datif, für → accusatif, in → accusatif ou datif selon le sens.</p>
             </div>
 
             <div class="form-field">
