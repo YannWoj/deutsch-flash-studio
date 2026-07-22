@@ -6537,6 +6537,7 @@ const GRAMMAR_CASES_CONTENT = [
     intro: [
       "Le datif sert notamment à dire à quelqu'un. Il marque souvent le destinataire ou le bénéficiaire.",
     ],
+    keyRule: "À retenir : au datif pluriel, le nom prend un -n en plus (sauf s'il finit déjà par -n ou -s). die Kinder → mit den Kindern, die Häuser → in den Häusern. Mais : die Frauen → den Frauen (déjà en -n), die Autos → den Autos (finit en -s).",
     examples: [
       { de: "Ich gebe dem Mann das Buch.", fr: "Je donne le livre à l'homme." },
       { de: "Ich zeige der Frau das Handy.", fr: "Je montre le téléphone à la femme." },
@@ -6591,7 +6592,7 @@ const GRAMMAR_CASES_CONTENT = [
         ],
       },
       {
-        title: "Le -n du datif pluriel",
+        title: "Le nom change ! (+ -n au datif pluriel)",
         headers: ["Pluriel", "Datif pluriel"],
         rows: [
           ["die Kinder", grammarHTMLCell("den Kinder<strong>n</strong>")],
@@ -6644,6 +6645,7 @@ const GRAMMAR_CASES_CONTENT = [
     intro: [
       "Le génitif exprime la possession ou le lien entre deux noms.",
     ],
+    keyRule: "À retenir : au génitif singulier, le nom masculin ou neutre prend -s ou -es. der Mann → des Mannes, das Kind → des Kindes. Le féminin et le pluriel ne changent PAS : der Frau, der Kinder.",
     examples: [
       { de: "das Auto des Mannes", fr: "la voiture de l'homme" },
       { de: "der Hund der Frau", fr: "le chien de la femme" },
@@ -6663,7 +6665,7 @@ const GRAMMAR_CASES_CONTENT = [
         ],
       },
       {
-        title: "Le -s ou -es au génitif",
+        title: "Le nom change ! (masculin/neutre)",
         headers: ["Nominatif", "Génitif"],
         rows: [
           ["der Mann", grammarHTMLCell("des Mann<strong>es</strong>")],
@@ -6700,6 +6702,7 @@ const GRAMMAR_CASES_CONTENT = [
     notes: [
       "Au génitif singulier, les noms masculins et neutres prennent généralement -s ou -es.",
       "Le féminin et le pluriel ne prennent normalement pas ce -s/-es.",
+      "Les lignes du bas (féminin/pluriel) : le nom ne prend PAS de -s.",
       "Après un déterminant au génitif, l'adjectif prend presque toujours -en.",
     ],
     extraExamples: [
@@ -6715,6 +6718,51 @@ const GRAMMAR_CASES_CONTENT = [
       { de: "das Auto des alten Mannes", fr: "" },
       { de: "die Tür des kleinen Hauses", fr: "" },
       { de: "die Bücher der neuen Studenten", fr: "" },
+    ],
+  },
+  {
+    id: "weak-nouns",
+    title: "Les noms masculins faibles (Nachbar, Student...)",
+    intro: [
+      "Certains noms masculins ajoutent -n ou -en à TOUTES les formes, sauf au nominatif singulier. Beaucoup désignent des personnes ou des êtres vivants.",
+    ],
+    keyRule: [
+      "À ne jamais oublier : der Nachbar (nominatif) MAIS den Nachbarn, dem Nachbarn, des Nachbarn. Le -n apparaît partout sauf au nominatif singulier.",
+      "Piège : un nom faible ne prend PAS -s au génitif, il garde son -n : des Studenten, pas des Studentes.",
+    ],
+    tables: [
+      {
+        title: "Nachbar : -n partout sauf nominatif singulier",
+        headers: ["Cas", "Forme"],
+        rows: [
+          ["Nominatif", "der Nachbar"],
+          ["Accusatif", grammarHTMLCell("den Nachbar<strong>n</strong>")],
+          ["Datif", grammarHTMLCell("dem Nachbar<strong>n</strong>")],
+          ["Génitif", grammarHTMLCell("des Nachbar<strong>n</strong> (pas des Nachbars)")],
+        ],
+      },
+      {
+        title: "Autres noms masculins faibles courants",
+        headers: ["Nom", "Sens"],
+        rows: [
+          ["der Student", "l'étudiant"],
+          ["der Kunde", "le client"],
+          ["der Junge", "le garçon"],
+          ["der Mensch", "l'être humain"],
+          ["der Herr", "le monsieur"],
+          ["der Kollege", "le collègue"],
+          ["der Präsident", "le président"],
+          ["der Journalist", "le journaliste"],
+          ["der Tourist", "le touriste"],
+          ["der Name", "le nom (cas spécial : des Namens)"],
+        ],
+      },
+    ],
+    examples: [
+      { de: "Ich sehe den Nachbarn.", fr: "Je vois le voisin." },
+      { de: "Ich helfe dem Studenten.", fr: "J'aide l'étudiant." },
+      { de: "Das ist das Auto des Kunden.", fr: "C'est la voiture du client." },
+      { de: "Ich kenne den Namen nicht.", fr: "Je ne connais pas le nom." },
     ],
   },
   {
@@ -6965,6 +7013,17 @@ function grammarNotesHTML(notes = []) {
     : "";
 }
 
+function grammarKeyRuleHTML(keyRule) {
+  const rules = Array.isArray(keyRule) ? keyRule : (keyRule ? [keyRule] : []);
+  if (!rules.length) return "";
+  return (
+    '<div class="grammar-key-rule">' +
+      '<svg class="btn-svg-icon" focusable="false" aria-hidden="true"><use href="#icon-bulb"></use></svg>' +
+      '<div>' + rules.map((rule) => '<strong>' + escapeHTML(rule) + "</strong>").join("") + "</div>" +
+    "</div>"
+  );
+}
+
 function renderGrammarCases() {
   $("grammar-panel-cases").innerHTML =
     '<section class="panel grammar-section grammar-cases-home">' +
@@ -6983,6 +7042,7 @@ function renderGrammarCases() {
           grammarSummaryHTML(section.title, index) +
           '<div class="grammar-accordion-body">' +
             (section.intro || []).map((paragraph) => "<p>" + escapeHTML(paragraph) + "</p>").join("") +
+            grammarKeyRuleHTML(section.keyRule) +
             grammarTablesHTML(section.tables) +
             grammarNotesHTML(section.notes) +
             (examples.length
