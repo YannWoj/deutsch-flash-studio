@@ -6865,6 +6865,30 @@ const GRAMMAR_CASES_CONTENT = [
           ["Accusatif", grammarHTMLCell("groß<strong>en</strong>"), grammarHTMLCell("groß<strong>e</strong>"), grammarHTMLCell("groß<strong>es</strong>"), grammarHTMLCell("groß<strong>e</strong>")],
         ],
       },
+      {
+        title: "Tout ensemble : article + adjectif + nom (avec article défini)",
+        headers: ["Cas", "Masculin", "Féminin", "Neutre", "Pluriel"],
+        rows: [
+          ["Nominatif", grammarHTMLCell("der groß<strong>e</strong> Mann"), grammarHTMLCell("die groß<strong>e</strong> Frau"), grammarHTMLCell("das groß<strong>e</strong> Kind"), grammarHTMLCell("die groß<strong>en</strong> Kinder")],
+          ["Accusatif", grammarHTMLCell("den groß<strong>en</strong> Mann"), grammarHTMLCell("die groß<strong>e</strong> Frau"), grammarHTMLCell("das groß<strong>e</strong> Kind"), grammarHTMLCell("die groß<strong>en</strong> Kinder")],
+          ["Datif", grammarHTMLCell("dem groß<strong>en</strong> Mann"), grammarHTMLCell("der groß<strong>en</strong> Frau"), grammarHTMLCell("dem groß<strong>en</strong> Kind"), grammarHTMLCell("den groß<strong>en</strong> Kinder<strong>n</strong>")],
+          ["Génitif", grammarHTMLCell("des groß<strong>en</strong> Mann<strong>es</strong>"), grammarHTMLCell("der groß<strong>en</strong> Frau"), grammarHTMLCell("des groß<strong>en</strong> Kind<strong>es</strong>"), grammarHTMLCell("der groß<strong>en</strong> Kinder")],
+        ],
+        keyRule: "Vue complète : au génitif masculin/neutre, le NOM prend -es (des großen Mannes). Au datif pluriel, le NOM prend -n (den großen Kindern). Partout ailleurs, seul l'article et l'adjectif changent, le nom reste identique.",
+      },
+      {
+        title: "Piège : nom masculin faible avec adjectif",
+        headers: ["Cas", "Forme"],
+        rows: [
+          ["Nominatif", grammarHTMLCell("der nett<strong>e</strong> Nachbar")],
+          ["Accusatif", grammarHTMLCell("den nett<strong>en</strong> Nachbar<strong>n</strong>")],
+          ["Datif", grammarHTMLCell("dem nett<strong>en</strong> Nachbar<strong>n</strong>")],
+          ["Génitif", grammarHTMLCell("des nett<strong>en</strong> Nachbar<strong>n</strong> (et non Nachbars !)")],
+        ],
+        notes: [
+          "Rappel : le nom faible prend -n partout sauf au nominatif, y compris au génitif (pas de -s).",
+        ],
+      },
     ],
     notes: [
       "Avec article défini : nominatif singulier souvent -e ; accusatif masculin -en ; pluriel -en ; datif -en ; génitif -en.",
@@ -7003,6 +7027,8 @@ function grammarTablesHTML(tables = []) {
     '<div class="grammar-subblock">' +
       (table.title ? '<h3>' + escapeHTML(table.title) + "</h3>" : "") +
       grammarTableHTML(table.headers, table.rows, Boolean(table.articleCells)) +
+      grammarKeyRuleHTML(table.keyRule) +
+      grammarNotesHTML(table.notes) +
     "</div>"
   ).join("");
 }
