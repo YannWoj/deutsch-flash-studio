@@ -4322,10 +4322,15 @@ function showSessionSummary() {
 }
 
 function buildReviewQueue(cards, options = {}) {
-  if (options.allActive) return difficultCards(cards);
-  const due = difficultCards(cards, { onlyDue: true });
-  if (due.length > 0 || !options.fallbackAllActive) return due;
-  return difficultCards(cards);
+  let queue = [];
+  if (options.allActive) {
+    queue = difficultCards(cards);
+  } else {
+    const due = difficultCards(cards, { onlyDue: true });
+    queue = due.length > 0 || !options.fallbackAllActive ? due : difficultCards(cards);
+  }
+  shuffleArray(queue);
+  return queue;
 }
 
 function buildFreePracticeQueue(cards) {
